@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=WaffleHouse-Client
+Comment=AIM/OSCAR, IRC, Telnet, secure messaging, file transfer, and SIP/VoIP softphone
+Exec=wafflehouse-client
+Icon=internet-chat
+Terminal=false
+Categories=Network;Chat;InstantMessaging;
