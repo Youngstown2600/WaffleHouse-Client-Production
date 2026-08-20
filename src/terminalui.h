@@ -107,6 +107,7 @@ private:
     void drawScrollBar(int top, int bottom, int x, int totalLines, int firstLine, int visibleLines);
     void drawBuddyPane(ConnectionEntry *entry, int top, int bottom, int startX, int width);
     void drawMemberPane(Buffer *buffer, int top, int bottom, int startX, int width);
+    void drawShortcutHint(int row, int width);
     void drawStatusBar(int row, int width);
     void drawInputLine(int row, int width);
 

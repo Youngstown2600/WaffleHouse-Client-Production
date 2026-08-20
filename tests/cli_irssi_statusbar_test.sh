@@ -7,8 +7,16 @@ HDR="$ROOT/src/terminalui.h"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# The CLI should reserve the bottom two rows for an Irssi-style status bar
-# followed immediately by the input prompt.
+# The CLI should reserve the bottom three rows for the persistent shortcut
+# hint, an Irssi-style status bar, and the input prompt.
+grep -F 'void TerminalUi::drawShortcutHint(int row, int width)' "$TERM" >/dev/null \
+    || fail 'drawShortcutHint implementation missing'
+grep -F 'void drawShortcutHint(int row, int width);' "$HDR" >/dev/null \
+    || fail 'drawShortcutHint declaration missing'
+grep -F 'Tab completes /commands | Ctrl-N/P buffers | Alt-1..9/F1..F9 jump | PgUp/PgDn scroll |' "$TERM" >/dev/null \
+    || fail 'persistent shortcut hint text missing'
+grep -F 'drawShortcutHint(height - 3, width);' "$TERM" >/dev/null \
+    || fail 'shortcut hint is not directly above the status bar'
 grep -F 'void TerminalUi::drawStatusBar(int row, int width)' "$TERM" >/dev/null \
     || fail 'drawStatusBar implementation missing'
 grep -F 'void drawStatusBar(int row, int width);' "$HDR" >/dev/null \
@@ -29,4 +37,4 @@ grep -F 'buffer->number' "$TERM" >/dev/null \
 grep -F 'A_REVERSE | A_BOLD' "$TERM" >/dev/null \
     || fail 'status bar does not use full-width highlighted styling'
 
-echo 'PASS: Irssi-style CLI status bar is anchored directly above the prompt'
+echo 'PASS: CLI shortcut hint, Irssi-style status bar, and prompt are anchored at the bottom'

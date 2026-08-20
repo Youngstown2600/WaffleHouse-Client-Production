@@ -1044,6 +1044,16 @@ void TerminalUi::drawBufferPane(Buffer *buffer,
 }
 
 
+void TerminalUi::drawShortcutHint(int row, int width)
+{
+    move(row, 0);
+    clrtoeol();
+
+    const QString hint = QStringLiteral(
+        " Tab completes /commands | Ctrl-N/P buffers | Alt-1..9/F1..F9 jump | PgUp/PgDn scroll | ");
+    safeAdd(row, 0, hint.left(width), A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width);
+}
+
 void TerminalUi::drawStatusBar(int row, int width)
 {
     move(row, 0);
@@ -1147,7 +1157,8 @@ void TerminalUi::draw()
 
     drawHeader(width);
     drawConnectionsBar(1, width);
-    drawBufferPane(activeBuffer(), 2, height - 3, width);
+    drawBufferPane(activeBuffer(), 2, height - 4, width);
+    drawShortcutHint(height - 3, width);
     drawStatusBar(height - 2, width);
     drawInputLine(height - 1, width);
     refresh();
