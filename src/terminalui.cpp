@@ -1583,7 +1583,7 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/accept"), QStringLiteral("/decline"),
         QStringLiteral("/canceltransfer"), QStringLiteral("/resume"),
         QStringLiteral("/cleartransfer"),
-        QStringLiteral("/help"), QStringLiteral("/join"),
+        QStringLiteral("/help"), QStringLiteral("/j"), QStringLiteral("/join"),
         QStringLiteral("/joinprivate"), QStringLiteral("/members"),
         QStringLiteral("/msg"), QStringLiteral("/names"),
         QStringLiteral("/nick"), QStringLiteral("/options"),
@@ -4387,7 +4387,7 @@ void TerminalUi::handleCommand(const QString &line)
         return;
     }
 
-    if (command == QStringLiteral("join")) {
+    if (command == QStringLiteral("join") || command == QStringLiteral("j")) {
         if (!entry || !entry->connected) {
             status(QStringLiteral("Select an online connection first."));
             return;
@@ -4408,8 +4408,13 @@ void TerminalUi::handleCommand(const QString &line)
         m_closedChatBuffers.remove(
             bufferKey(QStringLiteral("chat"), entry->id, room));
         Buffer *buffer = ensureBuffer(QStringLiteral("chat"), entry->id, room, room, true);
-        append(buffer, QStringLiteral("*** joining %1…").arg(room), false);
-        entry->backend->joinRoom(room, false);
+        const bool privateRoom = entry->settings.protocol == ConnectionSettings::Protocol::Oscar;
+        append(buffer,
+               privateRoom
+                   ? QStringLiteral("*** joining private room %1…").arg(room)
+                   : QStringLiteral("*** joining %1…").arg(room),
+               false);
+        entry->backend->joinRoom(room, privateRoom);
         return;
     }
 
@@ -4735,7 +4740,8 @@ void TerminalUi::showHelp()
         QStringLiteral("CONVERSATIONS"),
         QStringLiteral("  /msg USER MESSAGE            private message (encrypted automatically if secure)"),
         QStringLiteral("  /query USER                  open a PM buffer"),
-        QStringLiteral("  /join ROOM                   join/open an AIM room or IRC channel"),
+        QStringLiteral("  /join ROOM                   IRC channel; AIM private chatroom"),
+        QStringLiteral("  /j ROOM                      alias of /join"),
         QStringLiteral("  /joinprivate ROOM            AIM private exchange room"),
         QStringLiteral("  /say MESSAGE                 send to active room"),
         QStringLiteral("  /window N|next|prev|NAME     switch buffers (/buffer and /use also work)"),

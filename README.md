@@ -1,11 +1,16 @@
-# WaffleHouse-Client 2.5.4-r3
+# WaffleHouse-Client 2.5.4-r5
 
-**WaffleHouse-Client 2.5.4-r3** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.4-r5** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
 > This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
 
+
+
+## 2.5.4-r5 AIM `/join` private-room compatibility
+
+2.5.4-r5 keeps `/j ROOM` as a true alias of `/join ROOM`, but makes the shared command protocol-aware: IRC joins remain normal public-channel joins, while AIM/OSCAR `/join` and `/j` now use the same private-exchange room behavior as `/joinprivate`. This matches the current OSCAR service where public-room discovery/join is unavailable.
 
 
 ## 2.5.4-r3 build lifecycle + status-bar cleanup

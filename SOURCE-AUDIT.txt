@@ -1,3 +1,9 @@
+2.5.4-r5 AIM /join private-room compatibility
+--------------------------------------
+- AIM/OSCAR /join and /j route through private-room exchange semantics; IRC stays public-channel.
+- Registers `/j` as a true alias of `/join` in dispatch, completion, and help.
+- Uses the existing AIM/OSCAR room and IRC channel join implementation without duplicate join logic.
+
 2.5.4-r3 build lifecycle/status-bar update
 ----------------------------------------------
 - Folds client-up lifecycle behavior into build.sh with build-before-replace upgrades and config-preserving uninstall.

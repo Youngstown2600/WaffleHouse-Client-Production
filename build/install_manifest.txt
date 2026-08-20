@@ -1,0 +1,2 @@
+/usr/local/bin/wafflehouse-client
+/usr/local/share/applications/wafflehouse-client.desktop

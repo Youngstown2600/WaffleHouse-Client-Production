@@ -1,3 +1,12 @@
+# WaffleHouse-Client 2.5.4-r5 — 2026-08-20
+
+- AIM/OSCAR `/join ROOM` and `/j ROOM` now invoke the private-room exchange path used by `/joinprivate`.
+- IRC `/join` and `/j` retain normal public-channel behavior.
+- `/j` remains a single-dispatch alias of `/join`; help text now documents protocol-aware behavior.
+
+- Fixed CLI `/j` shorthand so it is actually registered in slash-command dispatch, tab completion, and help.
+- `/j ROOM` now executes the exact same AIM chatroom / IRC channel join path as `/join ROOM`.
+
 # WaffleHouse-Client 2.5.4-r3 — 2026-08-20
 
 - Folded upgrade/uninstall lifecycle into `build.sh`: `--upgrade`, `--uninstall`, `--remove-only`, `--yes`, prefix auto-detection, build-before-replace, legacy launcher cleanup, and preserved user configuration.
