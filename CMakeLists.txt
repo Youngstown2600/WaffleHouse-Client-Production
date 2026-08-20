@@ -108,7 +108,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="2.5.4-r2"
+    APP_VERSION_STRING="2.5.4-r3"
 )
 
 target_link_libraries(${APP_EXECUTABLE} PRIVATE

@@ -9,6 +9,10 @@ DRY_RUN=0
 AUTO_DEPS=1
 INSTALL_MODE=ask
 INSTALL_PREFIX=/usr/local
+PREFIX_EXPLICIT=0
+UPGRADE_MODE=0
+UNINSTALL_MODE=0
+ASSUME_YES=0
 BUILD_TYPE=Release
 USER_HOME=${HOME:-$ROOT_DIR}
 PJSIP_PREFIX=${PJSIP_PREFIX:-$USER_HOME/.local/wafflehouse-pjsip}
@@ -42,7 +46,7 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 2.5.4-r2, the unified C++ GUI/CLI executable.
+Build WaffleHouse-Client 2.5.4-r3, the unified C++ GUI/CLI executable.
 
 The builder performs a full dependency preflight. Missing dependencies are
 installed automatically on supported Linux package managers or with FreeBSD pkg,
@@ -56,6 +60,11 @@ Options:
   --dry-run               Show dependency/build/install actions without changing anything
   --no-auto-deps          Do not install missing dependencies automatically
   --install               Build and install after a successful build
+  --upgrade               Clean-build and upgrade the detected/current installation
+                          while preserving all per-user configuration
+  --uninstall             Remove installed application files but preserve user config
+  --remove-only           Alias of --uninstall (client-up.sh compatibility)
+  --yes, -y               Do not ask for upgrade/uninstall confirmation
   --no-install            Build only; do not offer installation
   --prefix PATH           Installation prefix (default: /usr/local)
   --jobs N                Parallel build jobs (default: detected CPU count)
@@ -77,11 +86,15 @@ while [ "$#" -gt 0 ]; do
     --dry-run) DRY_RUN=1 ;;
     --no-auto-deps) AUTO_DEPS=0 ;;
     --install) INSTALL_MODE=yes ;;
+    --upgrade) UPGRADE_MODE=1; INSTALL_MODE=yes; CLEAN=1 ;;
+    --uninstall|--remove-only) UNINSTALL_MODE=1; INSTALL_MODE=no ;;
+    --yes|-y) ASSUME_YES=1 ;;
     --no-install) INSTALL_MODE=no ;;
     --prefix)
       shift
       [ "$#" -gt 0 ] || { echo "--prefix requires a path" >&2; exit 2; }
       INSTALL_PREFIX=$1
+      PREFIX_EXPLICIT=1
       ;;
     --jobs)
       shift
@@ -100,6 +113,29 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+# Uninstall/remove-only wins if both it and --upgrade were supplied (for
+# compatibility with the historical client-up.sh --remove-only workflow).
+if [ "$UNINSTALL_MODE" -eq 1 ]; then
+  UPGRADE_MODE=0
+  INSTALL_MODE=no
+fi
+
+# Upgrade/uninstall mode follows the currently installed standard PREFIX/bin
+# layout when --prefix was not supplied. Normal build/install keeps /usr/local
+# as its predictable default.
+if [ "$PREFIX_EXPLICIT" -eq 0 ] && { [ "$UPGRADE_MODE" -eq 1 ] || [ "$UNINSTALL_MODE" -eq 1 ]; }; then
+  if command -v wafflehouse-client >/dev/null 2>&1; then
+    CURRENT_BIN=$(command -v wafflehouse-client)
+    case "$CURRENT_BIN" in
+      */bin/wafflehouse-client)
+        DETECTED_PREFIX=${CURRENT_BIN%/bin/wafflehouse-client}
+        [ -n "$DETECTED_PREFIX" ] || DETECTED_PREFIX=/
+        INSTALL_PREFIX=$DETECTED_PREFIX
+        ;;
+    esac
+  fi
+fi
+
 if [ -z "$JOBS" ]; then
   if command -v nproc >/dev/null 2>&1; then
     JOBS=$(nproc)
@@ -113,18 +149,25 @@ fi
 if [ "$INSTALL_PREFIX" != "/" ]; then INSTALL_PREFIX=${INSTALL_PREFIX%/}; fi
 INSTALL_BINDIR="$INSTALL_PREFIX/bin"
 INSTALL_DESKTOPDIR="$INSTALL_PREFIX/share/applications"
+INSTALL_BIN="$INSTALL_BINDIR/wafflehouse-client"
+INSTALL_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-client.desktop"
+LEGACY_GUI="$INSTALL_BINDIR/wafflehouse-gui"
+LEGACY_CLI="$INSTALL_BINDIR/wafflehouse-cli"
+LEGACY_GUI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-gui.desktop"
+LEGACY_CLI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-cli.desktop"
 
 show_header() {
   cat <<EOF2
 ============================================================
-              WAFFLEHOUSE-CLIENT 2.5.4-r2 + SIP SOFTPHONE
+              WAFFLEHOUSE-CLIENT 2.5.4-r3 + SIP SOFTPHONE
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
 Build type:     $BUILD_TYPE
 Install prefix: $INSTALL_PREFIX
-Binary target:  $INSTALL_BINDIR/wafflehouse-client
+Binary target:  $INSTALL_BIN
 Auto deps:      $(if [ "$AUTO_DEPS" -eq 1 ]; then echo enabled; else echo disabled; fi)
+Upgrade mode:   $(if [ "$UPGRADE_MODE" -eq 1 ]; then echo enabled; else echo disabled; fi)
 
 The dependency preflight checks:
   - CMake 3.20 or newer
@@ -1226,24 +1269,46 @@ ask_install() {
   [ "$INSTALL_MODE" = ask ] || return 0
   if [ ! -t 0 ]; then INSTALL_MODE=no; return 0; fi
   echo "Build target: ./build/wafflehouse-client"
-  echo "System installation is optional."
-  printf 'Install to %s after a successful build? [y/N] ' "$INSTALL_BINDIR"
+  if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
+    echo "Existing installation detected: $INSTALL_BIN"
+    printf 'Upgrade/install to %s after a successful build? [y/N] ' "$INSTALL_BINDIR"
+  else
+    echo "System installation is optional."
+    printf 'Install to %s after a successful build? [y/N] ' "$INSTALL_BINDIR"
+  fi
   IFS= read -r answer
   case "$answer" in y|Y|yes|YES|Yes) INSTALL_MODE=yes ;; *) INSTALL_MODE=no ;; esac
 }
 
+confirm_lifecycle_action() {
+  action=$1
+  [ "$ASSUME_YES" -eq 1 ] && return 0
+  [ "$DRY_RUN" -eq 1 ] && return 0
+  [ -t 0 ] || return 0
+  case "$action" in
+    upgrade)
+      printf 'Upgrade WaffleHouse-Client under %s and preserve user configuration? [y/N] ' "$INSTALL_PREFIX"
+      ;;
+    uninstall)
+      printf 'Remove WaffleHouse-Client application files under %s and preserve user configuration? [y/N] ' "$INSTALL_PREFIX"
+      ;;
+  esac
+  IFS= read -r answer
+  case "$answer" in y|Y|yes|YES|Yes) return 0 ;; *) echo "Action cancelled."; exit 0 ;; esac
+}
+
 prepare_privileges() {
-  [ "$INSTALL_MODE" = yes ] || return 0
+  if [ "$INSTALL_MODE" != yes ] && [ "$UNINSTALL_MODE" -ne 1 ]; then return 0; fi
   bind_parent=$INSTALL_BINDIR; data_parent=$INSTALL_DESKTOPDIR
   while [ ! -d "$bind_parent" ] && [ "$bind_parent" != "/" ]; do bind_parent=$(dirname "$bind_parent"); done
   while [ ! -d "$data_parent" ] && [ "$data_parent" != "/" ]; do data_parent=$(dirname "$data_parent"); done
   if [ -w "$bind_parent" ] && [ -w "$data_parent" ]; then PRIV_METHOD=none; return 0; fi
-  if [ "$DRY_RUN" -eq 1 ]; then PRIV_METHOD=dry-run; echo "[dry-run] Installation may require root privileges for $INSTALL_PREFIX."; return 0; fi
+  if [ "$DRY_RUN" -eq 1 ]; then PRIV_METHOD=dry-run; echo "[dry-run] Installation lifecycle may require root privileges for $INSTALL_PREFIX."; return 0; fi
   if [ "$(id -u)" -eq 0 ]; then PRIV_METHOD=root; return 0; fi
-  if command -v sudo >/dev/null 2>&1; then PRIV_METHOD=sudo; echo "Root privileges are required only for the install step."; sudo -v; return 0; fi
-  if command -v doas >/dev/null 2>&1; then PRIV_METHOD=doas; echo "Root privileges are required only for the install step."; doas true; return 0; fi
-  if command -v su >/dev/null 2>&1; then PRIV_METHOD=su; echo "Root privileges are required only for the install step; su will be used."; return 0; fi
-  echo "Cannot install to $INSTALL_PREFIX: no root helper is available." >&2; exit 1
+  if command -v sudo >/dev/null 2>&1; then PRIV_METHOD=sudo; echo "Root privileges are required only for the install/upgrade lifecycle step."; sudo -v; return 0; fi
+  if command -v doas >/dev/null 2>&1; then PRIV_METHOD=doas; echo "Root privileges are required only for the install/upgrade lifecycle step."; doas true; return 0; fi
+  if command -v su >/dev/null 2>&1; then PRIV_METHOD=su; echo "Root privileges are required only for the install/upgrade lifecycle step; su will be used."; return 0; fi
+  echo "Cannot modify the installation under $INSTALL_PREFIX: no root helper is available." >&2; exit 1
 }
 
 run_privileged() {
@@ -1260,7 +1325,53 @@ run_privileged() {
   esac
 }
 
+refresh_desktop_database() {
+  [ "$DRY_RUN" -eq 0 ] || return 0
+  command -v update-desktop-database >/dev/null 2>&1 || return 0
+  [ -d "$INSTALL_DESKTOPDIR" ] || return 0
+  update-desktop-database "$INSTALL_DESKTOPDIR" >/dev/null 2>&1 || true
+}
+
+remove_path_if_present() {
+  target=$1
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    run_privileged rm -f "$target"
+    echo "Removed obsolete install artifact: $target"
+  fi
+}
+
+cleanup_legacy_installation() {
+  # The unified executable/desktop entry are replaced by cmake --install after
+  # the new build succeeds. Only obsolete 1.x split launchers are removed here.
+  remove_path_if_present "$LEGACY_GUI"
+  remove_path_if_present "$LEGACY_CLI"
+  remove_path_if_present "$LEGACY_GUI_DESKTOP"
+  remove_path_if_present "$LEGACY_CLI_DESKTOP"
+}
+
+uninstall_application_files() {
+  prepare_privileges
+  echo "==> Removing installed WaffleHouse-Client application files"
+  remove_path_if_present "$INSTALL_BIN"
+  remove_path_if_present "$INSTALL_DESKTOP"
+  cleanup_legacy_installation
+  refresh_desktop_database
+  echo
+  echo "Application files removed. Per-user WaffleHouse configuration was preserved."
+}
+
 show_header
+
+if [ "$UNINSTALL_MODE" -eq 1 ]; then
+  confirm_lifecycle_action uninstall
+  uninstall_application_files
+  exit 0
+fi
+
+if [ "$UPGRADE_MODE" -eq 1 ]; then
+  echo "Integrated upgrade mode: build first, then replace installed application files; user configuration is never removed."
+  confirm_lifecycle_action upgrade
+fi
 
 if [ "$AUDIO_DIAG_ONLY" -eq 1 ]; then
   run_audio_preflight
@@ -1288,7 +1399,7 @@ ask_install
 if [ "$INSTALL_MODE" = yes ]; then echo "Build will be installed after compilation succeeds."; else echo "Build only; no system installation will be performed."; fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 2.5.4-r2"
+echo "==> Configuring WaffleHouse-Client 2.5.4-r3"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1299,17 +1410,23 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE"
 
 echo
-echo "==> Building WaffleHouse-Client 2.5.4-r2"
+echo "==> Building WaffleHouse-Client 2.5.4-r3"
 run_cmd cmake --build build --parallel "$JOBS"
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 2.5.4-r2"
+  echo "==> Installing WaffleHouse-Client 2.5.4-r3"
   prepare_privileges
+  if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
+    echo "Existing WaffleHouse-Client detected; performing in-place upgrade after successful build."
+  fi
+  cleanup_legacy_installation
   run_privileged cmake --install "$ROOT_DIR/build" --prefix "$INSTALL_PREFIX"
+  refresh_desktop_database
   echo
-  echo "Installed executable: $INSTALL_BINDIR/wafflehouse-client"
-  echo "Installed desktop entry: $INSTALL_DESKTOPDIR/wafflehouse-client.desktop"
+  echo "Installed executable: $INSTALL_BIN"
+  echo "Installed desktop entry: $INSTALL_DESKTOP"
+  echo "User configuration preserved: yes"
 else
   echo
   echo "Built executable: $ROOT_DIR/build/wafflehouse-client"
@@ -1322,4 +1439,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 2.5.4-r2 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 2.5.4-r3 build complete."; fi

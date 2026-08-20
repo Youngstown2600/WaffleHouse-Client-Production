@@ -1,3 +1,8 @@
+2.5.4-r3 build lifecycle/status-bar update
+----------------------------------------------
+- Folds client-up lifecycle behavior into build.sh with build-before-replace upgrades and config-preserving uninstall.
+- Simplifies the CLI status bar to the active numbered screen plus state; the global Status screen remains IDLE.
+
 2.5.4-r2 saved-profile persistence hotfix
 -------------------------------------------
 - Restored QSettings profiles remain persistent in memory without rewriting the settings array during the read pass.

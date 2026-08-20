@@ -1,3 +1,10 @@
+# WaffleHouse-Client 2.5.4-r3 — 2026-08-20
+
+- Folded upgrade/uninstall lifecycle into `build.sh`: `--upgrade`, `--uninstall`, `--remove-only`, `--yes`, prefix auto-detection, build-before-replace, legacy launcher cleanup, and preserved user configuration.
+- Reduced `client-up.sh` to a compatibility wrapper around `build.sh --upgrade`.
+- Simplified the CLI status bar to `[time] [screen#:buffer] [state]`, removing the redundant unnumbered selected-connection label.
+- The global Status screen now remains `IDLE` instead of borrowing the selected account's offline/online state.
+
 # WaffleHouse-Client 2.5.4-r2 — 2026-08-20
 
 - Fixed restored QSettings profiles being incorrectly marked transient in 2.5.4-r1.

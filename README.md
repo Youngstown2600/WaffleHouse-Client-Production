@@ -1,11 +1,18 @@
-# WaffleHouse-Client 2.5.4-r2
+# WaffleHouse-Client 2.5.4-r3
 
-**WaffleHouse-Client 2.5.4-r2** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.4-r3** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
 > This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
 
+
+
+## 2.5.4-r3 build lifecycle + status-bar cleanup
+
+2.5.4-r3 folds the old `client-up.sh` upgrade/remove lifecycle into `build.sh`. Use `./build.sh --upgrade` for a clean build followed by an in-place install that preserves per-user settings, or `./build.sh --uninstall` to remove application files while preserving configuration. The compatibility `client-up.sh` now delegates to `build.sh --upgrade`. The builder compiles successfully before it replaces the installed unified binary and cleans obsolete split GUI/CLI launchers.
+
+The CLI Irssi-style status bar now reports only the active numbered screen and its state, for example `[00:15] [3:AIM:nexus] [ONLINE]`. The global Status buffer reports `[1:Status] [IDLE]`; a separately selected account is no longer rendered as a redundant unnumbered field.
 
 ## 2.5.4-r2 saved-account persistence hotfix
 
@@ -16,7 +23,7 @@ It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/O
 
 
 
-## 2.5.4-r2 Telnet disconnect/curses repaint hotfix
+## 2.5.4-r1 Telnet disconnect/curses repaint hotfix
 
 - Avoids calling `QAbstractSocket::waitForDisconnected()` after a Telnet socket is already in `UnconnectedState`, eliminating the Qt warning that could be written directly through an ncurses screen.
 - Forces a full ncurses repaint when a backend disconnect completes so any external terminal write cannot leave stale/corrupted screen cells behind.

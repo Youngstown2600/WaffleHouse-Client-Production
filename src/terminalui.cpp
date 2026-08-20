@@ -1237,20 +1237,19 @@ void TerminalUi::drawStatusBar(int row, int width)
     clrtoeol();
 
     Buffer *buffer = activeBuffer();
+    // The active screen is authoritative for the status bar. Do not fall back
+    // to the merely selected account: doing so produced a redundant unnumbered
+    // [AIM:name] field next to the numbered [screen:buffer] field and could
+    // make the global Status screen look like it belonged to an offline account.
     ConnectionEntry *entry = buffer ? connectionById(buffer->connectionId) : nullptr;
-    if (!entry) {
-        entry = selectedConnection();
-    }
 
     const QString clock = QDateTime::currentDateTime().toString(QStringLiteral("HH:mm"));
     const QString bufferText = buffer
         ? QStringLiteral("%1:%2").arg(buffer->number).arg(buffer->name)
         : QStringLiteral("-");
 
-    QString connectionText = QStringLiteral("no-connection");
     QString stateText = QStringLiteral("IDLE");
     if (entry) {
-        connectionText = connectionLabel(entry);
         if (entry->settings.protocol == ConnectionSettings::Protocol::Sip && m_sipController) {
             const QString accountId = entry->backend ? entry->backend->id() : QString();
             stateText = accountId.isEmpty()
@@ -1272,9 +1271,8 @@ void TerminalUi::drawStatusBar(int row, int width)
         }
     }
 
-    QString text = QStringLiteral(" [%1] [%2] [%3] [%4]")
+    QString text = QStringLiteral(" [%1] [%2] [%3]")
                        .arg(clock)
-                       .arg(connectionText)
                        .arg(bufferText)
                        .arg(stateText);
     if (unread > 0) {

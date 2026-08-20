@@ -30,8 +30,10 @@ grep -F 'drawInputLine(height - 1, width);' "$TERM" >/dev/null \
 
 grep -F 'QDateTime::currentDateTime().toString(QStringLiteral("HH:mm"))' "$TERM" >/dev/null \
     || fail 'status bar clock missing'
-grep -F 'connectionLabel(entry)' "$TERM" >/dev/null \
-    || fail 'status bar connection context missing'
+! awk '/void TerminalUi::drawStatusBar\(int row, int width\)/{f=1} f{print} /^}/{if(f){exit}}' "$TERM" | grep -Fq 'selectedConnection()' \
+    || fail 'status bar still falls back to selected connection'
+! awk '/void TerminalUi::drawStatusBar\(int row, int width\)/{f=1} f{print} /^}/{if(f){exit}}' "$TERM" | grep -Fq '.arg(connectionText)' \
+    || fail 'status bar still renders redundant unnumbered connection label'
 grep -F 'buffer->number' "$TERM" >/dev/null \
     || fail 'status bar buffer number missing'
 grep -F 'A_REVERSE | A_BOLD' "$TERM" >/dev/null \
