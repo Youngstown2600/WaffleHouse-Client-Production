@@ -1,3 +1,14 @@
+## 2.5.2 ANSI/BBS terminal + explicit connection workflow — 2026-08-19
+
+- Replaced Telnet ANSI-stripping transcript behavior with a shared ANSI screen model for GUI and ncurses CLI.
+- Added CP437 box/block character decoding, cursor movement, screen/line erase, SGR color/attribute handling, CR/LF/backspace/tab semantics, save/restore cursor, and fixed-screen rendering.
+- Added raw BBS keyboard input (Enter, Backspace, Escape, arrows, Home/End, Delete, PageUp/PageDown in GUI; raw printable/control input in CLI while the BBS buffer is active).
+- Added multi-BBS list import from GUI and CLI `/bbsimport` with CSV/TSV/JSON/pipe/simple text formats and duplicate suppression.
+- Added CLI `/telnet HOST PORT` and `/telnet HOST:PORT` ad-hoc sessions.
+- Added `/connect PROTOCOL:name` matching such as `/connect AIM:nexus`; connecting explicitly opens/populates the saved profile status buffer.
+- New connections and imported BBS entries are save-only and no longer auto-connect.
+- CLI live connection strip now hides inactive saved profiles; startup no longer creates status buffers for every offline profile.
+
 ## 2.5.1 CLI status-line polish — 2026-08-19
 
 - Reworked the ncurses bottom layout to use an Irssi-style full-width status bar directly above the input prompt.

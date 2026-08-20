@@ -3,6 +3,7 @@
 #include "appbranding.h"
 
 #include <QObject>
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 #include <QUuid>
@@ -41,7 +42,7 @@ struct ConnectionSettings {
 
     // Telnet/MUD/BBS settings. username is used as an optional profile/session
     // label for Telnet connections rather than being transmitted automatically.
-    QString telnetTerminalType = QStringLiteral("xterm-256color");
+    QString telnetTerminalType = QStringLiteral("ANSI");
 
     // SIP/VoIP settings. SIP is a first-class saved WaffleHouse connection type.
     // username/password/savePassword are shared with the normal connection model.
@@ -99,6 +100,7 @@ public:
     virtual void addBuddy(const QString &name);
     virtual void removeBuddy(const QString &name);
     virtual void setTerminalSize(int columns, int rows);
+    virtual void sendTerminalInput(const QByteArray &bytes);
 
 signals:
     void eventReceived(const QString &kind,

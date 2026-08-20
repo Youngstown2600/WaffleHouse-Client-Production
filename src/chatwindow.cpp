@@ -2,6 +2,7 @@
 
 #include "appbranding.h"
 #include "backend.h"
+#include "ansiterminalwidget.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -110,10 +111,24 @@ void ChatWindow::buildUi()
     topLine->addWidget(m_connectionLabel);
     outer->addLayout(topLine);
 
-    m_transcript = new QPlainTextEdit(central);
-    m_transcript->setReadOnly(true);
-    m_transcript->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    m_transcript->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    if (m_kind == QStringLiteral("terminal")) {
+        m_terminal = new AnsiTerminalWidget(central);
+        outer->addWidget(m_terminal, 1);
+        auto *hint = new QLabel(QStringLiteral("ANSI/BBS terminal · click the screen and type · CP437 · raw keys enabled"), central);
+        hint->setTextFormat(Qt::PlainText);
+        outer->addWidget(hint);
+        connect(m_terminal, &AnsiTerminalWidget::terminalBytes, this,
+                [this](const QByteArray &bytes) { emit terminalBytesSubmitted(this, bytes); });
+        connect(m_terminal, &AnsiTerminalWidget::terminalSizeChanged, this,
+                [this](int columns, int rows) {
+                    if (m_backend) m_backend->setTerminalSize(columns, rows);
+                });
+    } else {
+        m_transcript = new QPlainTextEdit(central);
+        m_transcript->setReadOnly(true);
+        m_transcript->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        m_transcript->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    }
 
     if (m_kind == QStringLiteral("chat")) {
         auto *splitter = new QSplitter(Qt::Horizontal, central);
@@ -143,7 +158,7 @@ void ChatWindow::buildUi()
         splitter->setStretchFactor(1, 0);
         splitter->setSizes({545, 145});
         outer->addWidget(splitter, 1);
-    } else {
+    } else if (m_kind != QStringLiteral("terminal")) {
         outer->addWidget(m_transcript, 1);
     }
 
@@ -187,27 +202,29 @@ void ChatWindow::buildUi()
     connect(m_opacitySlider, &QSlider::valueChanged,
             this, &ChatWindow::opacitySliderChanged);
 
-    auto *inputRow = new QHBoxLayout;
-    inputRow->setSpacing(4);
-    m_messageEdit = new QLineEdit(central);
-    m_messageEdit->setPlaceholderText(
-        m_kind == QStringLiteral("terminal")
-            ? QStringLiteral("Type a Telnet command/line…")
-            : QStringLiteral("Type a message…"));
-    m_sendButton = new QPushButton(QStringLiteral("Send"), central);
-    inputRow->addWidget(m_messageEdit, 1);
-    inputRow->addWidget(m_sendButton);
-    outer->addLayout(inputRow);
-
-    m_messageEdit->installEventFilter(this);
-    connect(m_messageEdit, &QLineEdit::textEdited, this, [this] {
-        resetCommandCompletion();
-        resetMemberCompletion();
-    });
-    connect(m_messageEdit, &QLineEdit::returnPressed,
-            this, &ChatWindow::sendMessage);
-    connect(m_sendButton, &QPushButton::clicked,
-            this, &ChatWindow::sendMessage);
+    if (m_kind != QStringLiteral("terminal")) {
+        auto *inputRow = new QHBoxLayout;
+        inputRow->setSpacing(4);
+        m_messageEdit = new QLineEdit(central);
+        m_messageEdit->setPlaceholderText(
+            m_kind == QStringLiteral("terminal")
+                ? QStringLiteral("Type a Telnet command/line…")
+                : QStringLiteral("Type a message…"));
+        m_sendButton = new QPushButton(QStringLiteral("Send"), central);
+        inputRow->addWidget(m_messageEdit, 1);
+        inputRow->addWidget(m_sendButton);
+        outer->addLayout(inputRow);
+    
+        m_messageEdit->installEventFilter(this);
+        connect(m_messageEdit, &QLineEdit::textEdited, this, [this] {
+            resetCommandCompletion();
+            resetMemberCompletion();
+        });
+        connect(m_messageEdit, &QLineEdit::returnPressed,
+                this, &ChatWindow::sendMessage);
+        connect(m_sendButton, &QPushButton::clicked,
+                this, &ChatWindow::sendMessage);
+    }
 
     setCentralWidget(central);
 }
@@ -387,9 +404,11 @@ void ChatWindow::refreshTitle()
 
 void ChatWindow::appendMessage(const QString &text)
 {
-    if (!m_transcript) {
+    if (m_kind == QStringLiteral("terminal") && m_terminal) {
+        m_terminal->feed(text);
         return;
     }
+    if (!m_transcript) return;
 
     if (!m_showTimestamps) {
         m_transcript->appendPlainText(text);
@@ -583,15 +602,8 @@ void ChatWindow::opacitySliderChanged(int percent)
 
 void ChatWindow::updateTerminalSize()
 {
-    if (!m_backend || m_kind != QStringLiteral("terminal") || !m_transcript) {
-        return;
-    }
-    const QFontMetrics metrics(m_transcript->font());
-    const int charWidth = std::max(1, metrics.horizontalAdvance(QLatin1Char('M')));
-    const int lineHeight = std::max(1, metrics.lineSpacing());
-    const QSize area = m_transcript->viewport()->size();
-    m_backend->setTerminalSize(std::max(20, area.width() / charWidth),
-                               std::max(5, area.height() / lineHeight));
+    if (!m_backend || m_kind != QStringLiteral("terminal") || !m_terminal) return;
+    m_backend->setTerminalSize(m_terminal->terminalColumns(), m_terminal->terminalRows());
 }
 
 void ChatWindow::resizeEvent(QResizeEvent *event)

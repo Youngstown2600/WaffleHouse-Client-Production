@@ -5,6 +5,7 @@
 #include "ircbackend.h"
 #include "oscarbackend.h"
 #include "telnetbackend.h"
+#include "bbsdirectory.h"
 #include "sipbackend.h"
 #include "sipcontroller.h"
 #include "trunkmonkey/Profile.h"
@@ -583,6 +584,8 @@ TerminalUi::Buffer *TerminalUi::ensureBuffer(const QString &kind,
         buffer->number = m_buffers.size() + 1;
         buffer->key = key;
         buffer->kind = kind;
+        if (kind == QStringLiteral("terminal"))
+            buffer->terminal = std::make_unique<AnsiTerminalModel>(80, 25);
         buffer->connectionId = connectionId;
         buffer->target = target;
         buffer->name = !displayName.isEmpty()
@@ -796,18 +799,16 @@ void TerminalUi::drawHeader(int width)
 void TerminalUi::drawConnectionsBar(int row, int width)
 {
     QString line = QStringLiteral(" Connections: ");
+    int active = 0;
     for (int i = 0; i < m_connections.size(); ++i) {
         ConnectionEntry *entry = m_connections.at(i);
-        const bool selected = entry && entry->id == m_selectedConnectionId;
-        QString token = QStringLiteral("%1:%2")
-                            .arg(i + 1)
-                            .arg(connectionLabel(entry));
-        line += selected ? QStringLiteral("[%1] ").arg(token)
-                         : QStringLiteral(" %1  ").arg(token);
+        if (!entry || (!entry->connected && !entry->connecting)) continue;
+        ++active;
+        const bool selected = entry->id == m_selectedConnectionId;
+        const QString token = QStringLiteral("%1:%2").arg(i + 1).arg(connectionLabel(entry));
+        line += selected ? QStringLiteral("[%1] ").arg(token) : QStringLiteral(" %1  ").arg(token);
     }
-    if (m_connections.isEmpty()) {
-        line += QStringLiteral("none — /add creates one");
-    }
+    if (!active) line += QStringLiteral("none active — /connect PROTOCOL:name or /telnet host:port");
     safeAdd(row, 0, line.left(width).leftJustified(width), A_DIM, width);
 }
 
@@ -981,7 +982,28 @@ void TerminalUi::drawScrollBar(int top, int bottom, int x,
 void TerminalUi::drawBufferPane(Buffer *buffer,
                                 int top, int bottom, int width)
 {
-    if (!buffer || bottom < top) {
+    if (!buffer || bottom < top) return;
+
+    if (buffer->kind == QStringLiteral("terminal") && buffer->terminal) {
+        const int height = bottom - top + 1;
+        const int cols = std::min(80, std::max(1, width - 2));
+        for (int r = 0; r < height && r < buffer->terminal->rows(); ++r) {
+            int c = 0;
+            while (c < cols && c < buffer->terminal->columns()) {
+                const auto cell = buffer->terminal->cell(r, c);
+                int fg = cell.fg, bg = cell.bg;
+                if (cell.inverse) std::swap(fg, bg);
+                static const short colors[8] = {COLOR_BLACK, COLOR_RED, COLOR_GREEN, COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA, COLOR_CYAN, COLOR_WHITE};
+                int attr = cell.bold ? A_BOLD : 0;
+                const short pair = static_cast<short>(16 + fg * 8 + bg);
+                if (has_colors() && pair > 0 && pair < COLOR_PAIRS) {
+                    init_pair(pair, colors[std::clamp(fg,0,7)], colors[std::clamp(bg,0,7)]);
+                    attr |= COLOR_PAIR(pair);
+                }
+                safeAdd(top + r, 1 + c, QString(cell.ch), attr, 1);
+                ++c;
+            }
+        }
         return;
     }
 
@@ -1114,7 +1136,9 @@ void TerminalUi::drawInputLine(int row, int width)
 {
     Buffer *buffer = activeBuffer();
     QString promptText;
-    if (!buffer || buffer->kind == QStringLiteral("global")
+    if (buffer && buffer->kind == QStringLiteral("terminal")) {
+        promptText = QStringLiteral("[BBS raw · Ctrl-N/P leaves]> ");
+    } else if (!buffer || buffer->kind == QStringLiteral("global")
         || buffer->kind == QStringLiteral("connection")) {
         promptText = QStringLiteral("> ");
     } else {
@@ -1182,7 +1206,7 @@ void TerminalUi::handleInput()
 
 void TerminalUi::handleCharacter(uint codepoint)
 {
-    if (codepoint == 9) { // Tab: complete slash commands
+    if (codepoint == 9 && (!activeBuffer() || activeBuffer()->kind != QStringLiteral("terminal"))) {
         completeCommand();
         return;
     }
@@ -1201,6 +1225,22 @@ void TerminalUi::handleCharacter(uint codepoint)
     }
     if (codepoint == 12) { // Ctrl-L
         clearok(stdscr, TRUE);
+        return;
+    }
+    if (Buffer *buffer = activeBuffer(); buffer && buffer->kind == QStringLiteral("terminal")) {
+        ConnectionEntry *entry = connectionById(buffer->connectionId);
+        if (entry && entry->backend && entry->connected) {
+            QByteArray bytes;
+            if (codepoint == 10 || codepoint == 13) bytes = QByteArray("\r");
+            else if (isTerminalBackspace(codepoint)) bytes = QByteArray(1, '\x08');
+            else if (codepoint == 9) bytes = QByteArray(1, '\t');
+            else if (codepoint == 27) bytes = QByteArray(1, '\x1b');
+            else if (codepoint >= 32) {
+                const char32_t cp = static_cast<char32_t>(codepoint);
+                bytes = QString::fromUcs4(&cp, 1).toUtf8();
+            }
+            if (!bytes.isEmpty()) entry->backend->sendTerminalInput(bytes);
+        }
         return;
     }
     if (codepoint == 10 || codepoint == 13) {
@@ -1247,8 +1287,31 @@ void TerminalUi::handleSpecialKey(int key)
     resetCommandCompletion();
     if (key >= KEY_F(1) && key <= KEY_F(9)) {
         const int index = key - KEY_F(1);
-        if (index < m_buffers.size()) {
-            switchBuffer(index);
+        if (index < m_buffers.size()) switchBuffer(index);
+        return;
+    }
+    if (Buffer *buffer = activeBuffer(); buffer && buffer->kind == QStringLiteral("terminal")) {
+        ConnectionEntry *entry = connectionById(buffer->connectionId);
+        if (entry && entry->backend && entry->connected) {
+            QByteArray seq;
+            switch (key) {
+            case KEY_ENTER: seq = "\r"; break;
+            case KEY_BACKSPACE: seq = QByteArray(1, '\x08'); break;
+            case KEY_UP: seq = "\x1b[A"; break;
+            case KEY_DOWN: seq = "\x1b[B"; break;
+            case KEY_RIGHT: seq = "\x1b[C"; break;
+            case KEY_LEFT: seq = "\x1b[D"; break;
+            case KEY_HOME: seq = "\x1b[H"; break;
+            case KEY_END: seq = "\x1b[F"; break;
+            case KEY_DC: seq = "\x1b[3~"; break;
+            case KEY_PPAGE: seq = "\x1b[5~"; break;
+            case KEY_NPAGE: seq = "\x1b[6~"; break;
+            case KEY_RESIZE:
+                entry->backend->setTerminalSize(80, 24);
+                break;
+            default: break;
+            }
+            if (!seq.isEmpty()) entry->backend->sendTerminalInput(seq);
         }
         return;
     }
@@ -1334,7 +1397,7 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/nick"), QStringLiteral("/options"),
         QStringLiteral("/passwd"), QStringLiteral("/part"),
         QStringLiteral("/query"), QStringLiteral("/quit"),
-        QStringLiteral("/raw"),
+        QStringLiteral("/raw"), QStringLiteral("/telnet"), QStringLiteral("/bbsimport"),
         QStringLiteral("/removebuddy"), QStringLiteral("/rooms"),
         QStringLiteral("/say"), QStringLiteral("/secure"),
         QStringLiteral("/secureoff"), QStringLiteral("/securestatus"),
@@ -1512,7 +1575,7 @@ void TerminalUi::submitInput()
     } else if (buffer->kind == QStringLiteral("chat")) {
         entry->backend->sendRoomMessage(buffer->target, line);
     } else {
-        entry->backend->sendPrivateMessage(QString(), line);
+        entry->backend->sendTerminalInput(line.toUtf8() + QByteArray("\r"));
     }
 }
 
@@ -1641,14 +1704,6 @@ TerminalUi::ConnectionEntry *TerminalUi::addConnectionEntry(
                 QStringLiteral("[error] SIP account initialization failed: %1").arg(sipError));
         }
     }
-
-    Buffer *buffer = ensureBuffer(QStringLiteral("connection"), entry->id, {},
-                                  connectionLabel(entry));
-    append(buffer,
-           QStringLiteral("Saved %1 connection profile for %2:%3.")
-               .arg(protocolName(settings.protocol), settings.server)
-               .arg(settings.port),
-           false);
 
     if (persist) {
         saveConnections();
@@ -1814,8 +1869,24 @@ TerminalUi::ConnectionEntry *TerminalUi::resolveConnection(const QString &token,
         return selectedConnection();
     }
 
+    QString protocolToken;
+    QString nameToken = trimmed;
+    const int separator = trimmed.indexOf(QLatin1Char(':'));
+    if (separator > 0) {
+        protocolToken = trimmed.left(separator).toCaseFolded();
+        nameToken = trimmed.mid(separator + 1);
+    }
+    auto protocolMatches = [&](ConnectionSettings::Protocol p) {
+        if (protocolToken.isEmpty()) return true;
+        if (p == ConnectionSettings::Protocol::Oscar) return protocolToken == "aim" || protocolToken == "oscar";
+        if (p == ConnectionSettings::Protocol::Irc) return protocolToken == "irc";
+        if (p == ConnectionSettings::Protocol::Sip) return protocolToken == "sip";
+        if (p == ConnectionSettings::Protocol::Telnet) return protocolToken == "tel" || protocolToken == "telnet" || protocolToken == "bbs";
+        return false;
+    };
+
     bool ok = false;
-    const int number = trimmed.toInt(&ok);
+    const int number = nameToken.toInt(&ok);
     if (ok && number >= 1 && number <= m_connections.size()) {
         return m_connections.at(number - 1);
     }
@@ -1824,10 +1895,11 @@ TerminalUi::ConnectionEntry *TerminalUi::resolveConnection(const QString &token,
         if (!entry) {
             continue;
         }
-        if (entry->id.startsWith(trimmed, Qt::CaseInsensitive)
-            || connectionLabel(entry).contains(trimmed, Qt::CaseInsensitive)
-            || entry->settings.username.compare(trimmed, Qt::CaseInsensitive) == 0
-            || entry->settings.server.compare(trimmed, Qt::CaseInsensitive) == 0) {
+        if (!protocolMatches(entry->settings.protocol)) continue;
+        if (entry->id.startsWith(nameToken, Qt::CaseInsensitive)
+            || connectionLabel(entry).contains(nameToken, Qt::CaseInsensitive)
+            || entry->settings.username.compare(nameToken, Qt::CaseInsensitive) == 0
+            || entry->settings.server.compare(nameToken, Qt::CaseInsensitive) == 0) {
             return entry;
         }
     }
@@ -2006,7 +2078,7 @@ void TerminalUi::loadConnections()
             value.realName = settings.value(
                 QStringLiteral("realName"), appDefaultRealName()).toString();
             value.telnetTerminalType = settings.value(
-                QStringLiteral("telnetTerminalType"), QStringLiteral("xterm-256color")).toString();
+                QStringLiteral("telnetTerminalType"), QStringLiteral("ANSI")).toString();
             value.tls = settings.value(QStringLiteral("tls"), false).toBool();
             value.ircBuddies = settings.value(QStringLiteral("ircBuddies")).toStringList();
             value.sipContacts = settings.value(QStringLiteral("sipContacts")).toStringList();
@@ -2944,6 +3016,11 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
     const QString displayName = entry->targetNames.value(
         QStringLiteral("%1|%2").arg(kind, target), target);
     Buffer *buffer = ensureBuffer(kind, entry->id, target, displayName);
+    if (kind == QStringLiteral("terminal") && buffer->terminal) {
+        buffer->terminal->feed(text);
+        buffer->unread += (buffer != activeBuffer());
+        return;
+    }
     append(buffer, text);
 }
 
@@ -3062,17 +3139,12 @@ void TerminalUi::onConnected(ConnectionEntry *entry,
     selectConnection(entry, false);
 
     if (entry->settings.protocol == ConnectionSettings::Protocol::Telnet) {
-        entry->backend->setTerminalSize(std::max(20, COLS - 2),
-                                        std::max(5, LINES - 5));
+        entry->backend->setTerminalSize(80, 24);
         const QString display = entry->settings.username.trimmed().isEmpty()
             ? entry->settings.server
             : entry->settings.username.trimmed();
         Buffer *terminal = ensureBuffer(QStringLiteral("terminal"), entry->id,
                                         entry->settings.server, display, true);
-        append(terminal,
-               QStringLiteral("*** Telnet session connected to %1")
-                   .arg(endpoint),
-               false);
     }
 }
 
@@ -3537,6 +3609,19 @@ void TerminalUi::handleCommand(const QString &line)
         return;
     }
 
+    if (command == QStringLiteral("bbsimport")) {
+        const QString path = takeArgument(rest);
+        if (path.isEmpty()) status(QStringLiteral("Usage: /bbsimport /path/to/bbs-list.csv|json|txt"));
+        else importBbsList(path);
+        return;
+    }
+    if (command == QStringLiteral("telnet")) {
+        const QString spec = takeArgument(rest);
+        const QString port = takeArgument(rest);
+        if (spec.isEmpty()) status(QStringLiteral("Usage: /telnet HOST [PORT] or /telnet HOST:PORT"));
+        else openAdHocTelnet(spec, port);
+        return;
+    }
     if (command == QStringLiteral("fingerprint")) {
         if (!m_secureReady) {
             status(QStringLiteral("Encrypted DMs are unavailable."));
@@ -3583,7 +3668,7 @@ void TerminalUi::handleCommand(const QString &line)
             status(QStringLiteral("Connection not found."));
             return;
         }
-        selectConnection(entry, false);
+        selectConnection(entry, true);
         connectConnection(entry);
         return;
     }
@@ -4305,10 +4390,10 @@ void TerminalUi::showHelp()
         QStringLiteral("  /fingerprint                 show selected connection profile's secure fingerprint"),
         QStringLiteral(""),
         QStringLiteral("CONNECTIONS"),
-        QStringLiteral("  /add                         add AIM/IRC/Telnet/SIP connection; saves + connects"),
+        QStringLiteral("  /add                         add AIM/IRC/Telnet/SIP connection; saves only"),
         QStringLiteral("  /connections                 list saved profiles"),
         QStringLiteral("  /conn N|next|prev            select/reopen a connection status buffer"),
-        QStringLiteral("  /connect [N]                 connect selected/profile N"),
+        QStringLiteral("  /connect N|PROTO:name        connect saved profile and open its status page"),
         QStringLiteral("  /disconnect [N]              disconnect selected/profile N"),
         QStringLiteral("  /edit [N]                    edit an offline saved profile"),
         QStringLiteral("  /delete [N]                  delete a saved profile"),
@@ -4401,7 +4486,10 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral(""),
         QStringLiteral("TELNET / MUD / BBS"),
-        QStringLiteral("  Connect a Telnet profile and type normally in its terminal buffer."),
+        QStringLiteral("  /telnet HOST [PORT]          open an ad-hoc ANSI/BBS Telnet session"),
+        QStringLiteral("  /telnet HOST:PORT            same as above"),
+        QStringLiteral("  /bbsimport FILE              import many BBS entries from CSV/TSV/JSON/text"),
+        QStringLiteral("  Active BBS buffers use raw-key mode; Ctrl-N/P leaves the BBS buffer."),
         QStringLiteral("  /raw TEXT                    send a literal line to the Telnet session"),
         QStringLiteral(""),
         QStringLiteral("KEYBOARD"),
@@ -4900,7 +4988,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         {QStringLiteral("redirectport"), QStringLiteral("AIM Redirect port"),
          QString::number(settings.redirectPort), FieldType::Text},
         {QStringLiteral("terminaltype"), QStringLiteral("Telnet terminal type"),
-         settings.telnetTerminalType.isEmpty() ? QStringLiteral("xterm-256color")
+         settings.telnetTerminalType.isEmpty() ? QStringLiteral("ANSI")
                                                : settings.telnetTerminalType,
          FieldType::Text},
         {QStringLiteral("debug"), QStringLiteral("Protocol debug"),
@@ -4952,7 +5040,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
             field(QStringLiteral("redirecthost")).value.clear();
             field(QStringLiteral("redirectport")).value = QStringLiteral("0");
             // Discord/MESSAGE_CONTENT was removed from this branch; no form field exists here.
-            field(QStringLiteral("terminaltype")).value = QStringLiteral("xterm-256color");
+            field(QStringLiteral("terminaltype")).value = QStringLiteral("ANSI");
             field(QStringLiteral("siplabel")).value.clear();
             field(QStringLiteral("sipregistrar")).value.clear();
             field(QStringLiteral("sipauth")).value.clear();
@@ -5257,7 +5345,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         settings.tls = parseYesNo(field(QStringLiteral("tls")).value, false);
         settings.telnetTerminalType = field(QStringLiteral("terminaltype")).value.trimmed();
         if (settings.telnetTerminalType.isEmpty()) {
-            settings.telnetTerminalType = QStringLiteral("xterm-256color");
+            settings.telnetTerminalType = QStringLiteral("ANSI");
         }
         settings.sipProfileName = field(QStringLiteral("siplabel")).value.trimmed();
         settings.sipDomain = currentProtocol == ConnectionSettings::Protocol::Sip ? server : settings.sipDomain;
@@ -5312,13 +5400,64 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
 }
 
 
+void TerminalUi::importBbsList(const QString &path)
+{
+    QString error;
+    const auto entries = BbsDirectory::loadFile(path, &error);
+    if (entries.isEmpty()) {
+        status(error.isEmpty() ? QStringLiteral("No BBS entries found in %1").arg(path)
+                               : QStringLiteral("BBS import failed: %1").arg(error));
+        return;
+    }
+    int added = 0, skipped = 0;
+    for (const auto &bbs : entries) {
+        bool duplicate = false;
+        for (ConnectionEntry *existing : m_connections) {
+            if (existing && existing->settings.protocol == ConnectionSettings::Protocol::Telnet
+                && existing->settings.server.compare(bbs.host, Qt::CaseInsensitive) == 0
+                && existing->settings.port == bbs.port) { duplicate = true; break; }
+        }
+        if (duplicate) { ++skipped; continue; }
+        ConnectionSettings cfg;
+        cfg.protocol = ConnectionSettings::Protocol::Telnet;
+        cfg.server = bbs.host; cfg.port = bbs.port; cfg.username = bbs.name;
+        cfg.telnetTerminalType = bbs.terminalType.isEmpty() ? QStringLiteral("ANSI") : bbs.terminalType;
+        if (addConnectionEntry(cfg, false, false, true, false)) ++added;
+    }
+    status(QStringLiteral("BBS import complete: %1 added, %2 duplicates skipped. Imported entries are saved offline.")
+               .arg(added).arg(skipped));
+}
+
+void TerminalUi::openAdHocTelnet(const QString &spec, const QString &portText)
+{
+    QString host = spec.trimmed();
+    quint16 port = 23;
+    if (!portText.trimmed().isEmpty()) port = parsePort(portText, 23);
+    else {
+        const int colon = host.lastIndexOf(QLatin1Char(':'));
+        if (colon > 0 && !host.contains(QLatin1Char(']'))) {
+            port = parsePort(host.mid(colon + 1), 23);
+            host = host.left(colon);
+        }
+    }
+    if (host.isEmpty()) { status(QStringLiteral("Invalid Telnet host.")); return; }
+    ConnectionSettings cfg;
+    cfg.protocol = ConnectionSettings::Protocol::Telnet;
+    cfg.server = host; cfg.port = port; cfg.username = QStringLiteral("%1:%2").arg(host).arg(port);
+    cfg.telnetTerminalType = QStringLiteral("ANSI");
+    ConnectionEntry *entry = addConnectionEntry(cfg, false, false, false, false);
+    if (!entry) { status(QStringLiteral("Could not create Telnet session.")); return; }
+    selectConnection(entry, true);
+    connectConnection(entry);
+}
+
 void TerminalUi::addConnectionWizard()
 {
     ConnectionSettings settings;
     settings.protocol = ConnectionSettings::Protocol::Unknown;
     settings.port = 0;
     settings.realName = appDefaultRealName();
-    settings.telnetTerminalType = QStringLiteral("xterm-256color");
+    settings.telnetTerminalType = QStringLiteral("ANSI");
 
     bool secretRequired = false;
     QString secret;
@@ -5330,9 +5469,10 @@ void TerminalUi::addConnectionWizard()
     settings.password = secret;
     settings.savePassword = settings.savePassword && !settings.password.isEmpty();
     ConnectionEntry *entry = addConnectionEntry(
-        settings, secretRequired, !secret.isEmpty(), true, true);
+        settings, secretRequired, !secret.isEmpty(), true, false);
     if (entry) {
-        selectConnection(entry, true);
+        status(QStringLiteral("Saved %1 offline. Use /connect %2 to connect it.")
+                   .arg(protocolName(settings.protocol), connectionLabel(entry)));
     }
 }
 

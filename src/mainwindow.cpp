@@ -6,6 +6,7 @@
 #include "ircbackend.h"
 #include "oscarbackend.h"
 #include "telnetbackend.h"
+#include "bbsdirectory.h"
 #include "transferwindow.h"
 #include "sipcontroller.h"
 #include "sipbackend.h"
@@ -167,7 +168,7 @@ public:
         m_telnetTerminalLabel = new QLabel(QStringLiteral("Terminal type:"), this);
         m_telnetTerminal = new QLineEdit(
             defaults.telnetTerminalType.isEmpty()
-                ? QStringLiteral("xterm-256color")
+                ? QStringLiteral("ANSI")
                 : defaults.telnetTerminalType,
             this);
         form->addRow(m_telnetTerminalLabel, m_telnetTerminal);
@@ -813,6 +814,7 @@ void MainWindow::buildMenus()
 
     QMenu *connectionMenu = bar->addMenu(QStringLiteral("&Connection"));
     m_addConnectionAction = connectionMenu->addAction(QStringLiteral("&Add…"));
+    m_importBbsAction = connectionMenu->addAction(QStringLiteral("Import &BBS List…"));
     m_editConnectionAction = connectionMenu->addAction(QStringLiteral("&Edit Selected…"));
     m_deleteConnectionAction = connectionMenu->addAction(QStringLiteral("&Delete Selected"));
     connectionMenu->addSeparator();
@@ -913,6 +915,8 @@ void MainWindow::buildMenus()
 
     connect(m_addConnectionAction, &QAction::triggered,
             this, [this] { openConnectionDialog(m_defaults, nullptr); });
+    connect(m_importBbsAction, &QAction::triggered,
+            this, &MainWindow::importBbsList);
     connect(m_editConnectionAction, &QAction::triggered,
             this, &MainWindow::editSelected);
     connect(m_deleteConnectionAction, &QAction::triggered,
@@ -1500,7 +1504,50 @@ void MainWindow::openConnectionDialog(const ConnectionSettings &defaults,
                   true,
                   secretRequired,
                   !settings.password.isEmpty(),
-                  true);
+                  false);
+}
+
+
+void MainWindow::importBbsList()
+{
+    const QString path = QFileDialog::getOpenFileName(
+        this, QStringLiteral("Import BBS List"), QString(),
+        QStringLiteral("BBS Lists (*.csv *.tsv *.json *.txt);;All Files (*)"));
+    if (path.isEmpty()) return;
+
+    QString error;
+    const auto entries = BbsDirectory::loadFile(path, &error);
+    if (entries.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("BBS Import"),
+                             error.isEmpty() ? QStringLiteral("No BBS entries were found in the selected file.") : error);
+        return;
+    }
+
+    int added = 0, skipped = 0;
+    for (const auto &bbs : entries) {
+        bool duplicate = false;
+        for (BackendState *state : m_states) {
+            if (!state || !state->backend) continue;
+            const auto &cfg = state->backend->settings();
+            if (cfg.protocol == ConnectionSettings::Protocol::Telnet
+                && cfg.server.compare(bbs.host, Qt::CaseInsensitive) == 0
+                && cfg.port == bbs.port) { duplicate = true; break; }
+        }
+        if (duplicate) { ++skipped; continue; }
+        ConnectionSettings cfg;
+        cfg.protocol = ConnectionSettings::Protocol::Telnet;
+        cfg.server = bbs.host;
+        cfg.port = bbs.port;
+        cfg.username = bbs.name;
+        cfg.telnetTerminalType = bbs.terminalType.isEmpty() ? QStringLiteral("ANSI") : bbs.terminalType;
+        if (ChatBackend *backend = createBackend(cfg)) {
+            attachBackend(backend, true, false, false, false);
+            ++added;
+        }
+    }
+    QMessageBox::information(this, QStringLiteral("BBS Import"),
+        QStringLiteral("Imported %1 BBS entries. %2 duplicates skipped.\n\nImported BBSes are saved offline; use Connect when you want to open one.")
+            .arg(added).arg(skipped));
 }
 
 void MainWindow::loadUiSettings()
@@ -2025,7 +2072,7 @@ void MainWindow::loadConnections()
         value.tls = settings.value(QStringLiteral("tls"), false).toBool();
         value.ircBuddies = settings.value(QStringLiteral("ircBuddies")).toStringList();
         value.sipContacts = settings.value(QStringLiteral("sipContacts")).toStringList();
-        value.telnetTerminalType = settings.value(QStringLiteral("telnetTerminalType"), QStringLiteral("xterm-256color")).toString();
+        value.telnetTerminalType = settings.value(QStringLiteral("telnetTerminalType"), QStringLiteral("ANSI")).toString();
         value.sipProfileName = settings.value(QStringLiteral("sipProfileName")).toString();
         value.sipDomain = settings.value(QStringLiteral("sipDomain"), value.protocol == ConnectionSettings::Protocol::Sip ? value.server : QString()).toString();
         value.sipRegistrar = settings.value(QStringLiteral("sipRegistrar")).toString();
@@ -2768,6 +2815,15 @@ ChatWindow *MainWindow::ensureConversationWindow(ChatBackend *backend,
             this, &MainWindow::handleConversationClosing);
     connect(window, &ChatWindow::messageSubmitted,
             this, &MainWindow::handleConversationMessage);
+    connect(window, &ChatWindow::terminalBytesSubmitted, this,
+            [this](ChatWindow *w, const QByteArray &bytes) {
+                if (!w) return;
+                BackendState *state = stateById(w->backendId());
+                if (state && state->backend && state->connected
+                    && state->backend->settings().protocol == ConnectionSettings::Protocol::Telnet) {
+                    state->backend->sendTerminalInput(bytes);
+                }
+            });
     connect(window, &ChatWindow::secureRequested,
             this, &MainWindow::startSecureSession);
     connect(window, &ChatWindow::secureStatusRequested,
@@ -4133,9 +4189,7 @@ void MainWindow::handleConnected(ChatBackend *backend,
     if (backend->settings().protocol == ConnectionSettings::Protocol::Telnet) {
         ChatWindow *terminal = ensureConversationWindow(
             backend, QStringLiteral("terminal"), backend->settings().server, true);
-        if (terminal) {
-            terminal->appendMessage(QStringLiteral("[Telnet connected to %1]").arg(endpoint));
-        }
+        if (terminal) terminal->setBackendOnline(true);
     }
 
     // Successful login always brings the Buddy List to the front.

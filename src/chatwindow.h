@@ -1,11 +1,13 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QByteArray>
 #include <QSet>
 #include <QString>
 #include <QStringList>
 
 class ChatBackend;
+class AnsiTerminalWidget;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -47,6 +49,7 @@ public:
 signals:
     void conversationClosing(ChatWindow *window);
     void messageSubmitted(ChatWindow *window, const QString &message);
+    void terminalBytesSubmitted(ChatWindow *window, const QByteArray &bytes);
     void secureRequested(ChatWindow *window);
     void secureStatusRequested(ChatWindow *window);
     void trustRequested(ChatWindow *window);
@@ -94,6 +97,7 @@ private:
     QLabel *m_connectionLabel = nullptr;
     QLabel *m_securityLabel = nullptr;
     QPlainTextEdit *m_transcript = nullptr;
+    AnsiTerminalWidget *m_terminal = nullptr;
     QWidget *m_memberPane = nullptr;
     QListWidget *m_members = nullptr;
     QLabel *m_membersTitle = nullptr;

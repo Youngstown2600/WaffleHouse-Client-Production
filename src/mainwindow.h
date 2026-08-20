@@ -67,6 +67,7 @@ private:
     void buildConnectionsWindow();
     void buildTrayIcon();
 
+    void importBbsList();
     void openConnectionDialog(const ConnectionSettings &defaults = {},
                               BackendState *editingState = nullptr);
     ChatBackend *createBackend(const ConnectionSettings &settings);
@@ -247,6 +248,7 @@ private:
     QMenu *m_accountsMenu = nullptr;
 
     QAction *m_addConnectionAction = nullptr;
+    QAction *m_importBbsAction = nullptr;
     QAction *m_editConnectionAction = nullptr;
     QAction *m_deleteConnectionAction = nullptr;
     QAction *m_connectAction = nullptr;

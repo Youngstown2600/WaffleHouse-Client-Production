@@ -1,11 +1,24 @@
-# WaffleHouse-Client 2.5.1
+# WaffleHouse-Client 2.5.2
 
-**WaffleHouse-Client 2.5.1** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.2** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
 > This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
 
+
+
+## 2.5.2 ANSI/BBS terminal and explicit connection workflow
+
+2.5.2 turns Telnet/BBS from a plain-text transcript into an ANSI screen terminal. It preserves VT/ANSI cursor and screen controls, translates classic CP437 line/block graphics, uses fixed-width no-wrap screen rendering, and sends raw BBS keystrokes in both GUI and CLI.
+
+Connection workflow changes:
+
+- Adding a connection saves it **offline**; it no longer auto-connects.
+- CLI `/connect PROTOCOL:name` connects a saved AIM/IRC/SIP/Telnet profile and opens/populates that connection's status buffer.
+- CLI `/telnet HOST PORT` and `/telnet HOST:PORT` create an ad-hoc ANSI/BBS session.
+- The CLI connection strip shows only active/connecting sessions. Offline saved profiles remain available through `/connections`.
+- `Connection -> Import BBS List...` and CLI `/bbsimport FILE` import multi-BBS CSV, TSV, JSON, pipe-delimited, or simple `host:port` lists. Imported BBS entries are saved offline and duplicate host/port pairs are skipped.
 
 ## 2.5.1 GUI hotfix and account workflow
 

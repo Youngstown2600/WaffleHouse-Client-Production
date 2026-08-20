@@ -230,7 +230,7 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
                               QStringLiteral("Enable IRC TLS by default."));
     QCommandLineOption terminalTypeOpt(
         QStringList{QStringLiteral("terminal-type")}, QStringLiteral("Prefill Telnet terminal type."),
-        QStringLiteral("terminal"), QStringLiteral("xterm-256color"));
+        QStringLiteral("terminal"), QStringLiteral("ANSI"));
     QCommandLineOption debugOpt(QStringList{QStringLiteral("debug")},
                                 QStringLiteral("Enable protocol debug logging."));
 
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
     if (mode == FrontendMode::Gui) {
         if (!runtime.graphicalSession && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             fprintf(stderr,
-                    "WaffleHouse-Client 2.5.1: GUI mode requested but no X11/Wayland session was detected.\n"
+                    "WaffleHouse-Client 2.5.2: GUI mode requested but no X11/Wayland session was detected.\n"
                     "Detected: %s\nUse --cli from an interactive terminal.\n",
                     runtime.summary().toUtf8().constData());
             return 2;
@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 
     if (!runtime.ttyAttached) {
         fprintf(stderr,
-                "WaffleHouse-CLI 2.5.1: CLI mode requires an interactive terminal.\n"
+                "WaffleHouse-CLI 2.5.2: CLI mode requires an interactive terminal.\n"
                 "Detected: %s\nUse --gui inside a graphical session.\n",
                 runtime.summary().toUtf8().constData());
         return 2;

@@ -4,6 +4,7 @@
 #include "securechannel.h"
 #include "filetransfer.h"
 #include "directtransfer.h"
+#include "ansiterminal.h"
 
 #include <QObject>
 #include <QHash>
@@ -66,6 +67,7 @@ private:
         QSet<QString> members;
         int unread = 0;
         int scroll = 0;
+        std::unique_ptr<AnsiTerminalModel> terminal;
     };
 
     void initCurses();
@@ -219,6 +221,8 @@ private:
     void listMembers(Buffer *buffer);
 
     void addConnectionWizard();
+    void importBbsList(const QString &path);
+    void openAdHocTelnet(const QString &spec, const QString &portText = QString());
     void editConnectionWizard(ConnectionEntry *entry);
     bool promptConnectionSettings(ConnectionSettings &settings,
                                   bool &secretRequired,

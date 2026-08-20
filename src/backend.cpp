@@ -49,3 +49,9 @@ void ChatBackend::removeBuddy(const QString &)
 void ChatBackend::setTerminalSize(int, int)
 {
 }
+
+void ChatBackend::sendTerminalInput(const QByteArray &)
+{
+    emit backendError(QStringLiteral("Terminal input"),
+                      QStringLiteral("This backend does not accept raw terminal keystrokes."));
+}

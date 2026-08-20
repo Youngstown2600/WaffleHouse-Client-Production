@@ -29,16 +29,19 @@ public:
                  const QString &unusedB = QString(),
                  const QString &unusedC = QString()) override;
     void setTerminalSize(int columns, int rows) override;
+    void sendTerminalInput(const QByteArray &bytes) override;
 
 private:
     enum class CommandType {
         SendLine,
         RawLine,
+        RawBytes,
     };
 
     struct Command {
         CommandType type;
         QString text;
+        QByteArray bytes;
     };
 
     enum class TelnetState {
@@ -62,7 +65,7 @@ private:
     void handleNegotiation(QTcpSocket &socket, quint8 command, quint8 option);
     void handleSubnegotiation(QTcpSocket &socket, quint8 option, const QByteArray &payload);
     void processBytes(QTcpSocket &socket, const QByteArray &bytes);
-    QString sanitizeTerminalText(const QByteArray &bytes) const;
+    QString decodeTerminalText(const QByteArray &bytes) const;
 
     QThread *m_thread = nullptr;
     QMutex m_commandMutex;

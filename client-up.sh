@@ -27,7 +27,7 @@ usage() {
   cat <<'EOF2'
 Usage: ./client-up.sh [options]
 
-Upgrade helper for WaffleHouse-Client 2.5.1.
+Upgrade helper for WaffleHouse-Client 2.5.2.
 
 By default this script:
   1. Locates the currently installed WaffleHouse-Client prefix when possible.
@@ -40,7 +40,7 @@ By default this script:
 Options:
   --prefix PATH       Upgrade the installation under PATH (default: auto-detect,
                       otherwise /usr/local)
-  --remove-only       Remove the installed client without building/installing 2.5.1
+  --remove-only       Remove the installed client without building/installing 2.5.2
   --yes, -y           Do not ask for confirmation
   --dry-run           Show what would be removed/built/installed; change nothing
   --no-auto-deps      Pass --no-auto-deps to build.sh
@@ -109,7 +109,7 @@ LEGACY_CLI_PATH="$PREFIX/bin/wafflehouse-cli"
 LEGACY_GUI_DESKTOP_PATH="$PREFIX/share/applications/wafflehouse-gui.desktop"
 
 printf '%s\n' "============================================================"
-printf '%s\n' "             WAFFLEHOUSE CLIENT-UP 2.5.1"
+printf '%s\n' "             WAFFLEHOUSE CLIENT-UP 2.5.2"
 printf '%s\n' "============================================================"
 printf 'Host OS:        %s\n' "$HOST_OS"
 printf 'Upgrade prefix: %s\n' "$PREFIX"
@@ -126,7 +126,7 @@ if [ "$ASSUME_YES" -ne 1 ] && [ "$DRY_RUN" -ne 1 ] && [ -t 0 ]; then
   if [ "$REMOVE_ONLY" -eq 1 ]; then
     printf 'Remove the installed WaffleHouse-Client from this prefix? [y/N] '
   else
-    printf 'Remove the previous client and install WaffleHouse-Client 2.5.1? [y/N] '
+    printf 'Remove the previous client and install WaffleHouse-Client 2.5.2? [y/N] '
   fi
   IFS= read -r answer
   case "$answer" in y|Y|yes|YES|Yes) ;; *) echo "Upgrade cancelled."; exit 0 ;; esac
@@ -215,7 +215,7 @@ fi
 [ -f "$BUILD_SCRIPT" ] || { echo "Cannot continue: $BUILD_SCRIPT was not found." >&2; exit 1; }
 
 echo
-echo "==> Building and installing WaffleHouse-Client 2.5.1"
+echo "==> Building and installing WaffleHouse-Client 2.5.2"
 set -- "$BUILD_SCRIPT" --clean --install --prefix "$PREFIX"
 [ "$DRY_RUN" -eq 1 ] && set -- "$@" --dry-run
 [ "$NO_AUTO_DEPS" -eq 1 ] && set -- "$@" --no-auto-deps
