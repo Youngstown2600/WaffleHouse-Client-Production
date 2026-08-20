@@ -66,11 +66,11 @@ include CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/compiler_depend
 # Include the progress variables for this target.
 include CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/progress.make
 
-CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/qt6/libexec/moc
-CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Network.so.6.4.2
-CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2
+CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: libwafflehouse_sipcore.a
+CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2
+CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Network.so.6.4.2
 
 wafflehouse-client_autogen_timestamp_deps: CMakeFiles/wafflehouse-client_autogen_timestamp_deps
 wafflehouse-client_autogen_timestamp_deps: CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/build.make

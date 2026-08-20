@@ -37,6 +37,7 @@ private:
         bool hasSessionSecret = false;
         bool connected = false;
         bool connecting = false;
+        bool persistent = true;
         QString identity;
         QString endpoint;
         QSet<QString> buddies;
@@ -67,6 +68,7 @@ private:
         QSet<QString> members;
         int unread = 0;
         int scroll = 0;
+        bool sensitiveInput = false;
         std::unique_ptr<AnsiTerminalModel> terminal;
     };
 
@@ -216,6 +218,7 @@ private:
     void showPhoneActivity(bool switchTo = true);
     void configurePhoneProfile();
     void listConnections();
+    void listActiveConnections();
     void listBuddies(ConnectionEntry *entry);
     void listRooms(ConnectionEntry *entry);
     void listMembers(Buffer *buffer);

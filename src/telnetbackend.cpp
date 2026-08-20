@@ -448,10 +448,10 @@ void TelnetBackend::run()
                 case CommandType::RawBytes: {
                     const QByteArray raw = escapeIac(command.bytes);
                     writeAll(*socket, raw);
-                    if (!m_serverEcho.load()) {
-                        emit eventReceived(QStringLiteral("terminal"), m_settings.server,
-                                           decodeTerminalText(command.bytes));
-                    }
+                    // Raw BBS input is mirrored by the UI, not injected into the
+                    // terminal model here.  That avoids duplicate characters and,
+                    // critically, prevents password bytes from being displayed when
+                    // the BBS intentionally suppresses application-level echo.
                     break;
                 }
                 }
@@ -470,8 +470,17 @@ void TelnetBackend::run()
             }
         }
 
-        socket->disconnectFromHost();
-        socket->waitForDisconnected(500);
+        // disconnectFromHost() may complete synchronously.  Calling
+        // waitForDisconnected() after the socket has already reached
+        // UnconnectedState makes Qt print a warning directly to stderr; in
+        // ncurses mode that external write corrupts the terminal display.
+        // Only wait while there is actually a disconnect transition left.
+        if (socket->state() != QAbstractSocket::UnconnectedState) {
+            socket->disconnectFromHost();
+            if (socket->state() != QAbstractSocket::UnconnectedState) {
+                socket->waitForDisconnected(500);
+            }
+        }
     } catch (const std::exception &e) {
         disconnectReason = QString::fromUtf8(e.what());
         if (!m_stopRequested || disconnectReason != QStringLiteral("Telnet connection cancelled")) {

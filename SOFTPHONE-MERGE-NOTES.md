@@ -1,3 +1,7 @@
+2.5.4 CLI/BBS lifecycle update
+------------------------------
+- Adds /active and /accounts, ephemeral /telnet quick-connect, preserved disconnected BBS screens, and masked password input.
+
 2.5.3 BBS/theme update
 ----------------------
 - Corrects curses bright-black/gray BBS rendering and raw CLI input visibility.

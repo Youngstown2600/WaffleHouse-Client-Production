@@ -1,6 +1,6 @@
-# WaffleHouse-Client 2.5.3
+# WaffleHouse-Client 2.5.4-r1
 
-**WaffleHouse-Client 2.5.3** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.4-r1** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
@@ -8,6 +8,21 @@ It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/O
 
 
 
+
+
+
+## 2.5.4-r1 Telnet disconnect/curses repaint hotfix
+
+- Avoids calling `QAbstractSocket::waitForDisconnected()` after a Telnet socket is already in `UnconnectedState`, eliminating the Qt warning that could be written directly through an ncurses screen.
+- Forces a full ncurses repaint when a backend disconnect completes so any external terminal write cannot leave stale/corrupted screen cells behind.
+
+## 2.5.4 CLI active-session and BBS lifecycle update
+
+- `/active` lists connecting/online sessions and their screen numbers.
+- `/accounts` is an alias of `/connections`.
+- `/telnet HOST [PORT]` and `/telnet HOST:PORT` are temporary quick-connect sessions and are never saved as accounts.
+- A disconnected BBS screen remains intact until `/close`.
+- BBS password/passphrase entry is masked in the local CLI input mirror.
 
 ## 2.5.3 BBS visibility/input fixes + S.I.P.H.E.R. themes
 

@@ -17,6 +17,7 @@
 #include <QFileInfo>
 #include <QEventLoop>
 #include <QSettings>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUuid>
 
@@ -790,9 +791,13 @@ void TerminalUi::closeActiveBuffer()
         m_secure.closeSession(buffer->connectionId, buffer->target);
     }
 
+    ConnectionEntry *ephemeralTerminalEntry = nullptr;
     if (buffer->kind == QStringLiteral("terminal")) {
         ConnectionEntry *entry = connectionById(buffer->connectionId);
-        if (entry && entry->backend && entry->connected) {
+        if (entry && !entry->persistent) {
+            ephemeralTerminalEntry = entry;
+        }
+        if (entry && entry->backend && (entry->connected || entry->connecting)) {
             entry->backend->stop();
         }
     }
@@ -816,6 +821,26 @@ void TerminalUi::closeActiveBuffer()
         m_buffers.removeAt(index);
     }
     delete buffer;
+
+    // /telnet quick-connect sessions are intentionally ephemeral.  Their
+    // terminal stays available after disconnect, but /close discards the
+    // temporary backend/connection object instead of turning it into a saved
+    // account.
+    if (ephemeralTerminalEntry) {
+        m_hiddenConnectionBuffers.remove(ephemeralTerminalEntry->id);
+        m_secure.closeConnection(ephemeralTerminalEntry->id);
+        m_connectionById.remove(ephemeralTerminalEntry->id);
+        m_connections.removeAll(ephemeralTerminalEntry);
+        if (ephemeralTerminalEntry->backend) {
+            QObject::disconnect(ephemeralTerminalEntry->backend, nullptr, this, nullptr);
+            ephemeralTerminalEntry->backend->deleteLater();
+        }
+        if (m_selectedConnectionId == ephemeralTerminalEntry->id) {
+            m_selectedConnectionId = m_connections.isEmpty() ? QString() : m_connections.first()->id;
+        }
+        delete ephemeralTerminalEntry;
+    }
+
     renumberBuffers();
 
     if (m_buffers.isEmpty()) {
@@ -1282,7 +1307,11 @@ void TerminalUi::drawInputLine(int row, int width)
     const int promptWidth = promptText.size();
     const int available = std::max(1, width - promptWidth - 1);
     int viewStart = std::max(0, m_inputCursor - available + 1);
-    const QString visible = m_input.mid(viewStart, available);
+    QString displayInput = m_input;
+    if (buffer && buffer->kind == QStringLiteral("terminal") && buffer->sensitiveInput) {
+        displayInput = QString(m_input.size(), QLatin1Char('*'));
+    }
+    const QString visible = displayInput.mid(viewStart, available);
     safeAdd(row, promptWidth, visible, 0, available);
 
     const int cursorX = std::clamp(promptWidth + (m_inputCursor - viewStart), 0, width - 1);
@@ -1365,9 +1394,11 @@ void TerminalUi::handleCharacter(uint codepoint)
                 bytes = QByteArray("\r");
                 // Raw BBS keystrokes are transmitted immediately, but keep a local
                 // command-line mirror so the operator can see what they are typing.
+                // Password/passphrase prompts are masked by drawInputLine().
                 // Enter commits the BBS command and clears the mirror for the next one.
                 m_input.clear();
                 m_inputCursor = 0;
+                buffer->sensitiveInput = false;
             } else if (isTerminalBackspace(codepoint)) {
                 bytes = QByteArray(1, '\x08');
                 if (m_inputCursor > 0) {
@@ -1386,8 +1417,11 @@ void TerminalUi::handleCharacter(uint codepoint)
                 m_inputCursor += text.size();
             }
             if (!bytes.isEmpty()) entry->backend->sendTerminalInput(bytes);
+            return;
         }
-        return;
+        // A disconnected BBS screen remains readable until /close.  Once the
+        // socket is offline, fall through to normal command-line editing so
+        // /close, /active, /telnet, etc. remain usable from that preserved screen.
     }
     if (codepoint == 10 || codepoint == 13) {
         submitInput();
@@ -1445,6 +1479,7 @@ void TerminalUi::handleSpecialKey(int key)
                 seq = "\r";
                 m_input.clear();
                 m_inputCursor = 0;
+                buffer->sensitiveInput = false;
                 break;
             case KEY_BACKSPACE:
                 seq = QByteArray(1, '\x08');
@@ -1468,8 +1503,9 @@ void TerminalUi::handleSpecialKey(int key)
             default: break;
             }
             if (!seq.isEmpty()) entry->backend->sendTerminalInput(seq);
+            return;
         }
-        return;
+        // Offline preserved BBS buffers use the normal command/navigation path.
     }
 
     switch (key) {
@@ -1534,6 +1570,7 @@ void TerminalUi::handleSpecialKey(int key)
 QStringList TerminalUi::slashCommands()
 {
     return {
+        QStringLiteral("/active"), QStringLiteral("/accounts"),
         QStringLiteral("/add"), QStringLiteral("/addbuddy"),
         QStringLiteral("/buddies"), QStringLiteral("/buddylist"),
         QStringLiteral("/buffer"), QStringLiteral("/channels"),
@@ -1834,6 +1871,7 @@ TerminalUi::ConnectionEntry *TerminalUi::addConnectionEntry(
     entry->settings = settings;
     entry->secretRequired = secretRequired;
     entry->hasSessionSecret = hasSessionSecret;
+    entry->persistent = persist;
 
     ChatBackend *backend = createBackend(settings);
     if (!backend) {
@@ -2346,13 +2384,14 @@ void TerminalUi::saveConnections() const
     settings.remove(QStringLiteral("connections"));
     settings.beginWriteArray(QStringLiteral("connections"));
 
+    int writeIndex = 0;
     for (int i = 0; i < m_connections.size(); ++i) {
         ConnectionEntry *entry = m_connections.at(i);
-        if (!entry) {
+        if (!entry || !entry->persistent) {
             continue;
         }
         const ConnectionSettings &value = entry->settings;
-        settings.setArrayIndex(i);
+        settings.setArrayIndex(writeIndex++);
         settings.setValue(QStringLiteral("id"), entry->id);
         settings.setValue(QStringLiteral("protocol"), static_cast<int>(value.protocol));
         settings.setValue(QStringLiteral("server"), value.server);
@@ -3186,6 +3225,20 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
     Buffer *buffer = ensureBuffer(kind, entry->id, target, displayName);
     if (kind == QStringLiteral("terminal") && buffer->terminal) {
         buffer->terminal->feed(text);
+
+        // Classic BBS software usually suppresses password echo at the
+        // application layer without renegotiating Telnet ECHO.  Detect the
+        // prompt nearest the terminal cursor and mask WaffleHouse's local input
+        // mirror so credentials never appear in the bottom command field.
+        QString promptLine;
+        for (int row = buffer->terminal->cursorRow(); row >= 0 && row >= buffer->terminal->cursorRow() - 2; --row) {
+            const QString candidate = buffer->terminal->plainLine(row).trimmed();
+            if (!candidate.isEmpty()) { promptLine = candidate; break; }
+        }
+        static const QRegularExpression sensitivePrompt(
+            QStringLiteral("(?i)(?:password|passphrase|passwd|pin|access\\s*code|login\\s*key|secret)\\s*[:>?\]]?\\s*$"));
+        buffer->sensitiveInput = sensitivePrompt.match(promptLine).hasMatch();
+
         buffer->unread += (buffer != activeBuffer());
         return;
     }
@@ -3328,12 +3381,27 @@ void TerminalUi::onDisconnected(ConnectionEntry *entry, const QString &reason)
     entry->onlineBuddies.clear();
     m_secure.closeConnection(entry->id);
 
-    removeConnectionConversationBuffers(entry->id);
+    // Preserve a Telnet/BBS terminal exactly as it looked at disconnect.
+    // The user can review/copy it and explicitly remove it with /close.
+    // Other protocols retain their historical teardown behavior.
+    if (entry->settings.protocol != ConnectionSettings::Protocol::Telnet) {
+        removeConnectionConversationBuffers(entry->id);
+    }
     connectionStatus(
         entry,
         reason.isEmpty()
             ? QStringLiteral("[offline] disconnected")
             : QStringLiteral("[offline] disconnected: %1").arg(reason));
+
+    // ncurses tracks what it believes is already painted on the physical
+    // terminal.  If a library ever writes directly to stderr/stdout while
+    // curses owns the screen, that cache becomes stale and ordinary refresh()
+    // may leave garbage visible.  A disconnect is a natural synchronization
+    // point, so force the next draw to repaint every cell.
+    if (m_cursesActive) {
+        clearok(stdscr, TRUE);
+        touchwin(stdscr);
+    }
 }
 
 void TerminalUi::onBackendError(ConnectionEntry *entry,
@@ -3832,8 +3900,13 @@ void TerminalUi::handleCommand(const QString &line)
         addConnectionWizard();
         return;
     }
-    if (command == QStringLiteral("connections") || command == QStringLiteral("servers")) {
+    if (command == QStringLiteral("connections") || command == QStringLiteral("accounts")
+        || command == QStringLiteral("servers")) {
         listConnections();
+        return;
+    }
+    if (command == QStringLiteral("active")) {
+        listActiveConnections();
         return;
     }
     if (command == QStringLiteral("conn") || command == QStringLiteral("server")) {
@@ -4584,6 +4657,8 @@ void TerminalUi::showHelp()
         QStringLiteral("CONNECTIONS"),
         QStringLiteral("  /add                         add AIM/IRC/Telnet/SIP connection; saves only"),
         QStringLiteral("  /connections                 list saved profiles"),
+        QStringLiteral("  /accounts                    alias of /connections"),
+        QStringLiteral("  /active                      list live connections and screen numbers"),
         QStringLiteral("  /conn N|next|prev            select/reopen a connection status buffer"),
         QStringLiteral("  /connect N|PROTO:name        connect saved profile and open its status page"),
         QStringLiteral("  /disconnect [N]              disconnect selected/profile N"),
@@ -4678,10 +4753,11 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral(""),
         QStringLiteral("TELNET / MUD / BBS"),
-        QStringLiteral("  /telnet HOST [PORT]          open an ad-hoc ANSI/BBS Telnet session"),
+        QStringLiteral("  /telnet HOST [PORT]          quick-connect ANSI/BBS session; not saved"),
         QStringLiteral("  /telnet HOST:PORT            same as above"),
         QStringLiteral("  /bbsimport FILE              import many BBS entries from CSV/TSV/JSON/text"),
         QStringLiteral("  Active BBS buffers use raw-key mode; Ctrl-N/P leaves the BBS buffer."),
+        QStringLiteral("  Disconnected BBS screens stay visible until you /close them."),
         QStringLiteral("  /raw TEXT                    send a literal line to the Telnet session"),
         QStringLiteral(""),
         QStringLiteral("KEYBOARD"),
@@ -4701,18 +4777,18 @@ void TerminalUi::showHelp()
 void TerminalUi::listConnections()
 {
     Buffer *buffer = ensureBuffer(QStringLiteral("global"));
-    append(buffer, QStringLiteral("Saved connections:"), false);
-    if (m_connections.isEmpty()) {
-        append(buffer, QStringLiteral("  (none)"), false);
-    }
+    append(buffer, QStringLiteral("Saved connections/accounts:"), false);
+    int shown = 0;
     for (int i = 0; i < m_connections.size(); ++i) {
         ConnectionEntry *entry = m_connections.at(i);
+        if (!entry || !entry->persistent) continue;
+        ++shown;
         const QString state = entry->connecting
             ? QStringLiteral("connecting")
             : entry->connected ? QStringLiteral("online") : QStringLiteral("offline");
         append(buffer,
                QStringLiteral("  %1) %2 %3  %4:%5  [%6]")
-                   .arg(i + 1)
+                   .arg(shown)
                    .arg(protocolName(entry->settings.protocol), -10)
                    .arg(entry->settings.username)
                    .arg(entry->settings.server)
@@ -4720,6 +4796,41 @@ void TerminalUi::listConnections()
                    .arg(state),
                false);
     }
+    if (!shown) append(buffer, QStringLiteral("  (none)"), false);
+    switchToBuffer(buffer);
+}
+
+void TerminalUi::listActiveConnections()
+{
+    Buffer *buffer = ensureBuffer(QStringLiteral("global"));
+    append(buffer, QStringLiteral("Active connections:"), false);
+    int shown = 0;
+    for (ConnectionEntry *entry : m_connections) {
+        if (!entry || (!entry->connected && !entry->connecting)) continue;
+        ++shown;
+
+        Buffer *screen = nullptr;
+        if (entry->settings.protocol == ConnectionSettings::Protocol::Telnet) {
+            screen = findBuffer(bufferKey(QStringLiteral("terminal"), entry->id, entry->settings.server));
+        }
+        if (!screen) {
+            screen = findBuffer(bufferKey(QStringLiteral("connection"), entry->id, {}));
+        }
+
+        const QString state = entry->connecting ? QStringLiteral("connecting") : QStringLiteral("online");
+        const QString screenText = screen ? QString::number(screen->number) : QStringLiteral("-");
+        QString label = connectionLabel(entry);
+        if (!entry->persistent) label += QStringLiteral(" [quick]");
+        append(buffer,
+               QStringLiteral("  screen %1  %2  %3:%4  [%5]")
+                   .arg(screenText, -3)
+                   .arg(label, -24)
+                   .arg(entry->settings.server)
+                   .arg(entry->settings.port)
+                   .arg(state),
+               false);
+    }
+    if (!shown) append(buffer, QStringLiteral("  (none)"), false);
     switchToBuffer(buffer);
 }
 
@@ -5639,7 +5750,11 @@ void TerminalUi::openAdHocTelnet(const QString &spec, const QString &portText)
     cfg.telnetTerminalType = QStringLiteral("ANSI");
     ConnectionEntry *entry = addConnectionEntry(cfg, false, false, false, false);
     if (!entry) { status(QStringLiteral("Could not create Telnet session.")); return; }
-    selectConnection(entry, true);
+    // Quick-connect only: do not add this host to saved accounts, and keep
+    // transient connection-status chatter in the global Status buffer.  The
+    // actual BBS terminal screen appears once connected.
+    m_hiddenConnectionBuffers.insert(entry->id);
+    selectConnection(entry, false);
     connectConnection(entry);
 }
 

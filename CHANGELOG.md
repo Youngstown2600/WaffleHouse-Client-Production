@@ -1,3 +1,20 @@
+# WaffleHouse-Client 2.5.4-r1 — 2026-08-19
+
+- Fixed Telnet `/disconnect` calling `waitForDisconnected()` after an immediate socket close, which caused Qt to print `QAbstractSocket::waitForDisconnected() is not allowed in UnconnectedState` directly into the ncurses screen.
+- Added a forced ncurses physical-screen repaint after backend disconnect so the CLI immediately repairs itself if any library writes outside curses.
+
+# WaffleHouse-Client 2.5.4 — 2026-08-19
+
+- Added `/active` to list only connecting/online sessions with their CLI screen numbers.
+- Added `/accounts` as an alias of `/connections`.
+- Changed `/telnet HOST[:PORT]` to a true ephemeral quick-connect; it is never persisted as a saved account.
+- Preserved Telnet/BBS terminal screens after disconnect until the user explicitly runs `/close`.
+- Offline preserved BBS buffers return to normal slash-command editing so `/close` remains usable.
+- Added password/passphrase prompt detection so the CLI input mirror masks sensitive BBS input with `*`.
+- Removed backend raw-byte local echo to avoid duplicate BBS input and accidental password disclosure.
+- Fixed duplicate insertion of CLI connection entries and excluded ephemeral sessions from persistent settings.
+- Synchronized stale build/version labels to 2.5.4.
+
 # WaffleHouse-Client 2.5.3 — 2026-08-19
 
 - Fixed classic BBS ANSI text that could disappear in the CLI when a board used SGR bold/bright-black (`1;30`) for gray labels: ncurses now uses explicit bright color indexes when the terminal supports them instead of relying only on `A_BOLD + COLOR_BLACK`.
