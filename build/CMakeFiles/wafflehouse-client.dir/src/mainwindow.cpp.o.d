@@ -294,13 +294,13 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbindingstorage.h \
  /usr/include/c++/13/chrono /usr/include/c++/13/bits/chrono.h \
  /usr/include/c++/13/ratio /usr/include/c++/13/ctime \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
  /home/gitsc/WaffleHouse-Client-Production/src/securechannel.h \
- /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
- /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QSet \
@@ -472,6 +472,11 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qiodevice.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
  /home/gitsc/WaffleHouse-Client-Production/src/telnetbackend.h \
+ /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qvector.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QtGlobal \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qglobal.h \
  /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.h \
  /home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.h \
  /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \

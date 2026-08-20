@@ -186,9 +186,27 @@
 	"HEADERS" : 
 	[
 		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h",
+			"Mu",
+			"UVLADIE3JM/moc_ansiterminal.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.h",
+			"Mu",
+			"UVLADIE3JM/moc_ansiterminalwidget.cpp",
+			null
+		],
+		[
 			"/home/gitsc/WaffleHouse-Client-Production/src/backend.h",
 			"Mu",
 			"UVLADIE3JM/moc_backend.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.h",
+			"Mu",
+			"UVLADIE3JM/moc_bbsdirectory.cpp",
 			null
 		],
 		[
@@ -290,7 +308,7 @@
 		"APP_DISPLAY_NAME=\"WaffleHouse-Client\"",
 		"APP_EXECUTABLE=\"wafflehouse-client\"",
 		"APP_ID=\"WaffleHouseClient\"",
-		"APP_VERSION_STRING=\"2.5.1\"",
+		"APP_VERSION_STRING=\"2.5.2\"",
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
 		"QT_NETWORK_LIB",
@@ -360,7 +378,22 @@
 	"SOURCES" : 
 	[
 		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp",
+			"Mu",
+			null
+		],
+		[
 			"/home/gitsc/WaffleHouse-Client-Production/src/backend.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp",
 			"Mu",
 			null
 		],

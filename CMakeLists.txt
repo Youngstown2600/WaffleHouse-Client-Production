@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 2.5.2 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 2.5.3 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -108,7 +108,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="2.5.2"
+    APP_VERSION_STRING="2.5.3"
 )
 
 target_link_libraries(${APP_EXECUTABLE} PRIVATE

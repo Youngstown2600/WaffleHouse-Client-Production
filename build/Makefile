@@ -239,6 +239,54 @@ wafflehouse-client_autogen/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client_autogen.dir/build.make CMakeFiles/wafflehouse-client_autogen.dir/build
 .PHONY : wafflehouse-client_autogen/fast
 
+src/ansiterminal.o: src/ansiterminal.cpp.o
+.PHONY : src/ansiterminal.o
+
+# target to build an object file
+src/ansiterminal.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o
+.PHONY : src/ansiterminal.cpp.o
+
+src/ansiterminal.i: src/ansiterminal.cpp.i
+.PHONY : src/ansiterminal.i
+
+# target to preprocess a source file
+src/ansiterminal.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.i
+.PHONY : src/ansiterminal.cpp.i
+
+src/ansiterminal.s: src/ansiterminal.cpp.s
+.PHONY : src/ansiterminal.s
+
+# target to generate assembly for a file
+src/ansiterminal.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.s
+.PHONY : src/ansiterminal.cpp.s
+
+src/ansiterminalwidget.o: src/ansiterminalwidget.cpp.o
+.PHONY : src/ansiterminalwidget.o
+
+# target to build an object file
+src/ansiterminalwidget.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o
+.PHONY : src/ansiterminalwidget.cpp.o
+
+src/ansiterminalwidget.i: src/ansiterminalwidget.cpp.i
+.PHONY : src/ansiterminalwidget.i
+
+# target to preprocess a source file
+src/ansiterminalwidget.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.i
+.PHONY : src/ansiterminalwidget.cpp.i
+
+src/ansiterminalwidget.s: src/ansiterminalwidget.cpp.s
+.PHONY : src/ansiterminalwidget.s
+
+# target to generate assembly for a file
+src/ansiterminalwidget.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.s
+.PHONY : src/ansiterminalwidget.cpp.s
+
 src/backend.o: src/backend.cpp.o
 .PHONY : src/backend.o
 
@@ -262,6 +310,30 @@ src/backend.s: src/backend.cpp.s
 src/backend.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/backend.cpp.s
 .PHONY : src/backend.cpp.s
+
+src/bbsdirectory.o: src/bbsdirectory.cpp.o
+.PHONY : src/bbsdirectory.o
+
+# target to build an object file
+src/bbsdirectory.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o
+.PHONY : src/bbsdirectory.cpp.o
+
+src/bbsdirectory.i: src/bbsdirectory.cpp.i
+.PHONY : src/bbsdirectory.i
+
+# target to preprocess a source file
+src/bbsdirectory.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.i
+.PHONY : src/bbsdirectory.cpp.i
+
+src/bbsdirectory.s: src/bbsdirectory.cpp.s
+.PHONY : src/bbsdirectory.s
+
+# target to generate assembly for a file
+src/bbsdirectory.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.s
+.PHONY : src/bbsdirectory.cpp.s
 
 src/chatwindow.o: src/chatwindow.cpp.o
 .PHONY : src/chatwindow.o
@@ -929,9 +1001,18 @@ help:
 	@echo "... wafflehouse_sipcore_autogen_timestamp_deps"
 	@echo "... wafflehouse-client"
 	@echo "... wafflehouse_sipcore"
+	@echo "... src/ansiterminal.o"
+	@echo "... src/ansiterminal.i"
+	@echo "... src/ansiterminal.s"
+	@echo "... src/ansiterminalwidget.o"
+	@echo "... src/ansiterminalwidget.i"
+	@echo "... src/ansiterminalwidget.s"
 	@echo "... src/backend.o"
 	@echo "... src/backend.i"
 	@echo "... src/backend.s"
+	@echo "... src/bbsdirectory.o"
+	@echo "... src/bbsdirectory.i"
+	@echo "... src/bbsdirectory.s"
 	@echo "... src/chatwindow.o"
 	@echo "... src/chatwindow.i"
 	@echo "... src/chatwindow.s"

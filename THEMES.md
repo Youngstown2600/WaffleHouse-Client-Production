@@ -1,38 +1,29 @@
-# WaffleHouse-Client 2.5 Alpha — Theme Guide
+# WaffleHouse-Client Themes
 
-WaffleHouse-Client keeps GUI and CLI appearance preferences separately. GUI mode uses full Qt widget styling. CLI mode uses ncurses palettes, taking advantage of 256-color terminals when available and falling back to standard terminal colors when necessary.
+WaffleHouse-Client 2.5.3 includes the complete S.I.P.H.E.R. GUI/CLI theme family plus the WaffleHouse-specific palettes.
 
-| Theme | Style |
-|---|---|
-| System | Native desktop / terminal defaults |
-| Hacker | Bright terminal green on near-black |
-| Matrix | Pure black and Matrix green |
-| Phosphor | Softer old-school green CRT |
-| Midnight | Cool blue-gray late-night dark theme |
-| Amber | Vintage amber monochrome terminal |
-| Ice | Cold blue/cyan terminal palette |
-| Classic Light | Traditional light desktop palette |
-| Cyberpunk | Black, electric cyan, and hot magenta |
-| Synthwave | Deep purple, neon pink, and cyan |
-| Dracula | Charcoal with purple, pink, cyan, and green accents |
-| Vaporwave | Pastel pink, violet, aqua, and dark purple |
-| Blood Moon | Black and deep crimson with bright red accents |
-| C64 | Commodore-inspired blue and light-blue retro palette |
-| DOS | Blue-screen DOS-inspired white/cyan/yellow palette |
-| Solarized Dark | Solarized-inspired blue-green dark palette |
-| Waffle Iron | Charcoal-brown with toasted gold and syrup-like accents |
-| Ghostline | Dark steel blue, cyan, and violet tech palette |
-| Hot Dog Stand | Deliberately ridiculous red/yellow/black high-contrast palette |
-| Neon Miami | Dark teal with neon aqua and pink |
+## S.I.P.H.E.R. theme family
 
-## Switching themes
+System / Classic, Hacker, Matrix, Phosphor, Midnight, Amber, Ice, Classic Light, Solarized, Dracula, Nord, Cyberpunk, Blood Moon, Ocean, Retro Blue, Monochrome, Blue Box, Red Box, Beige Box, 2600, WarGames, CRT Green, VT220, Cobalt, Vaporwave, and Stealth.
 
-### GUI
+## Additional WaffleHouse themes
 
-Use **View → Theme**, or open **Tools → Options** and choose a theme from the Theme list.
+Solarized Dark, Synthwave, C64, DOS, Waffle Iron, Ghostline, Hot Dog Stand, and Neon Miami.
 
-### CLI
+## GUI
 
-Run `/options`, move to **Theme**, then use **Left/Right** to cycle through the palettes. Save with **F10** or **Ctrl-S**.
+Use **View → Theme** or **Tools → Options**. The selected theme is saved.
 
-Theme selections persist independently for GUI and CLI mode.
+## CLI
+
+Use `/options`, or the direct commands:
+
+```text
+/themes
+/theme 2600
+/theme nord
+/theme wargames
+```
+
+`system` and `classic` use the normal terminal palette. 256-color themes degrade to basic ANSI colors when the terminal exposes fewer colors.
+

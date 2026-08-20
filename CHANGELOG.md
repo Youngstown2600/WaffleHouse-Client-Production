@@ -1,3 +1,18 @@
+# WaffleHouse-Client 2.5.3 — 2026-08-19
+
+- Fixed classic BBS ANSI text that could disappear in the CLI when a board used SGR bold/bright-black (`1;30`) for gray labels: ncurses now uses explicit bright color indexes when the terminal supports them instead of relying only on `A_BOLD + COLOR_BLACK`.
+- Kept bright/normal ANSI color pairs distinct so later cell rendering cannot collapse gray/bright text back into normal black.
+- Hardened the ANSI model with correct ED (`CSI J`) cursor semantics plus HPA/HPR/VPA/VPR, ECH, ICH, DCH, IND, NEL, and reverse-index handling.
+- Kept Telnet/BBS NAWS fixed at 80x24 from the CLI even when the surrounding terminal window is resized.
+- Raw BBS keystrokes are still sent immediately, but printable text/backspace is mirrored in the CLI input row so the operator can see the command being typed; Enter clears the local mirror for the next command.
+- Merged the complete S.I.P.H.E.R. GUI/CLI theme collection into WaffleHouse while retaining WaffleHouse-only themes. Added Solarized, Nord, Ocean, Retro Blue, Monochrome, Blue Box, Red Box, Beige Box, 2600, WarGames, CRT Green, VT220, Cobalt, and Stealth.
+- Added CLI `/themes` and `/theme NAME`; selections persist through the existing options store.
+
+# WaffleHouse-Client 2.5.2-r1 — 2026-08-19
+
+- Removed the unused Telnet terminal buffer local in `TerminalUi::onConnected()`.
+- No functional behavior changed; this only eliminates the `-Wunused-variable` warning during CLI compilation.
+
 ## 2.5.2 ANSI/BBS terminal + explicit connection workflow — 2026-08-19
 
 - Replaced Telnet ANSI-stripping transcript behavior with a shared ANSI screen model for GUI and ncurses CLI.

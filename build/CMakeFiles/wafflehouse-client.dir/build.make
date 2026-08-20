@@ -167,10 +167,52 @@ CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/WaffleHouse-Client-Production/src/telnetbackend.cpp -o CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.s
 
+CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
+CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp
+CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp
+
+CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp > CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.i
+
+CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp -o CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.s
+
+CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
+CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp
+CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp
+
+CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp > CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.i
+
+CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp -o CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.s
+
+CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
+CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp
+CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp
+
+CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp > CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.i
+
+CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp -o CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.s
+
 CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/securechannel.cpp
 CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/securechannel.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.i: cmake_force
@@ -184,7 +226,7 @@ CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.cpp
 CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.i: cmake_force
@@ -198,7 +240,7 @@ CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/directtransfer.cpp
 CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/directtransfer.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.i: cmake_force
@@ -212,7 +254,7 @@ CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.cpp
 CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.i: cmake_force
@@ -226,7 +268,7 @@ CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/platforminfo.cpp
 CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/platforminfo.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.i: cmake_force
@@ -240,7 +282,7 @@ CMakeFiles/wafflehouse-client.dir/src/platforminfo.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.i: cmake_force
@@ -254,7 +296,7 @@ CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/mainwindow.cpp
 CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/mainwindow.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.i: cmake_force
@@ -268,7 +310,7 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/terminalui.cpp
 CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/terminalui.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.i: cmake_force
@@ -282,7 +324,7 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.cpp
 CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.i: cmake_force
@@ -296,7 +338,7 @@ CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/sipbackend.cpp
 CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/sipbackend.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.i: cmake_force
@@ -310,7 +352,7 @@ CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.s: cmake_force
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: CMakeFiles/wafflehouse-client.dir/flags.make
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: /home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.cpp
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: CMakeFiles/wafflehouse-client.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o -MF CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o.d -o CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o -c /home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.cpp
 
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.i: cmake_force
@@ -330,6 +372,9 @@ wafflehouse__client_OBJECTS = \
 "CMakeFiles/wafflehouse-client.dir/src/oscarprotocol.cpp.o" \
 "CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o" \
 "CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.o" \
+"CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o" \
+"CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o" \
+"CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o" \
 "CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o" \
 "CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o" \
 "CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o" \
@@ -352,6 +397,9 @@ wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/ircbackend.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/oscarprotocol.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.o
+wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o
+wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o
+wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o
@@ -376,7 +424,7 @@ wafflehouse-client: /usr/lib/x86_64-linux-gnu/libncursesw.so
 wafflehouse-client: /usr/lib/x86_64-linux-gnu/libtinfo.so
 wafflehouse-client: /usr/lib/x86_64-linux-gnu/libxkbcommon.so
 wafflehouse-client: CMakeFiles/wafflehouse-client.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Linking CXX executable wafflehouse-client"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Linking CXX executable wafflehouse-client"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/wafflehouse-client.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

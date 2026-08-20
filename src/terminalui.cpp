@@ -43,6 +43,24 @@ QString timestamp()
     return QDateTime::currentDateTime().toString(QStringLiteral("HH:mm:ss"));
 }
 
+QStringList cliThemeNames()
+{
+    return {
+        QStringLiteral("system"), QStringLiteral("classic"), QStringLiteral("phosphor"),
+        QStringLiteral("amber"), QStringLiteral("ice"), QStringLiteral("hacker"),
+        QStringLiteral("matrix"), QStringLiteral("midnight"), QStringLiteral("classic-light"),
+        QStringLiteral("solarized"), QStringLiteral("solarized-dark"), QStringLiteral("dracula"),
+        QStringLiteral("nord"), QStringLiteral("cyberpunk"), QStringLiteral("blood-moon"),
+        QStringLiteral("ocean"), QStringLiteral("retro-blue"), QStringLiteral("monochrome"),
+        QStringLiteral("blue-box"), QStringLiteral("red-box"), QStringLiteral("beige-box"),
+        QStringLiteral("2600"), QStringLiteral("wargames"), QStringLiteral("crt-green"),
+        QStringLiteral("vt220"), QStringLiteral("cobalt"), QStringLiteral("vaporwave"),
+        QStringLiteral("stealth"), QStringLiteral("synthwave"), QStringLiteral("c64"),
+        QStringLiteral("dos"), QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
+        QStringLiteral("hot-dog-stand"), QStringLiteral("neon-miami")
+    };
+}
+
 bool isTerminalBackspace(uint codepoint)
 {
     // Depending on terminal/termios settings, Backspace can arrive as ASCII
@@ -268,6 +286,104 @@ void TerminalUi::applyTheme()
         unread = color256(201, COLOR_MAGENTA);
         border = color256(201, COLOR_MAGENTA);
         secure = color256(51, COLOR_CYAN);
+    } else if (theme == QStringLiteral("solarized")) {
+        background = color256(23, COLOR_BLACK);
+        header = color256(136, COLOR_YELLOW);
+        online = color256(64, COLOR_GREEN);
+        unread = color256(37, COLOR_CYAN);
+        border = color256(244, COLOR_WHITE);
+        secure = color256(37, COLOR_CYAN);
+    } else if (theme == QStringLiteral("nord")) {
+        background = color256(236, COLOR_BLACK);
+        header = color256(110, COLOR_CYAN);
+        online = color256(108, COLOR_GREEN);
+        unread = color256(81, COLOR_CYAN);
+        border = color256(245, COLOR_WHITE);
+        secure = color256(81, COLOR_CYAN);
+    } else if (theme == QStringLiteral("ocean")) {
+        background = color256(17, COLOR_BLACK);
+        header = color256(39, COLOR_CYAN);
+        online = color256(48, COLOR_GREEN);
+        unread = color256(45, COLOR_CYAN);
+        border = color256(24, COLOR_BLUE);
+        secure = color256(45, COLOR_CYAN);
+    } else if (theme == QStringLiteral("retro-blue")) {
+        background = color256(17, COLOR_BLACK);
+        header = color256(75, COLOR_BLUE);
+        online = color256(81, COLOR_CYAN);
+        unread = color256(117, COLOR_CYAN);
+        border = color256(60, COLOR_BLUE);
+        secure = color256(117, COLOR_CYAN);
+    } else if (theme == QStringLiteral("monochrome")) {
+        background = COLOR_BLACK;
+        header = COLOR_WHITE;
+        online = COLOR_WHITE;
+        unread = COLOR_WHITE;
+        border = color256(245, COLOR_WHITE);
+        secure = COLOR_WHITE;
+    } else if (theme == QStringLiteral("blue-box")) {
+        background = color256(17, COLOR_BLACK);
+        header = color256(33, COLOR_BLUE);
+        online = color256(51, COLOR_CYAN);
+        unread = color256(45, COLOR_CYAN);
+        border = color256(24, COLOR_BLUE);
+        secure = color256(51, COLOR_CYAN);
+    } else if (theme == QStringLiteral("red-box")) {
+        background = COLOR_BLACK;
+        header = color256(196, COLOR_RED);
+        online = color256(208, COLOR_YELLOW);
+        unread = color256(203, COLOR_RED);
+        border = color256(88, COLOR_RED);
+        secure = color256(203, COLOR_RED);
+    } else if (theme == QStringLiteral("beige-box")) {
+        background = color256(236, COLOR_BLACK);
+        header = color256(223, COLOR_YELLOW);
+        online = color256(150, COLOR_GREEN);
+        unread = color256(180, COLOR_YELLOW);
+        border = color256(101, COLOR_YELLOW);
+        secure = color256(180, COLOR_YELLOW);
+    } else if (theme == QStringLiteral("2600")) {
+        background = COLOR_BLACK;
+        header = color256(46, COLOR_GREEN);
+        online = color256(118, COLOR_GREEN);
+        unread = color256(51, COLOR_CYAN);
+        border = color256(34, COLOR_GREEN);
+        secure = color256(51, COLOR_CYAN);
+    } else if (theme == QStringLiteral("wargames")) {
+        background = COLOR_BLACK;
+        header = color256(40, COLOR_GREEN);
+        online = color256(46, COLOR_GREEN);
+        unread = color256(82, COLOR_GREEN);
+        border = color256(22, COLOR_GREEN);
+        secure = color256(82, COLOR_GREEN);
+    } else if (theme == QStringLiteral("crt-green")) {
+        background = COLOR_BLACK;
+        header = color256(118, COLOR_GREEN);
+        online = color256(156, COLOR_GREEN);
+        unread = color256(120, COLOR_GREEN);
+        border = color256(65, COLOR_GREEN);
+        secure = color256(120, COLOR_GREEN);
+    } else if (theme == QStringLiteral("vt220")) {
+        background = COLOR_BLACK;
+        header = color256(252, COLOR_WHITE);
+        online = color256(255, COLOR_WHITE);
+        unread = color256(250, COLOR_WHITE);
+        border = color256(244, COLOR_WHITE);
+        secure = color256(255, COLOR_WHITE);
+    } else if (theme == QStringLiteral("cobalt")) {
+        background = color256(17, COLOR_BLACK);
+        header = color256(69, COLOR_BLUE);
+        online = color256(48, COLOR_GREEN);
+        unread = color256(81, COLOR_CYAN);
+        border = color256(25, COLOR_BLUE);
+        secure = color256(81, COLOR_CYAN);
+    } else if (theme == QStringLiteral("stealth")) {
+        background = color256(236, COLOR_BLACK);
+        header = color256(245, COLOR_WHITE);
+        online = color256(108, COLOR_GREEN);
+        unread = color256(250, COLOR_WHITE);
+        border = color256(238, COLOR_BLACK);
+        secure = color256(250, COLOR_WHITE);
     } else if (theme == QStringLiteral("synthwave")) {
         background = color256(17, COLOR_BLACK);
         header = color256(213, COLOR_MAGENTA);
@@ -994,11 +1110,25 @@ void TerminalUi::drawBufferPane(Buffer *buffer,
                 int fg = cell.fg, bg = cell.bg;
                 if (cell.inverse) std::swap(fg, bg);
                 static const short colors[8] = {COLOR_BLACK, COLOR_RED, COLOR_GREEN, COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA, COLOR_CYAN, COLOR_WHITE};
-                int attr = cell.bold ? A_BOLD : 0;
-                const short pair = static_cast<short>(16 + fg * 8 + bg);
+                const int clampedFg = std::clamp(fg, 0, 7);
+                const int clampedBg = std::clamp(bg, 0, 7);
+                const bool explicitBright = cell.bold && COLORS >= 16;
+                const short fgColor = explicitBright
+                    ? static_cast<short>(clampedFg + 8)
+                    : colors[clampedFg];
+                const short bgColor = colors[clampedBg];
+                // Keep bright and normal color pairs distinct.  A number of BBSes
+                // use SGR 1;30 (bright black) for their ordinary gray labels.  Relying
+                // only on A_BOLD + COLOR_BLACK makes those labels disappear on some
+                // ncurses/terminal combinations.
+                const short pair = static_cast<short>(16 + (explicitBright ? 64 : 0)
+                                                     + clampedFg * 8 + clampedBg);
+                int attr = (cell.bold && !explicitBright) ? A_BOLD : 0;
                 if (has_colors() && pair > 0 && pair < COLOR_PAIRS) {
-                    init_pair(pair, colors[std::clamp(fg,0,7)], colors[std::clamp(bg,0,7)]);
+                    init_pair(pair, fgColor, bgColor);
                     attr |= COLOR_PAIR(pair);
+                } else if (cell.bold) {
+                    attr |= A_BOLD;
                 }
                 safeAdd(top + r, 1 + c, QString(cell.ch), attr, 1);
                 ++c;
@@ -1231,13 +1361,29 @@ void TerminalUi::handleCharacter(uint codepoint)
         ConnectionEntry *entry = connectionById(buffer->connectionId);
         if (entry && entry->backend && entry->connected) {
             QByteArray bytes;
-            if (codepoint == 10 || codepoint == 13) bytes = QByteArray("\r");
-            else if (isTerminalBackspace(codepoint)) bytes = QByteArray(1, '\x08');
-            else if (codepoint == 9) bytes = QByteArray(1, '\t');
-            else if (codepoint == 27) bytes = QByteArray(1, '\x1b');
-            else if (codepoint >= 32) {
+            if (codepoint == 10 || codepoint == 13) {
+                bytes = QByteArray("\r");
+                // Raw BBS keystrokes are transmitted immediately, but keep a local
+                // command-line mirror so the operator can see what they are typing.
+                // Enter commits the BBS command and clears the mirror for the next one.
+                m_input.clear();
+                m_inputCursor = 0;
+            } else if (isTerminalBackspace(codepoint)) {
+                bytes = QByteArray(1, '\x08');
+                if (m_inputCursor > 0) {
+                    m_input.remove(m_inputCursor - 1, 1);
+                    --m_inputCursor;
+                }
+            } else if (codepoint == 9) {
+                bytes = QByteArray(1, '\t');
+            } else if (codepoint == 27) {
+                bytes = QByteArray(1, '\x1b');
+            } else if (codepoint >= 32) {
                 const char32_t cp = static_cast<char32_t>(codepoint);
-                bytes = QString::fromUcs4(&cp, 1).toUtf8();
+                const QString text = QString::fromUcs4(&cp, 1);
+                bytes = text.toUtf8();
+                m_input.insert(m_inputCursor, text);
+                m_inputCursor += text.size();
             }
             if (!bytes.isEmpty()) entry->backend->sendTerminalInput(bytes);
         }
@@ -1295,8 +1441,18 @@ void TerminalUi::handleSpecialKey(int key)
         if (entry && entry->backend && entry->connected) {
             QByteArray seq;
             switch (key) {
-            case KEY_ENTER: seq = "\r"; break;
-            case KEY_BACKSPACE: seq = QByteArray(1, '\x08'); break;
+            case KEY_ENTER:
+                seq = "\r";
+                m_input.clear();
+                m_inputCursor = 0;
+                break;
+            case KEY_BACKSPACE:
+                seq = QByteArray(1, '\x08');
+                if (m_inputCursor > 0) {
+                    m_input.remove(m_inputCursor - 1, 1);
+                    --m_inputCursor;
+                }
+                break;
             case KEY_UP: seq = "\x1b[A"; break;
             case KEY_DOWN: seq = "\x1b[B"; break;
             case KEY_RIGHT: seq = "\x1b[C"; break;
@@ -1364,8 +1520,9 @@ void TerminalUi::handleSpecialKey(int key)
         for (ConnectionEntry *entry : m_connections) {
             if (entry && entry->backend && entry->connected
                 && entry->settings.protocol == ConnectionSettings::Protocol::Telnet) {
-                entry->backend->setTerminalSize(std::max(20, COLS - 2),
-                                                std::max(5, LINES - 5));
+                // BBS ANSI art is normally authored for an 80-column screen.
+                // Keep NAWS stable even if the enclosing ncurses window is resized.
+                entry->backend->setTerminalSize(80, 24);
             }
         }
         break;
@@ -1395,6 +1552,7 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/joinprivate"), QStringLiteral("/members"),
         QStringLiteral("/msg"), QStringLiteral("/names"),
         QStringLiteral("/nick"), QStringLiteral("/options"),
+        QStringLiteral("/theme"), QStringLiteral("/themes"),
         QStringLiteral("/passwd"), QStringLiteral("/part"),
         QStringLiteral("/query"), QStringLiteral("/quit"),
         QStringLiteral("/raw"), QStringLiteral("/telnet"), QStringLiteral("/bbsimport"),
@@ -2252,12 +2410,17 @@ void TerminalUi::loadOptions()
     settings.endGroup();
 
     static const QSet<QString> validThemes = {
-        QStringLiteral("system"), QStringLiteral("phosphor"), QStringLiteral("amber"), QStringLiteral("ice"),
-        QStringLiteral("hacker"), QStringLiteral("matrix"), QStringLiteral("midnight"),
-        QStringLiteral("classic-light"), QStringLiteral("cyberpunk"), QStringLiteral("synthwave"),
-        QStringLiteral("dracula"), QStringLiteral("vaporwave"), QStringLiteral("blood-moon"),
-        QStringLiteral("c64"), QStringLiteral("dos"), QStringLiteral("solarized-dark"),
-        QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
+        QStringLiteral("system"), QStringLiteral("classic"), QStringLiteral("phosphor"),
+        QStringLiteral("amber"), QStringLiteral("ice"), QStringLiteral("hacker"),
+        QStringLiteral("matrix"), QStringLiteral("midnight"), QStringLiteral("classic-light"),
+        QStringLiteral("solarized"), QStringLiteral("solarized-dark"), QStringLiteral("dracula"),
+        QStringLiteral("nord"), QStringLiteral("cyberpunk"), QStringLiteral("blood-moon"),
+        QStringLiteral("ocean"), QStringLiteral("retro-blue"), QStringLiteral("monochrome"),
+        QStringLiteral("blue-box"), QStringLiteral("red-box"), QStringLiteral("beige-box"),
+        QStringLiteral("2600"), QStringLiteral("wargames"), QStringLiteral("crt-green"),
+        QStringLiteral("vt220"), QStringLiteral("cobalt"), QStringLiteral("vaporwave"),
+        QStringLiteral("stealth"), QStringLiteral("synthwave"), QStringLiteral("c64"),
+        QStringLiteral("dos"), QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
         QStringLiteral("hot-dog-stand"), QStringLiteral("neon-miami")
     };
     if (!validThemes.contains(m_options.theme)) {
@@ -2288,12 +2451,17 @@ void TerminalUi::showOptions()
 {
     UiOptions pending = m_options;
     const QStringList themes = {
-        QStringLiteral("system"), QStringLiteral("phosphor"), QStringLiteral("amber"), QStringLiteral("ice"),
-        QStringLiteral("hacker"), QStringLiteral("matrix"), QStringLiteral("midnight"),
-        QStringLiteral("classic-light"), QStringLiteral("cyberpunk"), QStringLiteral("synthwave"),
-        QStringLiteral("dracula"), QStringLiteral("vaporwave"), QStringLiteral("blood-moon"),
-        QStringLiteral("c64"), QStringLiteral("dos"), QStringLiteral("solarized-dark"),
-        QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
+        QStringLiteral("system"), QStringLiteral("classic"), QStringLiteral("phosphor"),
+        QStringLiteral("amber"), QStringLiteral("ice"), QStringLiteral("hacker"),
+        QStringLiteral("matrix"), QStringLiteral("midnight"), QStringLiteral("classic-light"),
+        QStringLiteral("solarized"), QStringLiteral("solarized-dark"), QStringLiteral("dracula"),
+        QStringLiteral("nord"), QStringLiteral("cyberpunk"), QStringLiteral("blood-moon"),
+        QStringLiteral("ocean"), QStringLiteral("retro-blue"), QStringLiteral("monochrome"),
+        QStringLiteral("blue-box"), QStringLiteral("red-box"), QStringLiteral("beige-box"),
+        QStringLiteral("2600"), QStringLiteral("wargames"), QStringLiteral("crt-green"),
+        QStringLiteral("vt220"), QStringLiteral("cobalt"), QStringLiteral("vaporwave"),
+        QStringLiteral("stealth"), QStringLiteral("synthwave"), QStringLiteral("c64"),
+        QStringLiteral("dos"), QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
         QStringLiteral("hot-dog-stand"), QStringLiteral("neon-miami")
     };
 
@@ -3143,8 +3311,8 @@ void TerminalUi::onConnected(ConnectionEntry *entry,
         const QString display = entry->settings.username.trimmed().isEmpty()
             ? entry->settings.server
             : entry->settings.username.trimmed();
-        Buffer *terminal = ensureBuffer(QStringLiteral("terminal"), entry->id,
-                                        entry->settings.server, display, true);
+        ensureBuffer(QStringLiteral("terminal"), entry->id,
+                     entry->settings.server, display, true);
     }
 }
 
@@ -3431,6 +3599,30 @@ void TerminalUi::handleCommand(const QString &line)
     }
     if (command == QStringLiteral("options")) {
         showOptions();
+        return;
+    }
+    if (command == QStringLiteral("themes")) {
+        messageBox(QStringLiteral("CLI Themes"), cliThemeNames());
+        return;
+    }
+    if (command == QStringLiteral("theme")) {
+        QString name = takeArgument(rest).trimmed().toCaseFolded();
+        name.replace(QLatin1Char('_'), QLatin1Char('-'));
+        if (name.isEmpty()) {
+            status(QStringLiteral("Current CLI theme: %1. Usage: /theme NAME; use /themes to list choices.")
+                       .arg(m_options.theme));
+            return;
+        }
+        const QStringList themes = cliThemeNames();
+        if (!themes.contains(name)) {
+            status(QStringLiteral("Unknown theme '%1'. Use /themes to list choices.").arg(name));
+            return;
+        }
+        m_options.theme = name;
+        saveOptions();
+        applyTheme();
+        clearok(stdscr, TRUE);
+        status(QStringLiteral("CLI theme changed to %1.").arg(name));
         return;
     }
     if (command == QStringLiteral("env") || command == QStringLiteral("environment")) {
@@ -4383,7 +4575,7 @@ void TerminalUi::showHelp()
         QStringLiteral("OPTIONS / APPEARANCE"),
         QStringLiteral("  Tab                          complete/cycle matching slash commands"),
         QStringLiteral("  /options                     open check-box options/theme dialog"),
-        QStringLiteral("      Themes: Phosphor, Amber, Ice, Hacker, Matrix, Midnight, Classic Light,"),
+        QStringLiteral("      Themes: System/Classic plus the full WaffleHouse + S.I.P.H.E.R. palette,"),
         QStringLiteral("              Cyberpunk, Synthwave, Dracula, Vaporwave, Blood Moon, C64, DOS,"),
         QStringLiteral("              Solarized Dark, Waffle Iron, Ghostline, Hot Dog Stand, Neon Miami"),
         QStringLiteral("  /env                         show OS / GUI-session / terminal environment"),

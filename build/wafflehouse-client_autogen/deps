@@ -6,9 +6,15 @@ wafflehouse-client_autogen/timestamp: \
 	/home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \
 	/home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Profile.h \
 	/home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+	/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp \
+	/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h \
+	/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp \
+	/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.h \
 	/home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
 	/home/gitsc/WaffleHouse-Client-Production/src/backend.cpp \
 	/home/gitsc/WaffleHouse-Client-Production/src/backend.h \
+	/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp \
+	/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.h \
 	/home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp \
 	/home/gitsc/WaffleHouse-Client-Production/src/chatwindow.h \
 	/home/gitsc/WaffleHouse-Client-Production/src/directtransfer.cpp \
@@ -402,6 +408,7 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QThread \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QTimer \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qalgorithms.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qanystringview.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qarraydata.h \
@@ -495,7 +502,10 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvariant.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvarlengtharray.h \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvector.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qversiontagging.h \
+	/usr/include/x86_64-linux-gnu/qt6/QtGui/QColor \
+	/usr/include/x86_64-linux-gnu/qt6/QtGui/QFont \
 	/usr/include/x86_64-linux-gnu/qt6/QtGui/qaction.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtGui/qbitmap.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtGui/qbrush.h \

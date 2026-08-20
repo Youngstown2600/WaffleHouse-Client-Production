@@ -1,12 +1,19 @@
-# WaffleHouse-Client 2.5.2
+# WaffleHouse-Client 2.5.3
 
-**WaffleHouse-Client 2.5.2** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.3** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
 > This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
 
 
+
+
+## 2.5.3 BBS visibility/input fixes + S.I.P.H.E.R. themes
+
+2.5.3 fixes a curses-specific ANSI rendering issue where classic BBS gray text (`bold + black`) could be effectively invisible even though colored hotkeys remained visible. The CLI now maps bright ANSI foregrounds explicitly on 16/256-color terminals, keeps BBS NAWS at 80x24, and mirrors raw printable keystrokes into the bottom input row while transmitting them immediately.
+
+The GUI and CLI theme collections now include the full S.I.P.H.E.R. palette in addition to WaffleHouse-specific themes. CLI users can run `/themes` and `/theme NAME`.
 
 ## 2.5.2 ANSI/BBS terminal and explicit connection workflow
 

@@ -843,26 +843,18 @@ void MainWindow::buildMenus()
         const char *id;
     };
     static constexpr ThemeEntry themeEntries[] = {
-        {"System", "system"},
-        {"Hacker", "hacker"},
-        {"Matrix", "matrix"},
-        {"Phosphor", "phosphor"},
-        {"Midnight", "midnight"},
-        {"Amber", "amber"},
-        {"Ice", "ice"},
-        {"Classic Light", "classic-light"},
-        {"Cyberpunk", "cyberpunk"},
-        {"Synthwave", "synthwave"},
-        {"Dracula", "dracula"},
-        {"Vaporwave", "vaporwave"},
-        {"Blood Moon", "blood-moon"},
-        {"C64", "c64"},
-        {"DOS", "dos"},
-        {"Solarized Dark", "solarized-dark"},
-        {"Waffle Iron", "waffle-iron"},
-        {"Ghostline", "ghostline"},
-        {"Hot Dog Stand", "hot-dog-stand"},
-        {"Neon Miami", "neon-miami"},
+        {"System", "system"}, {"Hacker", "hacker"}, {"Matrix", "matrix"},
+        {"Phosphor", "phosphor"}, {"Midnight", "midnight"}, {"Amber", "amber"},
+        {"Ice", "ice"}, {"Classic Light", "classic-light"}, {"Solarized", "solarized"},
+        {"Solarized Dark", "solarized-dark"}, {"Dracula", "dracula"}, {"Nord", "nord"},
+        {"Cyberpunk", "cyberpunk"}, {"Blood Moon", "blood-moon"}, {"Ocean", "ocean"},
+        {"Retro Blue", "retro-blue"}, {"Monochrome", "monochrome"},
+        {"Blue Box", "blue-box"}, {"Red Box", "red-box"}, {"Beige Box", "beige-box"},
+        {"2600", "2600"}, {"WarGames", "wargames"}, {"CRT Green", "crt-green"},
+        {"VT220", "vt220"}, {"Cobalt", "cobalt"}, {"Vaporwave", "vaporwave"},
+        {"Stealth", "stealth"}, {"Synthwave", "synthwave"}, {"C64", "c64"},
+        {"DOS", "dos"}, {"Waffle Iron", "waffle-iron"}, {"Ghostline", "ghostline"},
+        {"Hot Dog Stand", "hot-dog-stand"}, {"Neon Miami", "neon-miami"},
     };
 
     for (const ThemeEntry &entry : themeEntries) {
@@ -1575,16 +1567,20 @@ void MainWindow::loadOptions()
     QSettings settings;
     m_options.theme = settings.value(QStringLiteral("ui/theme"), QStringLiteral("system"))
                           .toString().toCaseFolded();
-    const QSet<QString> validThemes{QStringLiteral("system"), QStringLiteral("hacker"), QStringLiteral("matrix"),
-                                    QStringLiteral("phosphor"), QStringLiteral("midnight"),
-                                    QStringLiteral("amber"), QStringLiteral("ice"),
-                                    QStringLiteral("classic-light"), QStringLiteral("cyberpunk"),
-                                    QStringLiteral("synthwave"), QStringLiteral("dracula"),
-                                    QStringLiteral("vaporwave"), QStringLiteral("blood-moon"),
-                                    QStringLiteral("c64"), QStringLiteral("dos"),
-                                    QStringLiteral("solarized-dark"), QStringLiteral("waffle-iron"),
-                                    QStringLiteral("ghostline"), QStringLiteral("hot-dog-stand"),
-                                    QStringLiteral("neon-miami")};
+    const QSet<QString> validThemes{
+        QStringLiteral("system"), QStringLiteral("hacker"), QStringLiteral("matrix"),
+        QStringLiteral("phosphor"), QStringLiteral("midnight"), QStringLiteral("amber"),
+        QStringLiteral("ice"), QStringLiteral("classic-light"), QStringLiteral("solarized"),
+        QStringLiteral("solarized-dark"), QStringLiteral("dracula"), QStringLiteral("nord"),
+        QStringLiteral("cyberpunk"), QStringLiteral("blood-moon"), QStringLiteral("ocean"),
+        QStringLiteral("retro-blue"), QStringLiteral("monochrome"), QStringLiteral("blue-box"),
+        QStringLiteral("red-box"), QStringLiteral("beige-box"), QStringLiteral("2600"),
+        QStringLiteral("wargames"), QStringLiteral("crt-green"), QStringLiteral("vt220"),
+        QStringLiteral("cobalt"), QStringLiteral("vaporwave"), QStringLiteral("stealth"),
+        QStringLiteral("synthwave"), QStringLiteral("c64"), QStringLiteral("dos"),
+        QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
+        QStringLiteral("hot-dog-stand"), QStringLiteral("neon-miami")
+    };
     if (!validThemes.contains(m_options.theme)) {
         m_options.theme = QStringLiteral("system");
     }
@@ -1849,6 +1845,65 @@ void MainWindow::applyTheme()
             "QHeaderView::section { background: #0d3640; color: #20e3d2; border: 1px solid #ff4fa3; padding: 4px; }"
             "QGroupBox { border: 1px solid #ff4fa3; margin-top: 8px; }"
             "QScrollBar::handle,QSplitter::handle { background: #20e3d2; }");
+    } else if (m_options.theme == QStringLiteral("solarized")) {
+        sheet=QStringLiteral(
+            "QWidget { background:#002b36; color:#839496; }"
+            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#073642; color:#eee8d5; border:1px solid #586e75; selection-background-color:#0b4f5c; }"
+            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#073642; color:#93a1a1; }"
+            "QPushButton { border:1px solid #657b83; padding:4px 8px; }"
+            "QPushButton:hover,QTabBar::tab:selected { background:#0b4f5c; color:#fdf6e3; }"
+            "QHeaderView::section { background:#073642; color:#b58900; border:1px solid #586e75; }"
+            "QGroupBox { border:1px solid #586e75; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#586e75; }");
+    } else if (m_options.theme == QStringLiteral("nord")) {
+        sheet=QStringLiteral(
+            "QWidget { background:#2e3440; color:#eceff4; }"
+            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#3b4252; color:#eceff4; border:1px solid #4c566a; selection-background-color:#5e81ac; }"
+            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#3b4252; color:#d8dee9; }"
+            "QPushButton { border:1px solid #81a1c1; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#434c5e; color:#88c0d0; }"
+            "QHeaderView::section { background:#434c5e; color:#8fbcbb; border:1px solid #4c566a; }"
+            "QGroupBox { border:1px solid #4c566a; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#5e81ac; }");
+    } else if (m_options.theme == QStringLiteral("ocean")) {
+        sheet=QStringLiteral(
+            "QWidget { background:#061923; color:#d7f3ff; }"
+            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#031018; color:#d7f3ff; border:1px solid #19799b; selection-background-color:#11516b; }"
+            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#0a2633; color:#c8f3ff; }"
+            "QPushButton { border:1px solid #2596be; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#10465d; color:#80f0ff; }"
+            "QHeaderView::section { background:#0c3242; color:#62d9ff; border:1px solid #19799b; }"
+            "QGroupBox { border:1px solid #19799b; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#19799b; }");
+    } else if (m_options.theme == QStringLiteral("retro-blue")) {
+        sheet=QStringLiteral(
+            "QWidget { background:#07112a; color:#b8d5ff; font-family:'Monospace'; }"
+            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#020817; color:#c8e0ff; border:1px solid #365f9c; selection-background-color:#173c73; }"
+            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#0d1d42; color:#c8e0ff; }"
+            "QPushButton { border:1px solid #4d7fc4; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#193a72; color:#ffffff; }"
+            "QHeaderView::section { background:#102858; color:#8fc5ff; border:1px solid #365f9c; }"
+            "QGroupBox { border:1px solid #365f9c; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#365f9c; }");
+    } else if (m_options.theme == QStringLiteral("monochrome")) {
+        sheet=QStringLiteral(
+            "QWidget { background:#111111; color:#eeeeee; }"
+            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#050505; color:#f5f5f5; border:1px solid #777777; selection-background-color:#444444; }"
+            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#222222; color:#eeeeee; }"
+            "QPushButton { border:1px solid #888888; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#3a3a3a; color:#ffffff; }"
+            "QHeaderView::section { background:#292929; color:#ffffff; border:1px solid #777777; }"
+            "QGroupBox { border:1px solid #777777; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#777777; }");
+    } else if (m_options.theme == QStringLiteral("blue-box")) {
+        sheet=QStringLiteral("QWidget{background:#031325;color:#bde7ff;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#010812;color:#d8f2ff;border:1px solid #1b77b7;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#08213a;color:#c7ecff;} QPushButton{border:1px solid #249ee8;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0d3f67;} QHeaderView::section{background:#0a2c4d;color:#77d5ff;border:1px solid #1b77b7;} QGroupBox{border:1px solid #1b77b7;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("red-box")) {
+        sheet=QStringLiteral("QWidget{background:#180404;color:#ffd6d6;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#080101;color:#ffe9e9;border:1px solid #aa2525;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#290808;color:#ffdede;} QPushButton{border:1px solid #dc3f3f;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#541010;} QHeaderView::section{background:#3a0b0b;color:#ff7e7e;border:1px solid #aa2525;} QGroupBox{border:1px solid #aa2525;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("beige-box")) {
+        sheet=QStringLiteral("QWidget{background:#2a2419;color:#f1dfbd;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#15110c;color:#f7e9cc;border:1px solid #8d7651;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#3a3021;color:#f1dfbd;} QPushButton{border:1px solid #b59a68;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#58492f;} QHeaderView::section{background:#463a27;color:#f0cf8f;border:1px solid #8d7651;} QGroupBox{border:1px solid #8d7651;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("2600")) {
+        sheet=QStringLiteral("QWidget{background:#050505;color:#d7ffd7;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#000;color:#8cff8c;border:1px solid #19c719;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#071707;color:#76ff76;} QPushButton{border:1px solid #21ed21;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0d350d;color:#fff000;} QHeaderView::section{background:#0a280a;color:#32ff32;border:1px solid #19c719;} QGroupBox{border:1px solid #19c719;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("wargames")) {
+        sheet=QStringLiteral("QWidget{background:#020b02;color:#55ff55;font-family:'Monospace';} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#000400;color:#55ff55;border:1px solid #138f13;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#061306;color:#55ff55;} QPushButton{border:1px solid #1dc51d;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0a2a0a;} QHeaderView::section{background:#071d07;color:#8cff8c;border:1px solid #138f13;} QGroupBox{border:1px solid #138f13;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("crt-green")) {
+        sheet=QStringLiteral("QWidget{background:#071008;color:#b8ffb8;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#010501;color:#cbffcb;border:1px solid #3b8f45;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#0c1c0e;color:#c7ffc7;} QPushButton{border:1px solid #55b85f;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#16361a;} QHeaderView::section{background:#102913;color:#8eff98;border:1px solid #3b8f45;} QGroupBox{border:1px solid #3b8f45;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("vt220")) {
+        sheet=QStringLiteral("QWidget{background:#161616;color:#e8e8e8;font-family:'Monospace';} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#050505;color:#f2f2f2;border:1px solid #767676;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#242424;color:#eee;} QPushButton{border:1px solid #919191;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#393939;} QHeaderView::section{background:#2d2d2d;color:#fff;border:1px solid #767676;} QGroupBox{border:1px solid #767676;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("cobalt")) {
+        sheet=QStringLiteral("QWidget{background:#07152b;color:#e5efff;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#020916;color:#e5efff;border:1px solid #456fb5;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#0d2446;color:#dce9ff;} QPushButton{border:1px solid #668fd0;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#173d75;color:#9ee7ff;} QHeaderView::section{background:#102f5c;color:#8cc7ff;border:1px solid #456fb5;} QGroupBox{border:1px solid #456fb5;margin-top:8px;}");
+    } else if (m_options.theme == QStringLiteral("stealth")) {
+        sheet=QStringLiteral("QWidget{background:#101214;color:#c7cbd0;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#070809;color:#d5d9de;border:1px solid #4c535a;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#1a1d20;color:#cbd0d5;} QPushButton{border:1px solid #5b636b;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#292e33;color:#e8ecef;} QHeaderView::section{background:#22272b;color:#d5d9de;border:1px solid #4c535a;} QGroupBox{border:1px solid #4c535a;margin-top:8px;}");
     } else if (m_options.theme == QStringLiteral("classic-light")) {
         sheet = QStringLiteral(
             "QWidget { background-color: #f2f2f2; color: #202020; }"
@@ -1897,14 +1952,28 @@ void MainWindow::showOptionsDialog()
     theme.addItem(QStringLiteral("Amber"), QStringLiteral("amber"));
     theme.addItem(QStringLiteral("Ice"), QStringLiteral("ice"));
     theme.addItem(QStringLiteral("Classic Light"), QStringLiteral("classic-light"));
-    theme.addItem(QStringLiteral("Cyberpunk"), QStringLiteral("cyberpunk"));
-    theme.addItem(QStringLiteral("Synthwave"), QStringLiteral("synthwave"));
+    theme.addItem(QStringLiteral("Solarized"), QStringLiteral("solarized"));
+    theme.addItem(QStringLiteral("Solarized Dark"), QStringLiteral("solarized-dark"));
     theme.addItem(QStringLiteral("Dracula"), QStringLiteral("dracula"));
-    theme.addItem(QStringLiteral("Vaporwave"), QStringLiteral("vaporwave"));
+    theme.addItem(QStringLiteral("Nord"), QStringLiteral("nord"));
+    theme.addItem(QStringLiteral("Cyberpunk"), QStringLiteral("cyberpunk"));
     theme.addItem(QStringLiteral("Blood Moon"), QStringLiteral("blood-moon"));
+    theme.addItem(QStringLiteral("Ocean"), QStringLiteral("ocean"));
+    theme.addItem(QStringLiteral("Retro Blue"), QStringLiteral("retro-blue"));
+    theme.addItem(QStringLiteral("Monochrome"), QStringLiteral("monochrome"));
+    theme.addItem(QStringLiteral("Blue Box"), QStringLiteral("blue-box"));
+    theme.addItem(QStringLiteral("Red Box"), QStringLiteral("red-box"));
+    theme.addItem(QStringLiteral("Beige Box"), QStringLiteral("beige-box"));
+    theme.addItem(QStringLiteral("2600"), QStringLiteral("2600"));
+    theme.addItem(QStringLiteral("WarGames"), QStringLiteral("wargames"));
+    theme.addItem(QStringLiteral("CRT Green"), QStringLiteral("crt-green"));
+    theme.addItem(QStringLiteral("VT220"), QStringLiteral("vt220"));
+    theme.addItem(QStringLiteral("Cobalt"), QStringLiteral("cobalt"));
+    theme.addItem(QStringLiteral("Vaporwave"), QStringLiteral("vaporwave"));
+    theme.addItem(QStringLiteral("Stealth"), QStringLiteral("stealth"));
+    theme.addItem(QStringLiteral("Synthwave"), QStringLiteral("synthwave"));
     theme.addItem(QStringLiteral("C64"), QStringLiteral("c64"));
     theme.addItem(QStringLiteral("DOS"), QStringLiteral("dos"));
-    theme.addItem(QStringLiteral("Solarized Dark"), QStringLiteral("solarized-dark"));
     theme.addItem(QStringLiteral("Waffle Iron"), QStringLiteral("waffle-iron"));
     theme.addItem(QStringLiteral("Ghostline"), QStringLiteral("ghostline"));
     theme.addItem(QStringLiteral("Hot Dog Stand"), QStringLiteral("hot-dog-stand"));
@@ -2027,7 +2096,7 @@ void MainWindow::showHelpDialog()
         "  Graphical-terminal sessions are distinguished from desktop launches and console-only TTYs.\n\n"
         "THEMES\n"
         "  Use the Buddy List Options button, Tools > Options, or Ctrl+, for full settings.\n"
-        "  View > Theme provides quick access to System, Hacker, Matrix, Phosphor, Midnight, Amber, Ice, and Classic Light.\n")
+        "  View > Theme provides the complete WaffleHouse + S.I.P.H.E.R. theme collection.\n")
         .arg(appAsciiLogo(), appDisplayName(), appVersionString(), RuntimeEnvironment::detect().summary()));
     outer->addWidget(help, 1);
     QDialogButtonBox close(QDialogButtonBox::Close, &dialog);

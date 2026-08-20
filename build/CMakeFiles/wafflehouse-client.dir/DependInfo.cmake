@@ -8,7 +8,10 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp" "CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/ansiterminal.cpp.o.d"
+  "/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp" "CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o.d"
   "/home/gitsc/WaffleHouse-Client-Production/src/backend.cpp" "CMakeFiles/wafflehouse-client.dir/src/backend.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/backend.cpp.o.d"
+  "/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp" "CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o.d"
   "/home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp" "CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o.d"
   "/home/gitsc/WaffleHouse-Client-Production/src/directtransfer.cpp" "CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/directtransfer.cpp.o.d"
   "/home/gitsc/WaffleHouse-Client-Production/src/filetransfer.cpp" "CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o" "gcc" "CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o.d"

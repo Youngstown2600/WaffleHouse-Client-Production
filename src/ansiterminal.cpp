@@ -121,8 +121,10 @@ QVector<int> AnsiTerminalModel::parseParams(const QString &params, int defaultVa
 void AnsiTerminalModel::eraseDisplay(int mode)
 {
     if (mode == 2 || mode == 3) {
+        // ANSI ED clears the display but does not move the cursor.  BBS ANSI often
+        // sends ED and CUP separately; homing here causes later screen fragments to
+        // overwrite earlier rows when a server intentionally keeps the cursor.
         for (Cell &c : m_cells) clearCell(c);
-        if (mode == 2) setCursor(0, 0);
         return;
     }
     if (mode == 0) {
@@ -158,6 +160,10 @@ void AnsiTerminalModel::handleCsi(QChar finalByte, const QString &params)
     case 'E': setCursor(m_row + n, 0); break;
     case 'F': setCursor(m_row - n, 0); break;
     case 'G': setCursor(m_row, std::max(1, n) - 1); break;
+    case '`': setCursor(m_row, std::max(1, n) - 1); break; // HPA
+    case 'a': setCursor(m_row, m_col + n); break;          // HPR
+    case 'd': setCursor(std::max(1, n) - 1, m_col); break; // VPA
+    case 'e': setCursor(m_row + n, m_col); break;          // VPR
     case 'H': case 'f': {
         const int r = p.size() > 0 && p[0] > 0 ? p[0] : 1;
         const int c = p.size() > 1 && p[1] > 0 ? p[1] : 1;
@@ -165,6 +171,26 @@ void AnsiTerminalModel::handleCsi(QChar finalByte, const QString &params)
     }
     case 'J': eraseDisplay(p.isEmpty() ? 0 : p[0]); break;
     case 'K': eraseLine(p.isEmpty() ? 0 : p[0]); break;
+    case 'X': { // ECH - erase characters without moving the cursor
+        const int count = std::max(1, n);
+        for (int c = m_col; c < std::min(m_columns, m_col + count); ++c)
+            clearCell(m_cells[m_row * m_columns + c]);
+        break;
+    }
+    case '@': { // ICH - insert blank characters
+        const int count = std::min(std::max(1, n), m_columns - m_col);
+        for (int c = m_columns - 1; c >= m_col + count; --c)
+            m_cells[m_row * m_columns + c] = m_cells[m_row * m_columns + c - count];
+        for (int c = m_col; c < m_col + count; ++c) clearCell(m_cells[m_row * m_columns + c]);
+        break;
+    }
+    case 'P': { // DCH - delete characters
+        const int count = std::min(std::max(1, n), m_columns - m_col);
+        for (int c = m_col; c + count < m_columns; ++c)
+            m_cells[m_row * m_columns + c] = m_cells[m_row * m_columns + c + count];
+        for (int c = m_columns - count; c < m_columns; ++c) clearCell(m_cells[m_row * m_columns + c]);
+        break;
+    }
     case 's': m_savedRow = m_row; m_savedCol = m_col; break;
     case 'u': setCursor(m_savedRow, m_savedCol); break;
     case 'm': {
@@ -209,6 +235,9 @@ void AnsiTerminalModel::feed(const QString &text)
             if (ch == QLatin1Char('[')) { m_csi.clear(); m_state = ParseState::Csi; }
             else if (ch == QLatin1Char('7')) { m_savedRow = m_row; m_savedCol = m_col; m_state = ParseState::Text; }
             else if (ch == QLatin1Char('8')) { setCursor(m_savedRow, m_savedCol); m_state = ParseState::Text; }
+            else if (ch == QLatin1Char('D')) { lineFeed(); m_state = ParseState::Text; } // IND
+            else if (ch == QLatin1Char('E')) { lineFeed(); carriageReturn(); m_state = ParseState::Text; } // NEL
+            else if (ch == QLatin1Char('M')) { setCursor(m_row - 1, m_col); m_state = ParseState::Text; } // RI (bounded)
             else if (ch == QLatin1Char('c')) { reset(); }
             else m_state = ParseState::Text;
             break;

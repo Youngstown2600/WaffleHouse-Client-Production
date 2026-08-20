@@ -1,3 +1,8 @@
+2.5.3 BBS/theme update
+----------------------
+- Corrects curses bright-black/gray BBS rendering and raw CLI input visibility.
+- Adds complete S.I.P.H.E.R. GUI/CLI theme family while preserving WaffleHouse themes.
+
 # WaffleHouse-Client 2.5.1 — Fully Integrated Multi-Account Softphone
 
 ## Merge parents
