@@ -1,17 +1,22 @@
-# WaffleHouse-Client 2.5.4-r1
+# WaffleHouse-Client 2.5.4-r2
 
-**WaffleHouse-Client 2.5.4-r1** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 2.5.4-r2** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
 
 It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
 
 > This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
 
 
+## 2.5.4-r2 saved-account persistence hotfix
+
+2.5.4-r2 fixes a 2.5.4-r1 regression where profiles restored from QSettings were loaded into memory but incorrectly marked as transient. The CLI could report that it loaded saved profiles while `/connections` and `/accounts` displayed `(none)`, and a subsequent settings write could omit those restored profiles. Restored profiles now remain persistent without rewriting the settings array during the read pass. `/connections` and `/accounts` again list all saved profiles, while `/active` remains live-session-only.
 
 
 
 
-## 2.5.4-r1 Telnet disconnect/curses repaint hotfix
+
+
+## 2.5.4-r2 Telnet disconnect/curses repaint hotfix
 
 - Avoids calling `QAbstractSocket::waitForDisconnected()` after a Telnet socket is already in `UnconnectedState`, eliminating the Qt warning that could be written directly through an ncurses screen.
 - Forces a full ncurses repaint when a backend disconnect completes so any external terminal write cannot leave stale/corrupted screen cells behind.

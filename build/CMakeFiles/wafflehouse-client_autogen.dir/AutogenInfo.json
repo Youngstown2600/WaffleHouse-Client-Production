@@ -372,7 +372,7 @@
 		"APP_DISPLAY_NAME=\"WaffleHouse-Client\"",
 		"APP_EXECUTABLE=\"wafflehouse-client\"",
 		"APP_ID=\"WaffleHouseClient\"",
-		"APP_VERSION_STRING=\"2.5.4-r1\"",
+		"APP_VERSION_STRING=\"2.5.4-r2\"",
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
 		"QT_NETWORK_LIB",

@@ -1871,7 +1871,14 @@ TerminalUi::ConnectionEntry *TerminalUi::addConnectionEntry(
     entry->settings = settings;
     entry->secretRequired = secretRequired;
     entry->hasSessionSecret = hasSessionSecret;
-    entry->persistent = persist;
+
+    // `persist` means a newly created/imported profile should be saved now.
+    // Profiles restored from QSettings intentionally call this helper with
+    // persist=false so we do not rewrite the settings array while it is being
+    // read.  A restored profile always arrives with its stable profileId, so
+    // it must still remain a persistent/saved connection in memory.
+    const bool restoredPersistentProfile = !profileId.trimmed().isEmpty();
+    entry->persistent = persist || restoredPersistentProfile;
 
     ChatBackend *backend = createBackend(settings);
     if (!backend) {

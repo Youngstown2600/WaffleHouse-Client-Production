@@ -1,3 +1,8 @@
+2.5.4-r2 saved-profile persistence hotfix
+-------------------------------------------
+- Restored QSettings profiles remain persistent in memory without rewriting the settings array during the read pass.
+- `/connections` and `/accounts` again list restored saved profiles; `/active` remains live-session-only.
+
 2.5.4 CLI/BBS lifecycle update
 ------------------------------
 - Adds /active and /accounts, ephemeral /telnet quick-connect, preserved disconnected BBS screens, and masked password input.

@@ -1,3 +1,10 @@
+# WaffleHouse-Client 2.5.4-r2 — 2026-08-20
+
+- Fixed restored QSettings profiles being incorrectly marked transient in 2.5.4-r1.
+- `/connections` and `/accounts` again enumerate all saved profiles after startup.
+- `saveConnections()` once again retains restored profiles instead of omitting them from the persistent array.
+- Added a saved-profile persistence regression test covering the load/list/save contract.
+
 # WaffleHouse-Client 2.5.4-r1 — 2026-08-19
 
 - Fixed Telnet `/disconnect` calling `waitForDisconnected()` after an immediate socket close, which caused Qt to print `QAbstractSocket::waitForDisconnected() is not allowed in UnconnectedState` directly into the ncurses screen.

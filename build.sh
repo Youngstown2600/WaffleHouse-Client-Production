@@ -42,7 +42,7 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 2.5.4-r1, the unified C++ GUI/CLI executable.
+Build WaffleHouse-Client 2.5.4-r2, the unified C++ GUI/CLI executable.
 
 The builder performs a full dependency preflight. Missing dependencies are
 installed automatically on supported Linux package managers or with FreeBSD pkg,
@@ -117,7 +117,7 @@ INSTALL_DESKTOPDIR="$INSTALL_PREFIX/share/applications"
 show_header() {
   cat <<EOF2
 ============================================================
-              WAFFLEHOUSE-CLIENT 2.5.4-r1 + SIP SOFTPHONE
+              WAFFLEHOUSE-CLIENT 2.5.4-r2 + SIP SOFTPHONE
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
@@ -1288,7 +1288,7 @@ ask_install
 if [ "$INSTALL_MODE" = yes ]; then echo "Build will be installed after compilation succeeds."; else echo "Build only; no system installation will be performed."; fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 2.5.4-r1"
+echo "==> Configuring WaffleHouse-Client 2.5.4-r2"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1299,12 +1299,12 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE"
 
 echo
-echo "==> Building WaffleHouse-Client 2.5.4-r1"
+echo "==> Building WaffleHouse-Client 2.5.4-r2"
 run_cmd cmake --build build --parallel "$JOBS"
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 2.5.4-r1"
+  echo "==> Installing WaffleHouse-Client 2.5.4-r2"
   prepare_privileges
   run_privileged cmake --install "$ROOT_DIR/build" --prefix "$INSTALL_PREFIX"
   echo
@@ -1322,4 +1322,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 2.5.4-r1 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 2.5.4-r2 build complete."; fi
