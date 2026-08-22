@@ -3,6 +3,6 @@ Type=Application
 Name=WaffleHouse-Client
 Comment=AIM/OSCAR, IRC, Telnet, secure messaging, file transfer, and SIP/VoIP softphone
 Exec=wafflehouse-client
-Icon=internet-chat
+Icon=wafflehouse-client
 Terminal=false
 Categories=Network;Chat;InstantMessaging;

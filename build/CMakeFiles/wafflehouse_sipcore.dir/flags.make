@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse_sipcore_autogen/include -I/home/gitsc/WaffleHouse-Client-Production/include -I/home/gitsc/.local/wafflehouse-pjsip/include
+CXX_INCLUDES = -I/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/include -I/home/gitsc/WaffleHouse-Client-Testing/include -I/home/gitsc/.local/wafflehouse-pjsip/include
 
 CXX_FLAGS = -O3 -DNDEBUG -std=c++17 -DPJ_AUTOCONF=1 -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1 -Wall -Wextra -Wpedantic
 

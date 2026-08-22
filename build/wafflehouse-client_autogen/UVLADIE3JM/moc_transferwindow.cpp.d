@@ -1,5 +1,5 @@
-/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_transferwindow.cpp: /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.h \
-  /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h \
+/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_transferwindow.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.h \
+  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

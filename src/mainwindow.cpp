@@ -3,6 +3,7 @@
 
 #include "chatwindow.h"
 #include "appbranding.h"
+#include "appicon.h"
 #include "ircbackend.h"
 #include "oscarbackend.h"
 #include "telnetbackend.h"
@@ -11,6 +12,10 @@
 #include "sipcontroller.h"
 #include "sipbackend.h"
 #include "softphonewindow.h"
+#include "modernstyle.h"
+#include "notificationmanager.h"
+#include "filetransport.h"
+#include "useractivity.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -27,6 +32,9 @@
 #include <QFormLayout>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QEvent>
+#include <QFrame>
+#include <QFont>
 #include <QGroupBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -41,6 +49,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QRadioButton>
 #include <QTextBrowser>
 #include <QTabWidget>
 #include <QPushButton>
@@ -76,7 +85,7 @@ public:
                            ? QStringLiteral("Edit Connection — %1").arg(appDisplayName())
                            : QStringLiteral("Add Connection — %1").arg(appDisplayName()));
         setModal(true);
-        setMinimumWidth(440);
+        setMinimumWidth(400);
 
         auto *outer = new QVBoxLayout(this);
         auto *form = new QFormLayout;
@@ -476,12 +485,11 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
     : QMainWindow(parent),
       m_defaults(defaults)
 {
-    setWindowTitle(QStringLiteral("%1 %2 — Buddy List").arg(appDisplayName(), appVersionString()));
-    // Start wide enough to expose the complete menu bar on typical Linux/FreeBSD
-    // desktops. The window can still be resized narrower; the Options button below
-    // remains available even when the right-most menu titles no longer fit.
-    resize(520, 500);
-    setMinimumSize(320, 360);
+    setWindowTitle(QStringLiteral("%1 %2").arg(appDisplayName(), appVersionString()));
+    // Compact by default: keep the full communications workspace usable without
+    // monopolizing the desktop. The window remains freely resizable.
+    resize(860, 560);
+    setMinimumSize(720, 480);
 
     m_sipController = new SipController(this);
     m_softphoneWindow = new SoftphoneWindow(m_sipController, nullptr);
@@ -527,7 +535,21 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
     loadUiSettings();
     loadOptions();
 
+    m_lastUserActivityMs = QDateTime::currentMSecsSinceEpoch();
+    qApp->installEventFilter(this);
+    m_presenceTimer = new QTimer(this);
+    m_presenceTimer->setInterval(1000);
+    connect(m_presenceTimer, &QTimer::timeout, this, &MainWindow::updateAutoPresence);
+    m_presenceTimer->start();
+
     m_secureReady = m_secure.initialize(&m_secureError);
+    if (m_secureReady) {
+        QString roomError;
+        if (!m_secureRooms.initialize(&roomError)) {
+            m_secureReady = false;
+            m_secureError = roomError;
+        }
+    }
     m_fileTransferTimer = new QTimer(this);
     m_fileTransferTimer->setInterval(100);
     connect(m_fileTransferTimer, &QTimer::timeout, this, &MainWindow::pumpFileTransfers);
@@ -564,7 +586,7 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
     if (!m_secureReady && !m_secureError.isEmpty()) {
         if (m_activity) {
             m_activity->appendPlainText(
-                QStringLiteral("[security] Encrypted DMs unavailable: %1").arg(m_secureError));
+                QStringLiteral("[security] Encrypted communications unavailable: %1").arg(m_secureError));
         }
     }
 }
@@ -572,6 +594,7 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
 MainWindow::~MainWindow()
 {
     m_quitting = true;
+    if (qApp) qApp->removeEventFilter(this);
 
     const auto windows = m_windows.values();
     for (ChatWindow *window : windows) {
@@ -603,6 +626,107 @@ MainWindow::~MainWindow()
     m_connectionsWindow = nullptr;
 }
 
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event) {
+        switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonDblClick:
+        case QEvent::Wheel:
+        case QEvent::TouchBegin:
+        case QEvent::TabletPress:
+            markUserActivity();
+            break;
+        default:
+            break;
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::markUserActivity()
+{
+    m_lastUserActivityMs = QDateTime::currentMSecsSinceEpoch();
+    for (BackendState *state : m_states) {
+        if (!state || state->autoPresenceState.isEmpty() || !state->connected || !state->backend) continue;
+        if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
+            oscar->setBack();
+            state->autoPresenceState.clear();
+        }
+    }
+}
+
+void MainWindow::updateAutoPresence()
+{
+    if (!m_options.autoPresenceEnabled || m_lastUserActivityMs <= 0) return;
+    const qint64 inactiveSeconds = UserActivity::idleMilliseconds(m_lastUserActivityMs) / 1000;
+    const qint64 idleThreshold = static_cast<qint64>(m_options.autoIdleMinutes) * 60;
+    const qint64 awayThreshold = static_cast<qint64>(m_options.autoAwayMinutes) * 60;
+
+    for (BackendState *state : m_states) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) continue;
+        auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+        if (!oscar) continue;
+
+        // Respect manual Away/AFK/Idle. Automation only manages ONLINE or a
+        // presence state that it set itself.
+        const bool managed = !state->autoPresenceState.isEmpty();
+        const bool manuallyChanged = !managed
+            && (state->presenceState.compare(QStringLiteral("ONLINE"), Qt::CaseInsensitive) != 0
+                || state->idleSeconds > 0);
+        if (manuallyChanged) continue;
+        if (managed && inactiveSeconds < idleThreshold) {
+            oscar->setBack();
+            state->autoPresenceState.clear();
+            continue;
+        }
+
+        if (inactiveSeconds >= awayThreshold) {
+            if (state->autoPresenceState != QStringLiteral("AWAY")) {
+                oscar->setAwayMessage(QStringLiteral("Auto-away — inactive for %1 minutes")
+                                          .arg(m_options.autoAwayMinutes));
+                oscar->setIdleSeconds(static_cast<quint32>(std::min<qint64>(inactiveSeconds, 0xffffffffLL)));
+                state->autoPresenceState = QStringLiteral("AWAY");
+            }
+        } else if (inactiveSeconds >= idleThreshold) {
+            if (state->autoPresenceState.isEmpty()) {
+                oscar->setIdleSeconds(static_cast<quint32>(std::min<qint64>(inactiveSeconds, 0xffffffffLL)));
+                state->autoPresenceState = QStringLiteral("IDLE");
+            }
+        }
+    }
+}
+
+void MainWindow::requestClientVersion(BackendState *state, const QString &target)
+{
+    if (!state || !state->connected || !state->backend || target.trimmed().isEmpty()) return;
+    const QString clean = target.trimmed();
+    const QString key = state->profileId + QChar(0x1f) + clean.toCaseFolded();
+    m_pendingVersionQueries.insert(key);
+    const auto protocol = state->backend->settings().protocol;
+    QTimer::singleShot(3500, this, [this, key, clean, protocol] {
+        if (!m_pendingVersionQueries.remove(key)) return;
+        const QString report = protocol == ConnectionSettings::Protocol::Oscar
+            ? QStringLiteral("[version] %1: no 3.1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(clean)
+            : QStringLiteral("[version] %1: no CTCP VERSION reply received").arg(clean);
+        statusBar()->showMessage(report, 7000);
+    });
+    if (auto *irc = qobject_cast<IrcBackend *>(state->backend)) {
+        irc->requestClientVersion(clean);
+        statusBar()->showMessage(QStringLiteral("Version query sent to %1 via IRC CTCP.").arg(clean), 4000);
+        return;
+    }
+    if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
+        oscar->requestClientVersion(clean);
+        statusBar()->showMessage(QStringLiteral("WaffleHouse version query sent to %1 via AIM.").arg(clean), 4000);
+        return;
+    }
+    m_pendingVersionQueries.remove(key);
+    statusBar()->showMessage(QStringLiteral("/version is available for AIM/OSCAR and IRC peers."), 4000);
+}
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     saveConnections();
@@ -632,125 +756,146 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::buildUi()
 {
     auto *central = new QWidget(this);
-    auto *outer = new QVBoxLayout(central);
-    outer->setContentsMargins(6, 6, 6, 6);
-    outer->setSpacing(5);
+    central->setObjectName(QStringLiteral("ModernRoot"));
 
-    auto *buddyGroup = new QGroupBox(QStringLiteral("Accounts / Buddies"), central);
-    auto *buddyLayout = new QVBoxLayout(buddyGroup);
-    buddyLayout->setContentsMargins(6, 8, 6, 6);
+    auto *shell = new QHBoxLayout(central);
+    shell->setContentsMargins(0, 0, 0, 0);
+    shell->setSpacing(0);
 
-    m_buddyTree = new QTreeWidget(buddyGroup);
-    m_buddyTree->setHeaderLabels({QStringLiteral("Buddy / Account"),
-                                  QStringLiteral("Status")});
+    // WaffleHouse 3.0: persistent application rail.  It exposes the most common
+    // workflows without taking any capability away from the traditional menus.
+    auto *sidebar = new QFrame(central);
+    sidebar->setObjectName(QStringLiteral("Sidebar"));
+    sidebar->setFixedWidth(184);
+    auto *side = new QVBoxLayout(sidebar);
+    side->setContentsMargins(14, 16, 14, 14);
+    side->setSpacing(8);
+
+    auto *brand = new QLabel(QStringLiteral("WAFFLEHOUSE"), sidebar);
+    brand->setObjectName(QStringLiteral("BrandTitle"));
+    auto *edition = new QLabel(QStringLiteral("CLIENT %1").arg(appVersionString().toUpper()), sidebar);
+    edition->setObjectName(QStringLiteral("BrandVersion"));
+    side->addWidget(brand);
+    side->addWidget(edition);
+    side->addSpacing(12);
+
+    auto makeNav = [sidebar](const QString &text, bool checked = false) {
+        auto *button = new QPushButton(text, sidebar);
+        button->setProperty("nav", true);
+        button->setCheckable(true);
+        button->setAutoExclusive(true);
+        button->setChecked(checked);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+
+    auto *navDashboard = makeNav(QStringLiteral("  Dashboard"), true);
+    auto *navMessages = makeNav(QStringLiteral("  Communications"));
+    auto *navSoftphone = makeNav(QStringLiteral("  Softphone"));
+    auto *navConnections = makeNav(QStringLiteral("  Connections"));
+    auto *navTransfers = makeNav(QStringLiteral("  File Transfers"));
+    side->addWidget(navDashboard);
+    side->addWidget(navMessages);
+    side->addWidget(navSoftphone);
+    side->addWidget(navConnections);
+    side->addWidget(navTransfers);
+    side->addStretch(1);
+
+    // Primary creation action lives in the application rail so the top bar stays
+    // focused on page context.  Keep it directly above Settings for a predictable
+    // lower-sidebar action cluster.
+    auto *addConnection = new QPushButton(QStringLiteral("+ New Connection"), sidebar);
+    addConnection->setProperty("role", "primary");
+    addConnection->setCursor(Qt::PointingHandCursor);
+    side->addWidget(addConnection);
+
+    // Settings intentionally uses the normal application button treatment rather
+    // than the transparent/checkable navigation style.
+    auto *navSettings = new QPushButton(QStringLiteral("Settings"), sidebar);
+    navSettings->setCursor(Qt::PointingHandCursor);
+    side->addWidget(navSettings);
+
+    shell->addWidget(sidebar);
+
+    auto *content = new QWidget(central);
+    auto *outer = new QVBoxLayout(content);
+    outer->setContentsMargins(18, 16, 18, 16);
+    outer->setSpacing(12);
+
+    auto *topBar = new QFrame(content);
+    topBar->setObjectName(QStringLiteral("TopBar"));
+    auto *top = new QHBoxLayout(topBar);
+    top->setContentsMargins(0, 0, 0, 0);
+    top->setSpacing(12);
+
+    auto *titleBlock = new QVBoxLayout;
+    titleBlock->setSpacing(2);
+    auto *title = new QLabel(QStringLiteral("Communications Hub"), topBar);
+    title->setObjectName(QStringLiteral("PageTitle"));
+    auto *subtitle = new QLabel(
+        QStringLiteral("AIM / OSCAR  •  IRC  •  Telnet / BBS  •  SIP / VoIP"), topBar);
+    subtitle->setObjectName(QStringLiteral("PageSubtitle"));
+    titleBlock->addWidget(title);
+    titleBlock->addWidget(subtitle);
+    top->addLayout(titleBlock, 1);
+
+    outer->addWidget(topBar);
+
+    auto *workspace = new QHBoxLayout;
+    workspace->setSpacing(12);
+
+    // Primary account/buddy card.
+    auto *buddyCard = new QFrame(content);
+    buddyCard->setObjectName(QStringLiteral("Card"));
+    auto *buddyLayout = new QVBoxLayout(buddyCard);
+    buddyLayout->setContentsMargins(12, 12, 12, 12);
+    buddyLayout->setSpacing(10);
+
+    auto *buddyHeader = new QHBoxLayout;
+    auto *buddyTitle = new QLabel(QStringLiteral("Accounts & Buddies"), buddyCard);
+    buddyTitle->setObjectName(QStringLiteral("CardTitle"));
+    auto *buddyHint = new QLabel(QStringLiteral("Double-click a buddy to start communicating"), buddyCard);
+    buddyHint->setObjectName(QStringLiteral("Muted"));
+    buddyHeader->addWidget(buddyTitle);
+    buddyHeader->addStretch(1);
+    buddyHeader->addWidget(buddyHint);
+    buddyLayout->addLayout(buddyHeader);
+
+    m_buddyTree = new QTreeWidget(buddyCard);
+    m_buddyTree->setHeaderLabels({QStringLiteral("Buddy / Account"), QStringLiteral("Status")});
     m_buddyTree->setRootIsDecorated(true);
-    m_buddyTree->setAlternatingRowColors(true);
+    m_buddyTree->setAlternatingRowColors(false);
     m_buddyTree->setUniformRowHeights(true);
+    m_buddyTree->setAnimated(true);
+    m_buddyTree->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_buddyTree->setIndentation(18);
     buddyLayout->addWidget(m_buddyTree, 1);
-    outer->addWidget(buddyGroup, 1);
+    workspace->addWidget(buddyCard, 3);
 
-    auto *phoneGroup = new QGroupBox(QStringLiteral("Softphone"), central);
-    auto *phoneLayout = new QGridLayout(phoneGroup);
-    phoneLayout->setContentsMargins(6, 8, 6, 6);
-    m_buddySipAccount = new QComboBox(phoneGroup);
-    m_buddySipAccount->setToolTip(QStringLiteral("SIP account used for outbound calls"));
-    m_buddyDialPrefix = new QLineEdit(phoneGroup);
-    m_buddyDialPrefix->setPlaceholderText(QStringLiteral("PBX prefix (optional)"));
-    m_buddyDialPrefix->setToolTip(QStringLiteral("Runtime prefix for the selected SIP account. Change per PBX without editing the saved account."));
-    m_buddyDial = new QLineEdit(phoneGroup);
-    m_buddyDial->setPlaceholderText(QStringLiteral("Number or SIP URI"));
-    m_buddyDialButton = new QPushButton(QStringLiteral("Dial"), phoneGroup);
-    m_buddySipConnectButton = new QPushButton(QStringLiteral("Register"), phoneGroup);
-    m_buddySipDisconnectButton = new QPushButton(QStringLiteral("Disconnect"), phoneGroup);
-    phoneLayout->addWidget(new QLabel(QStringLiteral("Account:"), phoneGroup), 0, 0);
-    phoneLayout->addWidget(m_buddySipAccount, 0, 1, 1, 2);
-    phoneLayout->addWidget(new QLabel(QStringLiteral("Prefix:"), phoneGroup), 1, 0);
-    phoneLayout->addWidget(m_buddyDialPrefix, 1, 1, 1, 2);
-    phoneLayout->addWidget(m_buddyDial, 2, 0, 1, 2);
-    phoneLayout->addWidget(m_buddyDialButton, 2, 2);
-    phoneLayout->addWidget(m_buddySipConnectButton, 3, 0, 1, 2);
-    phoneLayout->addWidget(m_buddySipDisconnectButton, 3, 2);
-    phoneLayout->setColumnStretch(1, 1);
-    outer->addWidget(phoneGroup);
+    // The main Communications Hub intentionally stays focused on accounts and buddies.
+    // SIP accounts remain visible in this tree, but the embedded quick-dial/phone card
+    // is intentionally removed. The full Softphone stays available from the left rail,
+    // Tools > Open Softphone, and the tray menu.
 
-    // Keep the Buddy List controls usable at narrow window widths. 1.9 originally
-    // put every control on one horizontal row, which could clip the right-hand
-    // buttons. A two-row grid keeps all controls visible and gives Options a
-    // permanent, menu-independent entry point.
-    auto *buttons = new QGridLayout;
-    buttons->setHorizontalSpacing(4);
-    buttons->setVerticalSpacing(4);
-
-    m_newImButton = new QPushButton(QStringLiteral("IM / Chat"), central);
-    m_optionsButton = new QPushButton(QStringLiteral("Options"), central);
-    m_buddyConnectButton = new QPushButton(QStringLiteral("Connect"), central);
-    m_buddyDisconnectButton = new QPushButton(QStringLiteral("Disconnect"), central);
-
-    m_newImButton->setToolTip(QStringLiteral("Open a direct message or chat room for the selected AIM/IRC account"));
-    m_optionsButton->setToolTip(
-        QStringLiteral("Open application options, themes, and security settings"));
-
-    buttons->addWidget(m_newImButton, 0, 0);
-    buttons->addWidget(m_buddyConnectButton, 0, 1);
-    buttons->addWidget(m_buddyDisconnectButton, 0, 2);
-    buttons->addWidget(m_optionsButton, 1, 0, 1, 3);
-    for (int column = 0; column < 3; ++column) {
-        buttons->setColumnStretch(column, 1);
-    }
-    outer->addLayout(buttons);
+    outer->addLayout(workspace, 1);
+    shell->addWidget(content, 1);
 
     setCentralWidget(central);
-    statusBar()->showMessage(QStringLiteral("%1 ready").arg(appDisplayName()));
+    statusBar()->showMessage(QStringLiteral("%1 %2 ready").arg(appDisplayName(), appVersionString()));
 
-    connect(m_newImButton, &QPushButton::clicked,
-            this, &MainWindow::newIm);
-    connect(m_buddyConnectButton, &QPushButton::clicked,
-            this, &MainWindow::connectSelected);
-    connect(m_buddyDisconnectButton, &QPushButton::clicked,
-            this, &MainWindow::disconnectSelected);
-    connect(m_optionsButton, &QPushButton::clicked,
-            this, &MainWindow::showOptionsDialog);
-    connect(m_buddySipConnectButton, &QPushButton::clicked, this, [this] {
-        const QString id = m_buddySipAccount ? m_buddySipAccount->currentData().toString() : QString();
-        if (BackendState *state = stateById(id)) { selectState(state); connectSelected(); }
+    connect(addConnection, &QPushButton::clicked, this,
+            [this] { openConnectionDialog(m_defaults, nullptr); });
+    connect(navDashboard, &QPushButton::clicked, this, [this] {
+        showBuddyWindow();
+        if (m_buddyTree) m_buddyTree->setFocus();
     });
-    connect(m_buddySipDisconnectButton, &QPushButton::clicked, this, [this] {
-        const QString id = m_buddySipAccount ? m_buddySipAccount->currentData().toString() : QString();
-        if (BackendState *state = stateById(id)) { selectState(state); disconnectSelected(); }
+    connect(navMessages, &QPushButton::clicked, this, &MainWindow::newIm);
+    connect(navSoftphone, &QPushButton::clicked, this, [this] {
+        if (m_softphoneWindow) m_softphoneWindow->showAndRaise();
     });
-    connect(m_buddySipAccount, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
-        const QString backendId = m_buddySipAccount ? m_buddySipAccount->currentData().toString() : QString();
-        if (!backendId.isEmpty()) {
-            m_sipController->setSelectedAccountId(backendId);
-            if (BackendState *state = stateById(backendId)) selectState(state);
-        }
-    });
-    connect(m_buddyDialPrefix, &QLineEdit::editingFinished, this, [this] {
-        const QString backendId=m_buddySipAccount?m_buddySipAccount->currentData().toString():QString();
-        if(backendId.isEmpty()) return;
-        QString error;
-        if(!m_sipController->setDialPrefix(backendId,m_buddyDialPrefix->text().trimmed(),&error)){
-            QMessageBox::warning(this,QStringLiteral("SIP Dial Prefix"),error);
-            const QSignalBlocker blocker(m_buddyDialPrefix);
-            m_buddyDialPrefix->setText(m_sipController->dialPrefix(backendId));
-        }
-    });
-    auto quickDial = [this] {
-        const QString backendId = m_buddySipAccount ? m_buddySipAccount->currentData().toString() : QString();
-        const QString destination = m_buddyDial ? m_buddyDial->text().trimmed() : QString();
-        if (backendId.isEmpty() || destination.isEmpty()) return;
-        QString error;
-        const int callId = m_sipController->dial(backendId, destination, QString(), &error);
-        if (callId < 0) {
-            QMessageBox::warning(this, QStringLiteral("SIP Call Failed"), error);
-            return;
-        }
-        m_buddyDial->clear();
-        m_softphoneWindow->showAndRaise();
-        statusBar()->showMessage(QStringLiteral("Dialing %1 (call %2)").arg(destination).arg(callId), 4000);
-    };
-    connect(m_buddyDialButton, &QPushButton::clicked, this, quickDial);
-    connect(m_buddyDial, &QLineEdit::returnPressed, this, quickDial);
+    connect(navConnections, &QPushButton::clicked, this, &MainWindow::showConnectionsWindow);
+    connect(navTransfers, &QPushButton::clicked, this, &MainWindow::showTransferWindow);
+    connect(navSettings, &QPushButton::clicked, this, &MainWindow::showOptionsDialog);
 
     connect(m_buddyTree, &QTreeWidget::currentItemChanged,
             this, [this](QTreeWidgetItem *current) {
@@ -763,12 +908,20 @@ void MainWindow::buildUi()
                 updateActions();
             });
 
+    connect(m_buddyTree, &QTreeWidget::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+                QTreeWidgetItem *item = m_buddyTree->itemAt(pos);
+                if (!item || item->parent()) return; // account rows only
+                BackendState *state = stateFromBuddyItem(item);
+                if (!state) return;
+                m_buddyTree->setCurrentItem(item);
+                showAccountContextMenu(state, m_buddyTree->viewport()->mapToGlobal(pos));
+            });
+
     connect(m_buddyTree, &QTreeWidget::itemDoubleClicked,
             this, [this](QTreeWidgetItem *item, int) {
                 BackendState *state = stateFromBuddyItem(item);
-                if (!state || !state->backend) {
-                    return;
-                }
+                if (!state || !state->backend) return;
                 selectState(state);
                 if (state->backend->settings().protocol == ConnectionSettings::Protocol::Sip) {
                     m_sipController->setSelectedAccountId(state->backend->id());
@@ -795,10 +948,7 @@ void MainWindow::buildUi()
                 }
                 if (item && item->parent() && state->connected) {
                     const QString buddy = item->data(0, Qt::UserRole + 1).toString();
-                    if (!buddy.isEmpty()) {
-                        ensureConversationWindow(
-                            state->backend, QStringLiteral("im"), buddy, true);
-                    }
+                    if (!buddy.isEmpty()) ensureConversationWindow(state->backend, QStringLiteral("im"), buddy, true);
                 }
             });
 }
@@ -973,6 +1123,77 @@ QString MainWindow::accountMenuLabel(BackendState *state) const
     return QStringLiteral("%1 / %2").arg(name, state->backend->protocolName());
 }
 
+
+void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globalPos)
+{
+    if (!state || !state->backend) return;
+    selectState(state);
+
+    const QString backendId = state->backend->id();
+    const auto protocol = state->backend->settings().protocol;
+    QMenu menu(this);
+
+    QAction *toggle = menu.addAction(
+        state->connected || state->connecting
+            ? QStringLiteral("Disconnect")
+            : (protocol == ConnectionSettings::Protocol::Sip
+                   ? QStringLiteral("Connect / Register")
+                   : QStringLiteral("Connect")));
+    connect(toggle, &QAction::triggered, this, [this, backendId] {
+        if (BackendState *target = stateById(backendId)) {
+            selectState(target);
+            if (target->connected || target->connecting) disconnectSelected();
+            else connectSelected();
+        }
+    });
+
+    if (protocol == ConnectionSettings::Protocol::Oscar
+        || protocol == ConnectionSettings::Protocol::Irc) {
+        menu.addSeparator();
+
+        QAction *startIm = menu.addAction(QStringLiteral("Start IM…"));
+        startIm->setEnabled(state->connected);
+        connect(startIm, &QAction::triggered, this, [this, backendId] {
+            if (BackendState *target = stateById(backendId)) {
+                selectState(target);
+                openMessagingDialog(target, QString(), false);
+            }
+        });
+
+        QAction *joinChat = menu.addAction(
+            protocol == ConnectionSettings::Protocol::Irc
+                ? QStringLiteral("Join IRC Channel…")
+                : QStringLiteral("Join AIM Chat…"));
+        joinChat->setEnabled(state->connected);
+        connect(joinChat, &QAction::triggered, this, [this, backendId] {
+            if (BackendState *target = stateById(backendId)) {
+                selectState(target);
+                openMessagingDialog(target, QString(), true);
+            }
+        });
+
+        QAction *buddies = menu.addAction(QStringLiteral("Add / Remove Buddies…"));
+        connect(buddies, &QAction::triggered, this, [this, backendId] {
+            if (BackendState *target = stateById(backendId)) {
+                selectState(target);
+                openBuddyManager(target);
+            }
+        });
+    }
+
+    menu.addSeparator();
+    QAction *edit = menu.addAction(QStringLiteral("Edit Connection…"));
+    edit->setEnabled(!state->connected && !state->connecting);
+    connect(edit, &QAction::triggered, this, [this, backendId] {
+        if (BackendState *target = stateById(backendId)) {
+            selectState(target);
+            openConnectionDialog(target->backend->settings(), target);
+        }
+    });
+
+    menu.exec(globalPos);
+}
+
 void MainWindow::rebuildAccountsMenu()
 {
     if (!m_accountsMenu) return;
@@ -1041,6 +1262,17 @@ void MainWindow::rebuildAccountsMenu()
                 }
             });
 
+            if (protocol == ConnectionSettings::Protocol::Oscar) {
+                QAction *presence = account->addAction(QStringLiteral("Set AIM Status / AFK…"));
+                presence->setEnabled(state->connected);
+                connect(presence, &QAction::triggered, this, [this, backendId] {
+                    if (BackendState *target = stateById(backendId)) {
+                        selectState(target);
+                        setAimPresence(target);
+                    }
+                });
+            }
+
             if (protocol == ConnectionSettings::Protocol::Irc) {
                 QAction *nick = account->addAction(QStringLiteral("Change IRC Nickname…"));
                 nick->setEnabled(state->connected);
@@ -1084,7 +1316,7 @@ void MainWindow::openMessagingDialog(BackendState *state,
 
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("%1 — IM / Chatroom").arg(accountMenuLabel(state)));
-    dialog.setMinimumWidth(480);
+    dialog.setMinimumWidth(360);
     auto *outer = new QVBoxLayout(&dialog);
     auto *tabs = new QTabWidget(&dialog);
 
@@ -1176,7 +1408,7 @@ void MainWindow::openBuddyManager(BackendState *state)
 
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("%1 — Buddies / Contacts").arg(accountMenuLabel(state)));
-    dialog.resize(480, 430);
+    dialog.resize(410, 350);
     auto *outer = new QVBoxLayout(&dialog);
 
     auto *description = new QLabel(&dialog);
@@ -1271,69 +1503,98 @@ void MainWindow::showTransferWindow()
 void MainWindow::buildConnectionsWindow()
 {
     m_connectionsWindow = new QMainWindow(nullptr);
-    m_connectionsWindow->setWindowTitle(QStringLiteral("%1 — Connections").arg(appDisplayName()));
-    m_connectionsWindow->resize(560, 390);
-    m_connectionsWindow->setMinimumSize(450, 300);
+    m_connectionsWindow->setWindowTitle(QStringLiteral("%1 %2 — Connections").arg(appDisplayName(), appVersionString()));
+    m_connectionsWindow->resize(620, 430);
+    m_connectionsWindow->setMinimumSize(500, 340);
     m_connectionsWindow->setAttribute(Qt::WA_QuitOnClose, false);
 
     auto *central = new QWidget(m_connectionsWindow);
     auto *outer = new QVBoxLayout(central);
-    outer->setContentsMargins(7, 7, 7, 7);
-    outer->setSpacing(6);
+    outer->setContentsMargins(16, 14, 16, 14);
+    outer->setSpacing(10);
 
-    m_connectionList = new QListWidget(central);
-    m_connectionList->setMinimumHeight(105);
-    outer->addWidget(m_connectionList, 1);
+    auto *header = new QHBoxLayout;
+    auto *headings = new QVBoxLayout;
+    headings->setSpacing(2);
+    auto *title = new QLabel(QStringLiteral("Connections"), central);
+    title->setObjectName(QStringLiteral("PageTitle"));
+    auto *subtitle = new QLabel(QStringLiteral("Saved profiles and live connection activity"), central);
+    subtitle->setObjectName(QStringLiteral("PageSubtitle"));
+    headings->addWidget(title);
+    headings->addWidget(subtitle);
+    header->addLayout(headings, 1);
+    m_addConnectionButton = new QPushButton(QStringLiteral("+ Add Connection"), central);
+    m_addConnectionButton->setProperty("role", "primary");
+    header->addWidget(m_addConnectionButton);
+    outer->addLayout(header);
+
+    auto *listCard = new QFrame(central);
+    listCard->setObjectName(QStringLiteral("ConnectionCard"));
+    auto *listLayout = new QVBoxLayout(listCard);
+    listLayout->setContentsMargins(10, 10, 10, 10);
+    listLayout->setSpacing(10);
+    auto *listTitle = new QLabel(QStringLiteral("Saved Accounts"), listCard);
+    listTitle->setObjectName(QStringLiteral("CardTitle"));
+    listLayout->addWidget(listTitle);
+    m_connectionList = new QListWidget(listCard);
+    m_connectionList->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_connectionList->setMinimumHeight(120);
+    listLayout->addWidget(m_connectionList, 1);
 
     auto *buttonRow = new QHBoxLayout;
-    buttonRow->setSpacing(4);
-    m_addConnectionButton = new QPushButton(QStringLiteral("Add"), central);
-    m_editConnectionButton = new QPushButton(QStringLiteral("Edit"), central);
-    m_deleteConnectionButton = new QPushButton(QStringLiteral("Delete"), central);
-    m_connectButton = new QPushButton(QStringLiteral("Connect"), central);
-    m_disconnectButton = new QPushButton(QStringLiteral("Disconnect"), central);
-    buttonRow->addWidget(m_addConnectionButton);
+    buttonRow->setSpacing(8);
+    m_editConnectionButton = new QPushButton(QStringLiteral("Edit"), listCard);
+    m_deleteConnectionButton = new QPushButton(QStringLiteral("Delete"), listCard);
+    m_deleteConnectionButton->setProperty("role", "danger");
+    m_connectButton = new QPushButton(QStringLiteral("Connect"), listCard);
+    m_connectButton->setProperty("role", "primary");
+    m_disconnectButton = new QPushButton(QStringLiteral("Disconnect"), listCard);
     buttonRow->addWidget(m_editConnectionButton);
     buttonRow->addWidget(m_deleteConnectionButton);
     buttonRow->addStretch(1);
     buttonRow->addWidget(m_connectButton);
     buttonRow->addWidget(m_disconnectButton);
-    outer->addLayout(buttonRow);
+    listLayout->addLayout(buttonRow);
+    outer->addWidget(listCard, 1);
 
-    auto *activityLabel = new QLabel(QStringLiteral("Activity"), central);
-    QFont labelFont = activityLabel->font();
-    labelFont.setBold(true);
-    activityLabel->setFont(labelFont);
-    outer->addWidget(activityLabel);
-
-    m_activity = new QPlainTextEdit(central);
+    auto *activityCard = new QFrame(central);
+    activityCard->setObjectName(QStringLiteral("Card"));
+    auto *activityLayout = new QVBoxLayout(activityCard);
+    activityLayout->setContentsMargins(14, 14, 14, 14);
+    auto *activityLabel = new QLabel(QStringLiteral("Activity"), activityCard);
+    activityLabel->setObjectName(QStringLiteral("CardTitle"));
+    activityLayout->addWidget(activityLabel);
+    m_activity = new QPlainTextEdit(activityCard);
     m_activity->setReadOnly(true);
     m_activity->setMaximumBlockCount(2500);
-    m_activity->setMinimumHeight(105);
-    outer->addWidget(m_activity, 1);
+    m_activity->setMinimumHeight(125);
+    activityLayout->addWidget(m_activity, 1);
+    outer->addWidget(activityCard, 1);
 
     m_connectionsWindow->setCentralWidget(central);
 
     connect(m_addConnectionButton, &QPushButton::clicked,
             this, [this] { openConnectionDialog(m_defaults, nullptr); });
-    connect(m_editConnectionButton, &QPushButton::clicked,
-            this, &MainWindow::editSelected);
-    connect(m_deleteConnectionButton, &QPushButton::clicked,
-            this, &MainWindow::deleteSelected);
-    connect(m_connectButton, &QPushButton::clicked,
-            this, &MainWindow::connectSelected);
-    connect(m_disconnectButton, &QPushButton::clicked,
-            this, &MainWindow::disconnectSelected);
+    connect(m_editConnectionButton, &QPushButton::clicked, this, &MainWindow::editSelected);
+    connect(m_deleteConnectionButton, &QPushButton::clicked, this, &MainWindow::deleteSelected);
+    connect(m_connectButton, &QPushButton::clicked, this, &MainWindow::connectSelected);
+    connect(m_disconnectButton, &QPushButton::clicked, this, &MainWindow::disconnectSelected);
 
     connect(m_connectionList, &QListWidget::currentItemChanged,
             this, [this](QListWidgetItem *current) {
-                BackendState *state = current
-                    ? stateById(current->data(Qt::UserRole).toString())
-                    : nullptr;
-                if (state) {
-                    selectState(state);
-                }
+                BackendState *state = current ? stateById(current->data(Qt::UserRole).toString()) : nullptr;
+                if (state) selectState(state);
                 updateActions();
+            });
+
+    connect(m_connectionList, &QListWidget::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+                QListWidgetItem *item = m_connectionList->itemAt(pos);
+                if (!item) return;
+                m_connectionList->setCurrentItem(item);
+                BackendState *state = stateById(item->data(Qt::UserRole).toString());
+                if (!state) return;
+                showAccountContextMenu(state, m_connectionList->viewport()->mapToGlobal(pos));
             });
 }
 
@@ -1347,13 +1608,15 @@ void MainWindow::buildTrayIcon()
     }
 
     m_trayIcon = new QSystemTrayIcon(this);
-    QIcon icon = QIcon::fromTheme(QStringLiteral("internet-chat"));
+    // WaffleHouse-Client 3.1 ships its own multi-resolution icon so the tray
+    // appearance is consistent across Linux and FreeBSD desktop themes.
+    QIcon icon = appIcon();
     if (icon.isNull()) {
         icon = windowIcon();
     }
-    // Alpha builds do not yet ship a project-specific artwork resource.  Give
-    // the tray icon a guaranteed Qt fallback so QSystemTrayIcon is never shown
-    // with a null icon on minimal Linux/FreeBSD desktop themes.
+    if (icon.isNull()) {
+        icon = QIcon::fromTheme(QStringLiteral("internet-chat"));
+    }
     if (icon.isNull() && QApplication::style()) {
         icon = QApplication::style()->standardIcon(QStyle::SP_ComputerIcon);
     }
@@ -1589,6 +1852,9 @@ void MainWindow::loadOptions()
     m_options.encryptedDmEnabled = settings.value(QStringLiteral("security/encryptedDmEnabled"), true).toBool();
     m_options.autoReplySecure = settings.value(QStringLiteral("security/autoReplySecure"), true).toBool();
     m_options.showSecureFingerprints = settings.value(QStringLiteral("security/showSecureFingerprints"), true).toBool();
+    m_options.autoPresenceEnabled = settings.value(QStringLiteral("presence/autoEnabled"), true).toBool();
+    m_options.autoIdleMinutes = std::clamp(settings.value(QStringLiteral("presence/idleMinutes"), 5).toInt(), 1, 1440);
+    m_options.autoAwayMinutes = std::clamp(settings.value(QStringLiteral("presence/awayMinutes"), 15).toInt(), m_options.autoIdleMinutes + 1, 2880);
 }
 
 void MainWindow::saveOptions() const
@@ -1600,328 +1866,18 @@ void MainWindow::saveOptions() const
     settings.setValue(QStringLiteral("security/encryptedDmEnabled"), m_options.encryptedDmEnabled);
     settings.setValue(QStringLiteral("security/autoReplySecure"), m_options.autoReplySecure);
     settings.setValue(QStringLiteral("security/showSecureFingerprints"), m_options.showSecureFingerprints);
+    settings.setValue(QStringLiteral("presence/autoEnabled"), m_options.autoPresenceEnabled);
+    settings.setValue(QStringLiteral("presence/idleMinutes"), m_options.autoIdleMinutes);
+    settings.setValue(QStringLiteral("presence/awayMinutes"), m_options.autoAwayMinutes);
     settings.sync();
 }
 
 void MainWindow::applyTheme()
 {
-    QString sheet;
-
-    if (m_options.theme == QStringLiteral("hacker")) {
-        sheet = QStringLiteral(
-            "QWidget { background-color: #020402; color: #39ff14; font-family: 'Monospace'; }"
-            "QMainWindow,QDialog { background-color: #020402; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background-color: #000000; color: #55ff33; border: 1px solid #168a0f; "
-            " selection-background-color: #124d0d; selection-color: #b7ff9f; }"
-            "QLineEdit:focus,QPlainTextEdit:focus,QTextEdit:focus,QListWidget:focus,QTreeWidget:focus,QComboBox:focus { "
-            " border: 1px solid #39ff14; }"
-            "QPushButton { background-color: #071007; color: #39ff14; border: 1px solid #1dbb13; "
-            " padding: 5px 10px; min-height: 18px; }"
-            "QPushButton:hover { background-color: #0d250b; border-color: #55ff33; }"
-            "QPushButton:pressed { background-color: #12360e; }"
-            "QPushButton:disabled { color: #286326; border-color: #173c17; background-color: #050905; }"
-            "QMenuBar,QMenu,QStatusBar { background-color: #040904; color: #39ff14; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background-color: #12360e; }"
-            "QHeaderView::section { background-color: #071207; color: #55ff33; border: 1px solid #168a0f; padding: 4px; }"
-            "QGroupBox { border: 1px solid #168a0f; margin-top: 8px; padding-top: 6px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; color: #55ff33; }"
-            "QToolTip { background-color: #000000; color: #55ff33; border: 1px solid #39ff14; }"
-            "QScrollBar:vertical { background: #020602; width: 12px; margin: 0; }"
-            "QScrollBar::handle:vertical { background: #176510; min-height: 24px; border: 1px solid #39ff14; }"
-            "QScrollBar::handle:vertical:hover { background: #209116; }"
-            "QScrollBar:add-line:vertical,QScrollBar:sub-line:vertical { height: 0; }"
-            "QScrollBar:horizontal { background: #020602; height: 12px; margin: 0; }"
-            "QScrollBar::handle:horizontal { background: #176510; min-width: 24px; border: 1px solid #39ff14; }"
-            "QScrollBar:add-line:horizontal,QScrollBar:sub-line:horizontal { width: 0; }"
-            "QSlider::groove:horizontal { height: 6px; background: #0b2609; border: 1px solid #176510; }"
-            "QSlider::handle:horizontal { width: 14px; margin: -5px 0; background: #39ff14; border: 1px solid #88ff70; }"
-            "QSplitter::handle { background: #168a0f; }"
-            "QCheckBox::indicator { width: 14px; height: 14px; border: 1px solid #39ff14; background: #000000; }"
-            "QCheckBox::indicator:checked { background: #39ff14; }");
-    } else if (m_options.theme == QStringLiteral("matrix")) {
-        sheet = QStringLiteral(
-            "QWidget { background-color: #000000; color: #00ff41; font-family: 'Monospace'; }"
-            "QMainWindow,QDialog { background-color: #000000; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background-color: #000000; color: #00ff41; border: 1px solid #008f11; "
-            " selection-background-color: #003b0a; selection-color: #b6ffbf; }"
-            "QLineEdit:focus,QPlainTextEdit:focus,QTextEdit:focus,QListWidget:focus,QTreeWidget:focus,QComboBox:focus { border: 1px solid #00ff41; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar { background-color: #001600; color: #00ff41; }"
-            "QPushButton { border: 1px solid #008f11; padding: 5px 9px; }"
-            "QPushButton:hover { background-color: #003b0a; border-color: #00ff41; }"
-            "QPushButton:pressed { background-color: #005b12; }"
-            "QHeaderView::section { background-color: #001d05; color: #00ff41; border: 1px solid #008f11; padding: 4px; }"
-            "QGroupBox { border: 1px solid #008f11; margin-top: 8px; padding-top: 6px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; color: #00ff41; }"
-            "QScrollBar:vertical { background: #000000; width: 12px; }"
-            "QScrollBar::handle:vertical { background: #006b10; min-height: 24px; border: 1px solid #00ff41; }"
-            "QScrollBar:horizontal { background: #000000; height: 12px; }"
-            "QScrollBar::handle:horizontal { background: #006b10; min-width: 24px; border: 1px solid #00ff41; }"
-            "QScrollBar:add-line,QScrollBar:sub-line { width: 0; height: 0; }"
-            "QSlider::groove:horizontal { height: 6px; background: #003b0a; border: 1px solid #008f11; }"
-            "QSlider::handle:horizontal { width: 14px; margin: -5px 0; background: #00ff41; border: 1px solid #b6ffbf; }"
-            "QSplitter::handle { background: #008f11; }");
-    } else if (m_options.theme == QStringLiteral("phosphor")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #071007; color: #75ff83; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background: #020702; color: #89ff95; border: 1px solid #2b7a34; selection-background-color: #215f29; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar { background: #0b180c; color: #89ff95; }"
-            "QPushButton { border: 1px solid #2b7a34; padding: 4px 8px; }"
-            "QPushButton:hover { background: #17391b; }"
-            "QHeaderView::section { background: #102512; color: #89ff95; border: 1px solid #2b7a34; }"
-            "QGroupBox { border: 1px solid #2b7a34; margin-top: 8px; }"
-            "QScrollBar::handle { background: #2b7a34; }"
-            "QSplitter::handle { background: #2b7a34; }");
-    } else if (m_options.theme == QStringLiteral("midnight")) {
-        sheet = QStringLiteral(
-            "QWidget { background-color: #11141b; color: #e1e7f0; }"
-            "QMainWindow,QDialog { background-color: #11141b; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background-color: #0a0d12; color: #e7edf7; border: 1px solid #394150; "
-            " selection-background-color: #31476d; selection-color: #ffffff; }"
-            "QPushButton { background-color: #202631; color: #eef3fb; border: 1px solid #4b5668; padding: 5px 9px; }"
-            "QPushButton:hover { background-color: #2a3342; border-color: #72809a; }"
-            "QMenuBar,QMenu,QStatusBar { background-color: #171c25; color: #e7edf7; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background-color: #2a3b5c; }"
-            "QHeaderView::section { background-color: #202631; color: #eef3fb; border: 1px solid #3f4958; padding: 4px; }"
-            "QGroupBox { border: 1px solid #3f4958; margin-top: 8px; }"
-            "QScrollBar::handle { background: #4b5668; }"
-            "QSplitter::handle { background: #3f4958; }");
-    } else if (m_options.theme == QStringLiteral("amber")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #130d03; color: #ffbf47; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background: #070401; color: #ffc85c; border: 1px solid #8f5e15; selection-background-color: #6a4510; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar { background: #211604; color: #ffc85c; }"
-            "QPushButton { border: 1px solid #8f5e15; padding: 4px 8px; }"
-            "QPushButton:hover { background: #3a2709; }"
-            "QHeaderView::section { background: #2a1c06; color: #ffc85c; border: 1px solid #8f5e15; }"
-            "QGroupBox { border: 1px solid #8f5e15; margin-top: 8px; }"
-            "QScrollBar::handle { background: #8f5e15; }"
-            "QSplitter::handle { background: #8f5e15; }");
-    } else if (m_options.theme == QStringLiteral("ice")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #071018; color: #bde8ff; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background: #02070b; color: #c9edff; border: 1px solid #2e6d91; selection-background-color: #1f526f; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar { background: #0c1b25; color: #c9edff; }"
-            "QPushButton { border: 1px solid #2e6d91; padding: 4px 8px; }"
-            "QPushButton:hover { background: #153447; }"
-            "QHeaderView::section { background: #102b3a; color: #c9edff; border: 1px solid #2e6d91; }"
-            "QGroupBox { border: 1px solid #2e6d91; margin-top: 8px; }"
-            "QScrollBar::handle { background: #2e6d91; }"
-            "QSplitter::handle { background: #2e6d91; }");
-    } else if (m_options.theme == QStringLiteral("cyberpunk")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #070714; color: #dffcff; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #03030a; color: #e7fdff; border: 1px solid #00d9ff; selection-background-color: #8a087b; selection-color: #ffffff; }"
-            "QPushButton { background: #17102e; color: #00e5ff; border: 1px solid #ff2bd6; padding: 5px 9px; }"
-            "QPushButton:hover { background: #2d1550; color: #ffffff; border-color: #00e5ff; }"
-            "QMenuBar,QMenu,QStatusBar { background: #100b22; color: #ff62df; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #31114b; color: #00e5ff; }"
-            "QHeaderView::section { background: #16102b; color: #00e5ff; border: 1px solid #9d1d91; padding: 4px; }"
-            "QGroupBox { border: 1px solid #9d1d91; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #00a9c6; }");
-    } else if (m_options.theme == QStringLiteral("synthwave")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #160b2d; color: #f7ddff; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #0b0618; color: #fff0ff; border: 1px solid #a447d1; selection-background-color: #ff4ecd; selection-color: #160b2d; }"
-            "QPushButton { background: #28124a; color: #ff69d8; border: 1px solid #30e7ff; padding: 5px 9px; }"
-            "QPushButton:hover { background: #3b1764; border-color: #ff4ecd; color: #ffffff; }"
-            "QMenuBar,QMenu,QStatusBar { background: #210e40; color: #30e7ff; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #4a1765; color: #ff8be5; }"
-            "QHeaderView::section { background: #301350; color: #30e7ff; border: 1px solid #a447d1; padding: 4px; }"
-            "QGroupBox { border: 1px solid #a447d1; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #ff4ecd; }");
-    } else if (m_options.theme == QStringLiteral("dracula")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #282a36; color: #f8f8f2; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #1e1f29; color: #f8f8f2; border: 1px solid #6272a4; selection-background-color: #44475a; selection-color: #f8f8f2; }"
-            "QPushButton { background: #343746; color: #bd93f9; border: 1px solid #6272a4; padding: 5px 9px; }"
-            "QPushButton:hover { background: #44475a; color: #ff79c6; border-color: #bd93f9; }"
-            "QMenuBar,QMenu,QStatusBar { background: #21222c; color: #f8f8f2; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #44475a; color: #50fa7b; }"
-            "QHeaderView::section { background: #343746; color: #8be9fd; border: 1px solid #6272a4; padding: 4px; }"
-            "QGroupBox { border: 1px solid #6272a4; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #6272a4; }");
-    } else if (m_options.theme == QStringLiteral("vaporwave")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #241b3a; color: #ffe5f8; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #171127; color: #ffd6f6; border: 1px solid #b967ff; selection-background-color: #ff71ce; selection-color: #27163e; }"
-            "QPushButton { background: #382455; color: #01cdfe; border: 1px solid #ff71ce; padding: 5px 9px; }"
-            "QPushButton:hover { background: #533074; color: #ffffff; border-color: #01cdfe; }"
-            "QMenuBar,QMenu,QStatusBar { background: #302047; color: #ff71ce; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #5c3377; color: #01cdfe; }"
-            "QHeaderView::section { background: #40275e; color: #05ffa1; border: 1px solid #b967ff; padding: 4px; }"
-            "QGroupBox { border: 1px solid #b967ff; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #ff71ce; }");
-    } else if (m_options.theme == QStringLiteral("blood-moon")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #120205; color: #ffd8d8; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #080102; color: #ffe8e8; border: 1px solid #8f1427; selection-background-color: #6c0b1c; selection-color: #ffffff; }"
-            "QPushButton { background: #27060c; color: #ff5269; border: 1px solid #b01d34; padding: 5px 9px; }"
-            "QPushButton:hover { background: #420812; color: #ffffff; border-color: #ff334f; }"
-            "QMenuBar,QMenu,QStatusBar { background: #200409; color: #ff6b7f; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #500b18; color: #ffffff; }"
-            "QHeaderView::section { background: #310710; color: #ff8595; border: 1px solid #8f1427; padding: 4px; }"
-            "QGroupBox { border: 1px solid #8f1427; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #8f1427; }");
-    } else if (m_options.theme == QStringLiteral("c64")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #40318d; color: #b8c3ff; font-family: 'Monospace'; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #352879; color: #d3d9ff; border: 2px solid #7869c4; selection-background-color: #7869c4; selection-color: #ffffff; }"
-            "QPushButton { background: #5040a0; color: #d3d9ff; border: 2px solid #7869c4; padding: 5px 9px; }"
-            "QPushButton:hover { background: #6655b5; color: #ffffff; }"
-            "QMenuBar,QMenu,QStatusBar { background: #352879; color: #b8c3ff; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #7869c4; color: #ffffff; }"
-            "QHeaderView::section { background: #5040a0; color: #ffffff; border: 1px solid #7869c4; padding: 4px; }"
-            "QGroupBox { border: 2px solid #7869c4; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #7869c4; }");
-    } else if (m_options.theme == QStringLiteral("dos")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #000080; color: #ffffff; font-family: 'Monospace'; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #000050; color: #ffffff; border: 1px solid #00ffff; selection-background-color: #00aaaa; selection-color: #000000; }"
-            "QPushButton { background: #0000aa; color: #ffff55; border: 1px solid #ffffff; padding: 4px 8px; }"
-            "QPushButton:hover { background: #0000cc; color: #ffffff; border-color: #00ffff; }"
-            "QMenuBar,QMenu,QStatusBar { background: #000050; color: #ffff55; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #00aaaa; color: #000000; }"
-            "QHeaderView::section { background: #0000aa; color: #ffffff; border: 1px solid #00ffff; padding: 4px; }"
-            "QGroupBox { border: 1px solid #00ffff; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #00aaaa; }");
-    } else if (m_options.theme == QStringLiteral("solarized-dark")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #002b36; color: #839496; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #073642; color: #93a1a1; border: 1px solid #586e75; selection-background-color: #2aa198; selection-color: #002b36; }"
-            "QPushButton { background: #073642; color: #b58900; border: 1px solid #586e75; padding: 5px 9px; }"
-            "QPushButton:hover { background: #0b4652; color: #2aa198; border-color: #2aa198; }"
-            "QMenuBar,QMenu,QStatusBar { background: #073642; color: #93a1a1; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #2aa198; color: #002b36; }"
-            "QHeaderView::section { background: #073642; color: #268bd2; border: 1px solid #586e75; padding: 4px; }"
-            "QGroupBox { border: 1px solid #586e75; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #586e75; }");
-    } else if (m_options.theme == QStringLiteral("waffle-iron")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #1c1206; color: #ffe7a3; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #0f0903; color: #fff0bd; border: 1px solid #9b6726; selection-background-color: #b87823; selection-color: #1c1206; }"
-            "QPushButton { background: #3a240b; color: #f4b942; border: 1px solid #b87823; padding: 5px 9px; }"
-            "QPushButton:hover { background: #563810; color: #fff1b8; border-color: #ffd36a; }"
-            "QMenuBar,QMenu,QStatusBar { background: #2b1b08; color: #f4b942; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #6f4519; color: #fff1b8; }"
-            "QHeaderView::section { background: #42280c; color: #ffd36a; border: 1px solid #9b6726; padding: 4px; }"
-            "QGroupBox { border: 1px solid #9b6726; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #9b6726; }");
-    } else if (m_options.theme == QStringLiteral("ghostline")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #07131b; color: #c6efff; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #030b10; color: #d7f4ff; border: 1px solid #35799a; selection-background-color: #4d5aa8; selection-color: #ffffff; }"
-            "QPushButton { background: #0e2431; color: #5fd7ff; border: 1px solid #5576b8; padding: 5px 9px; }"
-            "QPushButton:hover { background: #17394b; color: #ffffff; border-color: #9b7bff; }"
-            "QMenuBar,QMenu,QStatusBar { background: #0a1d28; color: #7be3ff; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #38447f; color: #ffffff; }"
-            "QHeaderView::section { background: #102b3a; color: #8ddfff; border: 1px solid #5576b8; padding: 4px; }"
-            "QGroupBox { border: 1px solid #5576b8; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #5576b8; }");
-    } else if (m_options.theme == QStringLiteral("hot-dog-stand")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #ff0000; color: #ffff00; font-weight: bold; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #ffff00; color: #000000; border: 2px solid #000000; selection-background-color: #000000; selection-color: #ffff00; }"
-            "QPushButton { background: #ffff00; color: #ff0000; border: 2px solid #000000; padding: 5px 9px; }"
-            "QPushButton:hover { background: #000000; color: #ffff00; }"
-            "QMenuBar,QMenu,QStatusBar { background: #ffff00; color: #ff0000; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #000000; color: #ffff00; }"
-            "QHeaderView::section { background: #000000; color: #ffff00; border: 1px solid #ff0000; padding: 4px; }"
-            "QGroupBox { border: 2px solid #ffff00; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #ffff00; }");
-    } else if (m_options.theme == QStringLiteral("neon-miami")) {
-        sheet = QStringLiteral(
-            "QWidget { background: #071c24; color: #d8fffb; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { background: #041116; color: #e5fffc; border: 1px solid #20e3d2; selection-background-color: #ff4fa3; selection-color: #ffffff; }"
-            "QPushButton { background: #0d3038; color: #20e3d2; border: 1px solid #ff4fa3; padding: 5px 9px; }"
-            "QPushButton:hover { background: #134650; color: #ffffff; border-color: #20e3d2; }"
-            "QMenuBar,QMenu,QStatusBar { background: #092830; color: #ff70b7; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background: #5a1f4b; color: #20e3d2; }"
-            "QHeaderView::section { background: #0d3640; color: #20e3d2; border: 1px solid #ff4fa3; padding: 4px; }"
-            "QGroupBox { border: 1px solid #ff4fa3; margin-top: 8px; }"
-            "QScrollBar::handle,QSplitter::handle { background: #20e3d2; }");
-    } else if (m_options.theme == QStringLiteral("solarized")) {
-        sheet=QStringLiteral(
-            "QWidget { background:#002b36; color:#839496; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#073642; color:#eee8d5; border:1px solid #586e75; selection-background-color:#0b4f5c; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#073642; color:#93a1a1; }"
-            "QPushButton { border:1px solid #657b83; padding:4px 8px; }"
-            "QPushButton:hover,QTabBar::tab:selected { background:#0b4f5c; color:#fdf6e3; }"
-            "QHeaderView::section { background:#073642; color:#b58900; border:1px solid #586e75; }"
-            "QGroupBox { border:1px solid #586e75; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#586e75; }");
-    } else if (m_options.theme == QStringLiteral("nord")) {
-        sheet=QStringLiteral(
-            "QWidget { background:#2e3440; color:#eceff4; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#3b4252; color:#eceff4; border:1px solid #4c566a; selection-background-color:#5e81ac; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#3b4252; color:#d8dee9; }"
-            "QPushButton { border:1px solid #81a1c1; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#434c5e; color:#88c0d0; }"
-            "QHeaderView::section { background:#434c5e; color:#8fbcbb; border:1px solid #4c566a; }"
-            "QGroupBox { border:1px solid #4c566a; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#5e81ac; }");
-    } else if (m_options.theme == QStringLiteral("ocean")) {
-        sheet=QStringLiteral(
-            "QWidget { background:#061923; color:#d7f3ff; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#031018; color:#d7f3ff; border:1px solid #19799b; selection-background-color:#11516b; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#0a2633; color:#c8f3ff; }"
-            "QPushButton { border:1px solid #2596be; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#10465d; color:#80f0ff; }"
-            "QHeaderView::section { background:#0c3242; color:#62d9ff; border:1px solid #19799b; }"
-            "QGroupBox { border:1px solid #19799b; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#19799b; }");
-    } else if (m_options.theme == QStringLiteral("retro-blue")) {
-        sheet=QStringLiteral(
-            "QWidget { background:#07112a; color:#b8d5ff; font-family:'Monospace'; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#020817; color:#c8e0ff; border:1px solid #365f9c; selection-background-color:#173c73; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#0d1d42; color:#c8e0ff; }"
-            "QPushButton { border:1px solid #4d7fc4; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#193a72; color:#ffffff; }"
-            "QHeaderView::section { background:#102858; color:#8fc5ff; border:1px solid #365f9c; }"
-            "QGroupBox { border:1px solid #365f9c; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#365f9c; }");
-    } else if (m_options.theme == QStringLiteral("monochrome")) {
-        sheet=QStringLiteral(
-            "QWidget { background:#111111; color:#eeeeee; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox { background:#050505; color:#f5f5f5; border:1px solid #777777; selection-background-color:#444444; }"
-            "QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab { background:#222222; color:#eeeeee; }"
-            "QPushButton { border:1px solid #888888; padding:4px 8px; } QTabBar::tab:selected,QPushButton:hover { background:#3a3a3a; color:#ffffff; }"
-            "QHeaderView::section { background:#292929; color:#ffffff; border:1px solid #777777; }"
-            "QGroupBox { border:1px solid #777777; margin-top:8px; } QScrollBar::handle,QSplitter::handle { background:#777777; }");
-    } else if (m_options.theme == QStringLiteral("blue-box")) {
-        sheet=QStringLiteral("QWidget{background:#031325;color:#bde7ff;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#010812;color:#d8f2ff;border:1px solid #1b77b7;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#08213a;color:#c7ecff;} QPushButton{border:1px solid #249ee8;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0d3f67;} QHeaderView::section{background:#0a2c4d;color:#77d5ff;border:1px solid #1b77b7;} QGroupBox{border:1px solid #1b77b7;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("red-box")) {
-        sheet=QStringLiteral("QWidget{background:#180404;color:#ffd6d6;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#080101;color:#ffe9e9;border:1px solid #aa2525;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#290808;color:#ffdede;} QPushButton{border:1px solid #dc3f3f;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#541010;} QHeaderView::section{background:#3a0b0b;color:#ff7e7e;border:1px solid #aa2525;} QGroupBox{border:1px solid #aa2525;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("beige-box")) {
-        sheet=QStringLiteral("QWidget{background:#2a2419;color:#f1dfbd;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#15110c;color:#f7e9cc;border:1px solid #8d7651;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#3a3021;color:#f1dfbd;} QPushButton{border:1px solid #b59a68;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#58492f;} QHeaderView::section{background:#463a27;color:#f0cf8f;border:1px solid #8d7651;} QGroupBox{border:1px solid #8d7651;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("2600")) {
-        sheet=QStringLiteral("QWidget{background:#050505;color:#d7ffd7;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#000;color:#8cff8c;border:1px solid #19c719;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#071707;color:#76ff76;} QPushButton{border:1px solid #21ed21;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0d350d;color:#fff000;} QHeaderView::section{background:#0a280a;color:#32ff32;border:1px solid #19c719;} QGroupBox{border:1px solid #19c719;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("wargames")) {
-        sheet=QStringLiteral("QWidget{background:#020b02;color:#55ff55;font-family:'Monospace';} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#000400;color:#55ff55;border:1px solid #138f13;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#061306;color:#55ff55;} QPushButton{border:1px solid #1dc51d;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#0a2a0a;} QHeaderView::section{background:#071d07;color:#8cff8c;border:1px solid #138f13;} QGroupBox{border:1px solid #138f13;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("crt-green")) {
-        sheet=QStringLiteral("QWidget{background:#071008;color:#b8ffb8;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#010501;color:#cbffcb;border:1px solid #3b8f45;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#0c1c0e;color:#c7ffc7;} QPushButton{border:1px solid #55b85f;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#16361a;} QHeaderView::section{background:#102913;color:#8eff98;border:1px solid #3b8f45;} QGroupBox{border:1px solid #3b8f45;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("vt220")) {
-        sheet=QStringLiteral("QWidget{background:#161616;color:#e8e8e8;font-family:'Monospace';} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#050505;color:#f2f2f2;border:1px solid #767676;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#242424;color:#eee;} QPushButton{border:1px solid #919191;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#393939;} QHeaderView::section{background:#2d2d2d;color:#fff;border:1px solid #767676;} QGroupBox{border:1px solid #767676;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("cobalt")) {
-        sheet=QStringLiteral("QWidget{background:#07152b;color:#e5efff;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#020916;color:#e5efff;border:1px solid #456fb5;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#0d2446;color:#dce9ff;} QPushButton{border:1px solid #668fd0;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#173d75;color:#9ee7ff;} QHeaderView::section{background:#102f5c;color:#8cc7ff;border:1px solid #456fb5;} QGroupBox{border:1px solid #456fb5;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("stealth")) {
-        sheet=QStringLiteral("QWidget{background:#101214;color:#c7cbd0;} QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QTableWidget,QComboBox,QSpinBox{background:#070809;color:#d5d9de;border:1px solid #4c535a;} QPushButton,QMenuBar,QMenu,QStatusBar,QTabBar::tab{background:#1a1d20;color:#cbd0d5;} QPushButton{border:1px solid #5b636b;padding:4px 8px;} QPushButton:hover,QTabBar::tab:selected{background:#292e33;color:#e8ecef;} QHeaderView::section{background:#22272b;color:#d5d9de;border:1px solid #4c535a;} QGroupBox{border:1px solid #4c535a;margin-top:8px;}");
-    } else if (m_options.theme == QStringLiteral("classic-light")) {
-        sheet = QStringLiteral(
-            "QWidget { background-color: #f2f2f2; color: #202020; }"
-            "QMainWindow,QDialog { background-color: #f2f2f2; }"
-            "QLineEdit,QPlainTextEdit,QTextEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox { "
-            " background-color: #ffffff; color: #202020; border: 1px solid #9a9a9a; "
-            " selection-background-color: #2f6fa7; selection-color: #ffffff; }"
-            "QPushButton { background-color: #e5e5e5; color: #202020; border: 1px solid #8b8b8b; padding: 5px 9px; }"
-            "QPushButton:hover { background-color: #d8e6f3; }"
-            "QMenuBar,QMenu,QStatusBar { background-color: #e8e8e8; color: #202020; }"
-            "QMenu::item:selected,QMenuBar::item:selected { background-color: #d2e5f5; color: #101010; }"
-            "QHeaderView::section { background-color: #dddddd; color: #202020; border: 1px solid #a0a0a0; padding: 4px; }"
-            "QGroupBox { border: 1px solid #a0a0a0; margin-top: 8px; }"
-            "QScrollBar::handle { background: #b1b1b1; }"
-            "QSplitter::handle { background: #a0a0a0; }");
-    }
-
-    qApp->setStyleSheet(sheet);
+    // 3.0 keeps every existing theme key but routes them through one modern
+    // design system so the main window, dialogs, chat windows, softphone,
+    // transfers, menus, and secondary windows all share the same visual language.
+    qApp->setStyleSheet(ModernStyle::styleSheet(m_options.theme));
     applyConversationOptions();
 }
 
@@ -1939,7 +1895,7 @@ void MainWindow::showOptionsDialog()
 {
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("Options — %1").arg(appDisplayName()));
-    dialog.setMinimumWidth(430);
+    dialog.setMinimumWidth(360);
     auto *outer = new QVBoxLayout(&dialog);
     auto *form = new QFormLayout;
 
@@ -1990,7 +1946,7 @@ void MainWindow::showOptionsDialog()
     sidePanes.setChecked(m_options.showSidePanes);
     form->addRow(QString(), &sidePanes);
 
-    QCheckBox encrypted(QStringLiteral("Enable CPX3-compatible encrypted DMs"), &dialog);
+    QCheckBox encrypted(QStringLiteral("Enable CPX3 encrypted communications (DMs + rooms)"), &dialog);
     encrypted.setChecked(m_options.encryptedDmEnabled);
     form->addRow(QString(), &encrypted);
 
@@ -2002,12 +1958,29 @@ void MainWindow::showOptionsDialog()
     fingerprints.setChecked(m_options.showSecureFingerprints);
     form->addRow(QString(), &fingerprints);
 
+    QCheckBox autoPresence(QStringLiteral("Automatically set AIM/OSCAR Idle and Away when inactive"), &dialog);
+    autoPresence.setChecked(m_options.autoPresenceEnabled);
+    form->addRow(QString(), &autoPresence);
+    QSpinBox autoIdle(&dialog);
+    autoIdle.setRange(1, 1440);
+    autoIdle.setSuffix(QStringLiteral(" minutes"));
+    autoIdle.setValue(m_options.autoIdleMinutes);
+    form->addRow(QStringLiteral("Auto-idle after:"), &autoIdle);
+    QSpinBox autoAway(&dialog);
+    autoAway.setRange(m_options.autoIdleMinutes + 1, 2880);
+    autoAway.setSuffix(QStringLiteral(" minutes"));
+    autoAway.setValue(std::max(m_options.autoAwayMinutes, m_options.autoIdleMinutes + 1));
+    form->addRow(QStringLiteral("Auto-away after:"), &autoAway);
+    connect(&autoIdle, qOverload<int>(&QSpinBox::valueChanged), &dialog, [&autoAway](int minutes) {
+        autoAway.setMinimum(minutes + 1);
+    });
+
     QLabel identity(&dialog);
     if (BackendState *state = selectedState(); m_secureReady && state) {
         identity.setText(QStringLiteral("Selected profile fingerprint:\n%1")
                              .arg(m_secure.localFingerprint(state->profileId)));
     } else if (!m_secureReady) {
-        identity.setText(QStringLiteral("Encrypted DMs unavailable: %1").arg(m_secureError));
+        identity.setText(QStringLiteral("Encrypted communications unavailable: %1").arg(m_secureError));
     } else {
         identity.setText(QStringLiteral("Select a connection to view its secure fingerprint."));
     }
@@ -2015,6 +1988,83 @@ void MainWindow::showOptionsDialog()
     identity.setWordWrap(true);
     outer->addLayout(form);
     outer->addWidget(&identity);
+
+    auto *notifyBox = new QGroupBox(QStringLiteral("Notification Sounds"), &dialog);
+    auto *notifyLayout = new QGridLayout(notifyBox);
+    auto *notifyMaster = new QCheckBox(QStringLiteral("Enable notification sounds"), notifyBox);
+    notifyMaster->setChecked(NotificationManager::globalEnabled());
+    notifyLayout->addWidget(notifyMaster, 0, 0, 1, 5);
+    auto *notifyHint = new QLabel(QStringLiteral("Built-in sounds are included. Choose Custom to use your own audio file (WAV is recommended). GUI and CLI share these settings."), notifyBox);
+    notifyHint->setWordWrap(true);
+    notifyHint->setObjectName(QStringLiteral("Muted"));
+    notifyLayout->addWidget(notifyHint, 1, 0, 1, 5);
+
+    struct NotificationRow {
+        NotificationManager::Event event;
+        QCheckBox *enabled = nullptr;
+        QComboBox *source = nullptr;
+        QLineEdit *path = nullptr;
+        QPushButton *browse = nullptr;
+        QPushButton *test = nullptr;
+    };
+    QList<NotificationRow> notificationRows;
+    int notifyRow = 2;
+    for (const auto event : NotificationManager::configurableEvents()) {
+        const auto cfg = NotificationManager::setting(event);
+        NotificationRow row;
+        row.event = event;
+        row.enabled = new QCheckBox(NotificationManager::displayName(event), notifyBox);
+        row.enabled->setChecked(cfg.enabled);
+        row.source = new QComboBox(notifyBox);
+        row.source->addItem(QStringLiteral("Built-in"), QStringLiteral("builtin"));
+        row.source->addItem(QStringLiteral("Custom file"), QStringLiteral("custom"));
+        row.source->addItem(QStringLiteral("None"), QStringLiteral("none"));
+        row.path = new QLineEdit(notifyBox);
+        row.path->setPlaceholderText(QStringLiteral("/path/to/notification.wav"));
+        row.browse = new QPushButton(QStringLiteral("Browse…"), notifyBox);
+        row.test = new QPushButton(QStringLiteral("Test"), notifyBox);
+
+        if (NotificationManager::isCustomSpec(cfg.soundSpec)) {
+            row.source->setCurrentIndex(row.source->findData(QStringLiteral("custom")));
+            row.path->setText(NotificationManager::customPath(cfg.soundSpec));
+        } else if (cfg.soundSpec.compare(QStringLiteral("none"), Qt::CaseInsensitive) == 0
+                   || cfg.soundSpec.compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0) {
+            row.source->setCurrentIndex(row.source->findData(QStringLiteral("none")));
+        } else {
+            row.source->setCurrentIndex(row.source->findData(QStringLiteral("builtin")));
+        }
+
+        auto updateCustom = [source=row.source, path=row.path, browse=row.browse] {
+            const bool custom = source->currentData().toString() == QStringLiteral("custom");
+            path->setEnabled(custom);
+            browse->setEnabled(custom);
+        };
+        updateCustom();
+        connect(row.source, &QComboBox::currentIndexChanged, &dialog, [updateCustom](int) { updateCustom(); });
+        connect(row.browse, &QPushButton::clicked, &dialog, [path=row.path, &dialog] {
+            const QString selected = QFileDialog::getOpenFileName(
+                &dialog, QStringLiteral("Choose Notification Sound"), path->text(),
+                QStringLiteral("Audio files (*.wav *.ogg *.oga *.flac *.mp3);;All files (*)"));
+            if (!selected.isEmpty()) path->setText(selected);
+        });
+        connect(row.test, &QPushButton::clicked, &dialog, [event, source=row.source, path=row.path] {
+            const QString mode = source->currentData().toString();
+            QString spec = QStringLiteral("none");
+            if (mode == QStringLiteral("builtin")) spec = NotificationManager::builtinSpec(event);
+            else if (mode == QStringLiteral("custom")) spec = NotificationManager::customSpec(path->text());
+            if (!NotificationManager::playSpec(spec, false) && mode != QStringLiteral("none")) QApplication::beep();
+        });
+
+        notifyLayout->addWidget(row.enabled, notifyRow, 0);
+        notifyLayout->addWidget(row.source, notifyRow, 1);
+        notifyLayout->addWidget(row.path, notifyRow, 2);
+        notifyLayout->addWidget(row.browse, notifyRow, 3);
+        notifyLayout->addWidget(row.test, notifyRow, 4);
+        notificationRows.push_back(row);
+        ++notifyRow;
+    }
+    notifyLayout->setColumnStretch(2, 1);
+    outer->addWidget(notifyBox);
 
     QDialogButtonBox buttons(QDialogButtonBox::Cancel | QDialogButtonBox::Save, &dialog);
     outer->addWidget(&buttons);
@@ -2029,6 +2079,20 @@ void MainWindow::showOptionsDialog()
     m_options.encryptedDmEnabled = encrypted.isChecked();
     m_options.autoReplySecure = autoReply.isChecked();
     m_options.showSecureFingerprints = fingerprints.isChecked();
+    m_options.autoPresenceEnabled = autoPresence.isChecked();
+    m_options.autoIdleMinutes = autoIdle.value();
+    m_options.autoAwayMinutes = std::max(autoAway.value(), autoIdle.value() + 1);
+    if (!m_options.autoPresenceEnabled) markUserActivity();
+    NotificationManager::setGlobalEnabled(notifyMaster->isChecked());
+    for (const NotificationRow &row : notificationRows) {
+        NotificationManager::Setting cfg;
+        cfg.enabled = row.enabled->isChecked();
+        const QString mode = row.source->currentData().toString();
+        if (mode == QStringLiteral("custom")) cfg.soundSpec = NotificationManager::customSpec(row.path->text());
+        else if (mode == QStringLiteral("none")) cfg.soundSpec = QStringLiteral("none");
+        else cfg.soundSpec = NotificationManager::builtinSpec(row.event);
+        NotificationManager::setSetting(row.event, cfg);
+    }
     saveOptions();
     applyTheme();
 }
@@ -2037,7 +2101,7 @@ void MainWindow::showHelpDialog()
 {
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("%1 Help").arg(appDisplayName()));
-    dialog.resize(720, 600);
+    dialog.resize(580, 460);
     auto *outer = new QVBoxLayout(&dialog);
     auto *help = new QPlainTextEdit(&dialog);
     help->setReadOnly(true);
@@ -2051,13 +2115,13 @@ void MainWindow::showHelpDialog()
         "  AIM/IRC account menus provide IM / Chatroom and Add / Remove Buddies windows.\n"
         "  Tools contains Show Connections Window, Open Softphone, AIM password, fingerprint, and Options.\n\n"
         "SIP / VOIP SOFTPHONE\n"
-        "  SIP accounts are normal saved WaffleHouse connections and multiple accounts may register at once.\n"
-        "  The Buddy List Softphone panel selects the outbound SIP identity and provides quick dialing.\n"
-        "  Active calls appear under their SIP account; double-click an active call to open Softphone.\n"
-        "  SIP contacts are local dial targets; double-click one to load it into quick dial.\n"
-        "  Tools > Open Softphone opens the full phone workspace.\n"
+        "  SIP accounts are normal saved WaffleHouse connections and remain visible in the Communications Hub.\n"
+        "  The old right-side quick-dial card is removed; the left-rail Softphone button opens the full phone workspace.\n"
+        "  SIP contacts remain available from the account management menus and the Softphone profile/workspace.\n"
+        "  Tools > Open Softphone also opens the full phone workspace.\n"
         "  Softphone > Profile edits the same saved SIP account as Connection > Edit.\n"
-        "  Softphone tabs: Main, Active Call, SIP Log, SIP Ladder, Profile, and Activity.\n\n"
+        "  Softphone left rail: Phone, Active Calls, SIP Log, SIP Ladder, Profile, and Activity.\n"
+        "  The Phone page includes Prefix, Destination, Caller ID, a live status strip, and a telephone dial pad.\n\n"
         "TELNET / MUD / BBS\n"
         "  Add a Telnet profile, choose host/port and terminal type, then connect.\n"
         "  A terminal session window opens automatically. Closing it disconnects that Telnet profile.\n"
@@ -2072,22 +2136,28 @@ void MainWindow::showHelpDialog()
         "  4. Compare the peer fingerprint through a separate trusted channel (voice, phone, in person, etc.).\n"
         "  5. Choose Security > Trust Peer Fingerprint after it matches.\n"
         "  6. Type normally. Messages are encrypted automatically while the secure session is active.\n\n"
+        "SECURE AIM / IRC ROOMS\n"
+        "  Open an AIM chat room or IRC channel and choose Security > Start Secure Room (or type /secure).\n"
+        "  WaffleHouse creates an XChaCha20-Poly1305 shared room key and delivers it only through established CPX encrypted PM sessions.\n"
+        "  Public room traffic contains CPXROOM ciphertext. WaffleHouse peers with the key display [secure-room] plaintext locally; ordinary traffic is marked [plaintext].\n"
+        "  The key owner rotates the room key when membership changes and redistributes it to current secure peers.\n\n"
         "  An unverified secure session is encrypted but not identity-verified.\n"
         "  If a trusted peer later presents a different key, the client rejects that secure session.\n"
         "  Security > Forget Trusted Fingerprint removes saved trust.\n"
         "  Security > Close Secure Session returns that conversation to plaintext.\n\n"
-        "SECURE FILE TRANSFER\n"
-        "  After a secure session is active and the peer advertises file-transfer capability, choose Security > Send File.\n"
-        "  Transfers are encrypted inside CPX, chunked, resumable, and SHA-256 verified before finalizing.\n"
-        "  Incoming transfers require explicit acceptance and a destination path.\n\n"
+        "FILE TRANSFER\n"
+        "  Choose Send File from an AIM/IRC private-message window, then select Secure or Unsecured.\n"
+        "  Secure uses CPX encryption/authentication and requires a verified secure session; the dialog explains setup if one is not active.\n"
+        "  Unsecured proceeds over ordinary AIM/IRC PM transport without CPX encryption/authentication.\n"
+        "  Both modes retain chunking/resume and SHA-256 verification; incoming transfers require explicit acceptance and a destination path.\n\n"
         "SLASH ALIASES INSIDE CONVERSATION WINDOWS\n"
         "  Tab          complete/cycle matching slash commands\n"
         "  Shift+Tab    cycle matching commands backward\n"
         "  /options     open Options\n"
         "  /help        open this Help window\n"
         "  /fingerprint show this connection profile's local secure fingerprint\n"
-        "  /secure      start a secure session in an IM\n"
-        "  /securestatus show fingerprints/trust state\n"
+        "  /secure      start a secure IM, or start/rotate secure-room mode in an AIM/IRC room\n"
+        "  /securestatus show IM trust state or the active room-key status\n"
         "  /trust       trust the active peer fingerprint\n"
         "  /untrust     forget the trusted peer fingerprint\n"
         "  /secureoff   close the secure session\n\n"
@@ -2095,7 +2165,7 @@ void MainWindow::showHelpDialog()
         "  %4\n"
         "  Graphical-terminal sessions are distinguished from desktop launches and console-only TTYs.\n\n"
         "THEMES\n"
-        "  Use the Buddy List Options button, Tools > Options, or Ctrl+, for full settings.\n"
+        "  Use the left-rail Settings button, Tools > Options, or Ctrl+, for full settings.\n"
         "  View > Theme provides the complete WaffleHouse + S.I.P.H.E.R. theme collection.\n")
         .arg(appAsciiLogo(), appDisplayName(), appVersionString(), RuntimeEnvironment::detect().summary()));
     outer->addWidget(help, 1);
@@ -2292,7 +2362,7 @@ bool MainWindow::ensureConnectionSecret(BackendState *state)
     auto *promptLabel = new QLabel(label, &dialog);
     auto *secretEdit = new QLineEdit(&dialog);
     secretEdit->setEchoMode(QLineEdit::Password);
-    secretEdit->setMinimumWidth(320);
+    secretEdit->setMinimumWidth(280);
     auto *savePassword = new QCheckBox(QStringLiteral("Save password on this computer"), &dialog);
     savePassword->setChecked(false);
     savePassword->setToolTip(
@@ -2404,6 +2474,22 @@ void MainWindow::wireBackend(ChatBackend *backend)
             [this, backend](const QString &context, const QString &message) {
                 handleBackendError(backend, context, message);
             }, Qt::QueuedConnection);
+    if (auto *oscar = qobject_cast<OscarBackend *>(backend)) {
+        connect(oscar, &OscarBackend::presenceChanged, this,
+                [this, backend](const QString &presence, const QString &message, quint32 idleSeconds) {
+                    if (BackendState *state = stateFor(backend)) {
+                        state->presenceState = presence;
+                        state->presenceMessage = message;
+                        state->idleSeconds = idleSeconds;
+                        updateConnectionItem(state);
+                        refreshBuddyList();
+                        QString text = presence;
+                        if (idleSeconds > 0) text += QStringLiteral(" + IDLE %1s").arg(idleSeconds);
+                        if (!message.isEmpty()) text += QStringLiteral(" — %1").arg(message);
+                        statusBar()->showMessage(QStringLiteral("AIM presence: %1").arg(text), 4000);
+                    }
+                }, Qt::QueuedConnection);
+    }
 }
 
 void MainWindow::attachBackend(ChatBackend *backend,
@@ -2535,9 +2621,14 @@ void MainWindow::updateConnectionItem(BackendState *state)
     const QString identity = state->identity.isEmpty()
         ? state->backend->settings().username
         : state->identity;
-    const QString stateWord = state->connecting
+    QString stateWord = state->connecting
         ? QStringLiteral("Connecting")
         : statusWord(state->connected);
+    if (state->connected
+        && state->backend->settings().protocol == ConnectionSettings::Protocol::Oscar) {
+        stateWord = state->presenceState.isEmpty() ? QStringLiteral("ONLINE") : state->presenceState;
+        if (state->idleSeconds > 0) stateWord += QStringLiteral(" + Idle");
+    }
 
     QString text = QStringLiteral("%1 — %2").arg(stateWord, state->backend->protocolName());
     if (!identity.isEmpty()) {
@@ -2560,7 +2651,6 @@ void MainWindow::updateActions()
         && state->backend->settings().protocol == ConnectionSettings::Protocol::Telnet;
     const bool isSip = exists
         && state->backend->settings().protocol == ConnectionSettings::Protocol::Sip;
-    const bool privateMessaging = online && !isTelnet && !isSip;
 
     if (m_editConnectionAction) m_editConnectionAction->setEnabled(editable);
     if (m_deleteConnectionAction) m_deleteConnectionAction->setEnabled(exists);
@@ -2571,10 +2661,7 @@ void MainWindow::updateActions()
     if (m_deleteConnectionButton) m_deleteConnectionButton->setEnabled(exists);
     if (m_connectButton) m_connectButton->setEnabled(exists && !online && !connecting);
     if (m_disconnectButton) m_disconnectButton->setEnabled(exists && (online || connecting));
-    if (m_buddyConnectButton) m_buddyConnectButton->setEnabled(exists && !online && !connecting);
-    if (m_buddyDisconnectButton) m_buddyDisconnectButton->setEnabled(exists && (online || connecting));
 
-    if (m_newImButton) m_newImButton->setEnabled(privateMessaging);
     if (m_rawAction) m_rawAction->setEnabled(online && !isSip);
     if (m_changePasswordAction) m_changePasswordAction->setEnabled(oscar);
     if (m_fingerprintAction) m_fingerprintAction->setEnabled(exists && m_secureReady && !isTelnet && !isSip);
@@ -2621,6 +2708,8 @@ void MainWindow::refreshBuddyList()
 
     QTreeWidgetItem *restoreItem = nullptr;
 
+    // Every saved connection remains a top-level Communications Hub account,
+    // including SIP/VoIP. Only the old embedded quick-dial panel was removed.
     for (BackendState *state : states) {
         if (!state || !state->backend) {
             continue;
@@ -2637,22 +2726,26 @@ void MainWindow::refreshBuddyList()
 
         auto *root = new QTreeWidgetItem(m_buddyTree);
         root->setText(0, accountName);
-        root->setText(
-            1,
-            QStringLiteral("%1 — %2")
-                .arg(state->backend->protocolName(),
-                     state->connecting ? QStringLiteral("Connecting")
-                                       : statusWord(state->connected)));
+        QString accountStatus = state->connecting ? QStringLiteral("Connecting")
+                                                        : statusWord(state->connected);
+        if (state->connected
+            && state->backend->settings().protocol == ConnectionSettings::Protocol::Oscar) {
+            accountStatus = state->presenceState.isEmpty() ? QStringLiteral("ONLINE") : state->presenceState;
+            if (state->idleSeconds > 0) {
+                const quint32 minutes = state->idleSeconds / 60;
+                accountStatus += minutes > 0 ? QStringLiteral(" · Idle %1m").arg(minutes)
+                                             : QStringLiteral(" · Idle %1s").arg(state->idleSeconds);
+            }
+        }
+        root->setText(1, QStringLiteral("%1 — %2").arg(state->backend->protocolName(), accountStatus));
+        if (!state->presenceMessage.isEmpty()) root->setToolTip(1, state->presenceMessage);
         root->setData(0, Qt::UserRole, state->backend->id());
         QFont rootFont = root->font(0);
         rootFont.setBold(true);
         root->setFont(0, rootFont);
 
         if (state->backend->settings().protocol == ConnectionSettings::Protocol::Oscar
-            || state->backend->settings().protocol == ConnectionSettings::Protocol::Irc
-            || state->backend->settings().protocol == ConnectionSettings::Protocol::Sip) {
-            const bool sipContacts =
-                state->backend->settings().protocol == ConnectionSettings::Protocol::Sip;
+            || state->backend->settings().protocol == ConnectionSettings::Protocol::Irc) {
             QStringList buddies = state->buddies.values();
             std::sort(buddies.begin(), buddies.end(), [state](const QString &a, const QString &b) {
                 const bool aOnline = state->onlineBuddies.contains(a.toCaseFolded());
@@ -2667,12 +2760,10 @@ void MainWindow::refreshBuddyList()
                 auto *item = new QTreeWidgetItem(root);
                 item->setText(0, buddy);
                 const bool online = state->onlineBuddies.contains(buddy.toCaseFolded());
-                item->setText(1, sipContacts
-                                     ? QStringLiteral("Contact")
-                                     : (online ? QStringLiteral("Online") : QStringLiteral("Offline")));
+                item->setText(1, online ? QStringLiteral("Online") : QStringLiteral("Offline"));
                 item->setData(0, Qt::UserRole, state->backend->id());
                 item->setData(0, Qt::UserRole + 1, buddy);
-                if (!sipContacts && online) {
+                if (online) {
                     QFont font = item->font(0);
                     font.setBold(true);
                     item->setFont(0, font);
@@ -2682,25 +2773,6 @@ void MainWindow::refreshBuddyList()
                     && buddy == selectedBuddy) {
                     restoreItem = item;
                 }
-            }
-        }
-
-        if (state->backend->settings().protocol == ConnectionSettings::Protocol::Sip) {
-            const auto calls = m_sipController->calls();
-            for (const auto &call : calls) {
-                if (QString::fromStdString(call.accountId) != state->backend->id() || call.disconnected) {
-                    continue;
-                }
-                auto *item = new QTreeWidgetItem(root);
-                item->setText(0, QStringLiteral("Call #%1 — %2")
-                                     .arg(call.id)
-                                     .arg(QString::fromStdString(call.remoteUri)));
-                item->setText(1, QString::fromStdString(call.state));
-                item->setData(0, Qt::UserRole, state->backend->id());
-                item->setData(0, Qt::UserRole + 2, call.id);
-                QFont font = item->font(0);
-                font.setBold(true);
-                item->setFont(0, font);
             }
         }
 
@@ -3105,6 +3177,58 @@ void MainWindow::removeBuddy()
     }
 }
 
+void MainWindow::setAimPresence(BackendState *state)
+{
+    if (!state || !state->backend || !state->connected
+        || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+        QMessageBox::information(this, QStringLiteral("AIM Status"),
+                                 QStringLiteral("Select and connect an AIM/OSCAR account first."));
+        return;
+    }
+    auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+    if (!oscar) return;
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("AIM Status / AFK — %1").arg(accountMenuLabel(state)));
+    auto *form = new QFormLayout(&dialog);
+    auto *mode = new QComboBox(&dialog);
+    mode->addItems({QStringLiteral("Online"), QStringLiteral("Away"),
+                    QStringLiteral("AFK"), QStringLiteral("Idle")});
+    const QString current = state->presenceState.toCaseFolded();
+    if (current == QStringLiteral("away")) mode->setCurrentText(QStringLiteral("Away"));
+    else if (current == QStringLiteral("afk")) mode->setCurrentText(QStringLiteral("AFK"));
+    else if (state->idleSeconds > 0) mode->setCurrentText(QStringLiteral("Idle"));
+    auto *message = new QLineEdit(state->presenceMessage, &dialog);
+    message->setPlaceholderText(QStringLiteral("Away/AFK message (optional)"));
+    auto *idle = new QSpinBox(&dialog);
+    idle->setRange(0, 2147483647);
+    idle->setSuffix(QStringLiteral(" seconds"));
+    idle->setValue(static_cast<int>(std::min<quint32>(state->idleSeconds, 2147483647U)));
+    form->addRow(QStringLiteral("Status:"), mode);
+    form->addRow(QStringLiteral("Message:"), message);
+    form->addRow(QStringLiteral("Idle time:"), idle);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    form->addRow(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    const QString selected = mode->currentText();
+    state->autoPresenceState.clear();
+    m_lastUserActivityMs = QDateTime::currentMSecsSinceEpoch();
+    if (selected == QStringLiteral("Online")) {
+        oscar->setBack();
+    } else if (selected == QStringLiteral("Away")) {
+        oscar->setAwayMessage(message->text());
+        if (idle->value() > 0) oscar->setIdleSeconds(static_cast<quint32>(idle->value()));
+    } else if (selected == QStringLiteral("AFK")) {
+        oscar->setAfkMessage(message->text());
+        if (idle->value() > 0) oscar->setIdleSeconds(static_cast<quint32>(idle->value()));
+    } else {
+        oscar->setIdleSeconds(static_cast<quint32>(std::max(1, idle->value())));
+    }
+}
+
 void MainWindow::changePassword()
 {
     BackendState *state = selectedState();
@@ -3379,14 +3503,18 @@ void MainWindow::clearTrustedFingerprint(BackendState *state, const QString &tar
 
 void MainWindow::startSecureSession(ChatWindow *window)
 {
+    if (window && window->kind() == QStringLiteral("chat")) {
+        startSecureRoom(window);
+        return;
+    }
     if (!window || window->kind() != QStringLiteral("im")) return;
     BackendState *state = stateById(window->backendId());
     if (!state || !state->connected || !state->backend) return;
     if (!m_options.encryptedDmEnabled || !m_secureReady) {
         QMessageBox::warning(this, QStringLiteral("Encrypted DMs"),
                              m_secureReady
-                                 ? QStringLiteral("Encrypted DMs are disabled in Tools > Options.")
-                                 : QStringLiteral("Encrypted DMs are unavailable: %1").arg(m_secureError));
+                                 ? QStringLiteral("Encrypted communications are disabled in Tools > Options.")
+                                 : QStringLiteral("Encrypted communications are unavailable: %1").arg(m_secureError));
         return;
     }
     if (state->backend->settings().protocol == ConnectionSettings::Protocol::Telnet) return;
@@ -3406,6 +3534,10 @@ void MainWindow::startSecureSession(ChatWindow *window)
 
 void MainWindow::showSecureStatus(ChatWindow *window)
 {
+    if (window && window->kind() == QStringLiteral("chat")) {
+        showSecureRoomStatus(window);
+        return;
+    }
     if (!window || window->kind() != QStringLiteral("im")) return;
     BackendState *state = stateById(window->backendId());
     if (!state || !m_secureReady) return;
@@ -3463,6 +3595,10 @@ void MainWindow::untrustSecurePeer(ChatWindow *window)
 
 void MainWindow::closeSecureSession(ChatWindow *window)
 {
+    if (window && window->kind() == QStringLiteral("chat")) {
+        closeSecureRoom(window);
+        return;
+    }
     if (!window || window->kind() != QStringLiteral("im")) return;
     BackendState *state = stateById(window->backendId());
     if (!state) return;
@@ -3471,13 +3607,200 @@ void MainWindow::closeSecureSession(ChatWindow *window)
     updateConversationSecurity(window);
 }
 
+void MainWindow::startSecureRoom(ChatWindow *window)
+{
+    if (!window || window->kind() != QStringLiteral("chat")) return;
+    BackendState *state = stateById(window->backendId());
+    if (!state || !state->connected || !state->backend) return;
+    const auto protocol = state->backend->settings().protocol;
+    if (protocol != ConnectionSettings::Protocol::Oscar
+        && protocol != ConnectionSettings::Protocol::Irc) {
+        window->appendMessage(QStringLiteral("[error] [secure-room] Secure rooms are available only for AIM/OSCAR and IRC chats."));
+        return;
+    }
+    if (!m_options.encryptedDmEnabled || !m_secureReady) {
+        QMessageBox::warning(this, QStringLiteral("Secure Room"),
+                             m_secureReady
+                                 ? QStringLiteral("Secure communications are disabled in Tools > Options.")
+                                 : QStringLiteral("Secure communications are unavailable: %1").arg(m_secureError));
+        return;
+    }
+
+    QString error;
+    if (!m_secureRooms.createOrRotate(state->profileId, window->target(), &error)) {
+        window->appendMessage(QStringLiteral("[error] [secure-room] %1").arg(error));
+        return;
+    }
+
+    window->appendMessage(QStringLiteral(
+        "[secure-room] New shared room key %1 created. Key material is distributed only through encrypted CPX private sessions; the public room will carry ciphertext.")
+        .arg(m_secureRooms.keyId(state->profileId, window->target())));
+    distributeSecureRoomKeyToMembers(state, window);
+    updateConversationSecurity(window);
+}
+
+void MainWindow::showSecureRoomStatus(ChatWindow *window)
+{
+    if (!window || window->kind() != QStringLiteral("chat")) return;
+    BackendState *state = stateById(window->backendId());
+    if (!state || !m_secureReady) return;
+
+    const bool active = m_secureRooms.hasRoom(state->profileId, window->target());
+    const QString id = m_secureRooms.keyId(state->profileId, window->target());
+    const QString role = m_secureRooms.locallyOwned(state->profileId, window->target())
+        ? QStringLiteral("key owner / distributor")
+        : QStringLiteral("participant");
+    const QString body = active
+        ? QStringLiteral(
+            "Secure room: %1\n\nKey ID: %2\nRole: %3\n\n"
+            "Room messages are encrypted with XChaCha20-Poly1305 before being sent to IRC/AIM. "
+            "The room key itself is delivered separately through CPX encrypted private sessions. "
+            "Any plaintext message received while secure-room mode is active is marked [plaintext].")
+              .arg(window->displayName(), id, role)
+        : QStringLiteral("No secure room key is active for %1.\n\nUse /secure or Security > Start Secure Room.")
+              .arg(window->displayName());
+    QMessageBox::information(this, QStringLiteral("Secure Room Status"), body);
+}
+
+void MainWindow::closeSecureRoom(ChatWindow *window)
+{
+    if (!window || window->kind() != QStringLiteral("chat")) return;
+    BackendState *state = stateById(window->backendId());
+    if (!state) return;
+    m_secureRooms.closeRoom(state->profileId, window->target());
+    window->appendMessage(QStringLiteral(
+        "[secure-room] Secure room closed locally. New messages from this client will be plaintext until /secure is started again."));
+    updateConversationSecurity(window);
+}
+
+void MainWindow::distributeSecureRoomKey(BackendState *state,
+                                         ChatWindow *window,
+                                         const QString &peer)
+{
+    if (!state || !state->backend || !window || peer.trimmed().isEmpty()) return;
+    const QString cleanPeer = peer.trimmed();
+    const QString own = state->identity.isEmpty()
+        ? state->backend->settings().username
+        : state->identity;
+    if (!own.isEmpty() && cleanPeer.compare(own, Qt::CaseInsensitive) == 0) return;
+
+    const QString pendingKey = state->profileId + QChar(0x1f) + cleanPeer.toCaseFolded();
+    const QString room = window->target();
+
+    if (!m_secure.hasSession(state->profileId, cleanPeer)) {
+        m_pendingSecureRoomKeys[pendingKey].insert(room);
+        window->appendMessage(QStringLiteral(
+            "[secure-room] %1 is not included yet: establish a secure PM with that user first. "
+            "Once the CPX session is active, WaffleHouse will send this room key automatically.")
+            .arg(cleanPeer));
+        return;
+    }
+
+    const QStringList caps = m_secure.peerCapabilities(state->profileId, cleanPeer);
+    if (!m_secure.peerSupports(state->profileId, cleanPeer, QStringLiteral("secure-room-v1"))) {
+        if (caps.isEmpty()) {
+            m_pendingSecureRoomKeys[pendingKey].insert(room);
+            window->appendMessage(QStringLiteral(
+                "[secure-room] Waiting for %1 to advertise secure-room capability.").arg(cleanPeer));
+        } else {
+            m_pendingSecureRoomKeys[pendingKey].remove(room);
+            window->appendMessage(QStringLiteral(
+                "[secure-room] %1 does not advertise secure-room-v1 and will not receive this room key.").arg(cleanPeer));
+        }
+        return;
+    }
+
+    QString error;
+    const QString offer = m_secureRooms.keyOffer(state->profileId, room, &error);
+    if (offer.isEmpty()) {
+        window->appendMessage(QStringLiteral("[error] [secure-room] %1").arg(error));
+        return;
+    }
+    const QString encrypted = m_secure.encrypt(state->profileId, cleanPeer, offer, &error);
+    if (encrypted.isEmpty()) {
+        window->appendMessage(QStringLiteral(
+            "[error] [secure-room] Could not encrypt room key for %1: %2").arg(cleanPeer, error));
+        return;
+    }
+
+    m_outgoingSecureFrames.insert(state->profileId + QChar(0x1f)
+        + cleanPeer.toCaseFolded() + QChar(0x1f) + encrypted);
+    state->backend->sendPrivateMessage(cleanPeer, encrypted);
+    m_pendingSecureRoomKeys[pendingKey].remove(room);
+    if (m_pendingSecureRoomKeys[pendingKey].isEmpty()) m_pendingSecureRoomKeys.remove(pendingKey);
+    window->appendMessage(QStringLiteral(
+        "[secure-room] Room key %1 sent privately to %2 over CPX encryption.")
+        .arg(m_secureRooms.keyId(state->profileId, room), cleanPeer));
+}
+
+void MainWindow::distributeSecureRoomKeyToMembers(BackendState *state, ChatWindow *window)
+{
+    if (!state || !window) return;
+    QStringList members = window->members();
+    members.sort(Qt::CaseInsensitive);
+    int peers = 0;
+    for (const QString &member : members) {
+        const QString own = state->identity.isEmpty()
+            ? state->backend->settings().username
+            : state->identity;
+        if (!own.isEmpty() && member.compare(own, Qt::CaseInsensitive) == 0) continue;
+        ++peers;
+        distributeSecureRoomKey(state, window, member);
+    }
+    if (peers == 0) {
+        window->appendMessage(QStringLiteral(
+            "[secure-room] No other room members are currently known; the key will be distributed when members are discovered."));
+    }
+}
+
+void MainWindow::flushPendingSecureRoomKeys(BackendState *state, const QString &peer)
+{
+    if (!state || !state->backend || peer.trimmed().isEmpty()) return;
+    const QString key = state->profileId + QChar(0x1f) + peer.trimmed().toCaseFolded();
+    const QSet<QString> rooms = m_pendingSecureRoomKeys.value(key);
+    if (rooms.isEmpty()) return;
+    for (const QString &room : rooms) {
+        ChatWindow *window = m_windows.value(
+            conversationKey(state->backend, QStringLiteral("chat"), room), nullptr);
+        if (window && m_secureRooms.hasRoom(state->profileId, room)) {
+            distributeSecureRoomKey(state, window, peer);
+        }
+    }
+}
+
+bool MainWindow::handleSecureRoomKeyOffer(BackendState *state,
+                                          const QString &peer,
+                                          const QString &plaintext)
+{
+    if (!state || !SecureRoomManager::looksLikeKeyOffer(plaintext)) return false;
+    QString room, id, error;
+    if (!m_secureRooms.installKeyOffer(state->profileId, plaintext, &room, &id, &error)) {
+        appendActivity(state->backend,
+            QStringLiteral("[error] [secure-room] Key offer from %1 rejected: %2").arg(peer, error));
+        return true;
+    }
+
+    ChatWindow *roomWindow = m_windows.value(
+        conversationKey(state->backend, QStringLiteral("chat"), room), nullptr);
+    const QString notice = QStringLiteral(
+        "[secure-room] Installed shared room key %1 received privately from %2. Public room ciphertext can now be decrypted.")
+        .arg(id, peer);
+    if (roomWindow) {
+        roomWindow->appendMessage(notice);
+        updateConversationSecurity(roomWindow);
+    } else {
+        appendActivity(state->backend, QStringLiteral("%1 (%2)").arg(notice, room));
+    }
+    return true;
+}
+
 void MainWindow::showSelectedFingerprint()
 {
     BackendState *state = selectedState();
     if (!state || !m_secureReady) {
         QMessageBox::warning(this, QStringLiteral("Secure Identity"),
                              m_secureReady ? QStringLiteral("Select a connection first.")
-                                           : QStringLiteral("Encrypted DMs are unavailable: %1").arg(m_secureError));
+                                           : QStringLiteral("Encrypted communications are unavailable: %1").arg(m_secureError));
         return;
     }
     QMessageBox::information(
@@ -3492,47 +3815,103 @@ void MainWindow::sendFile(ChatWindow *window)
 {
     if (!window || window->kind() != QStringLiteral("im")) return;
     BackendState *state = stateById(window->backendId());
-    if (!state || !state->connected || !state->backend || !m_secureReady
-        || !m_secure.hasSession(state->profileId, window->target())) {
-        QMessageBox::information(this, QStringLiteral("Secure File Transfer"),
-                                 QStringLiteral("Start a secure CPX3 session with this peer before sending a file."));
+    if (!state || !state->connected || !state->backend) {
+        QMessageBox::information(this, QStringLiteral("Send File"),
+                                 QStringLiteral("Connect the AIM or IRC account before sending a file."));
         return;
     }
-    if (!m_secure.peerSupports(state->profileId, window->target(), QStringLiteral("file-transfer"))) {
-        QMessageBox::information(this, QStringLiteral("Secure File Transfer"),
-                                 QStringLiteral("This peer has not advertised CPX file-transfer support. The peer may be running an older client."));
+    if (state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar
+        && state->backend->settings().protocol != ConnectionSettings::Protocol::Irc) {
+        QMessageBox::information(this, QStringLiteral("Send File"),
+                                 QStringLiteral("WaffleHouse file transfer is available in AIM and IRC private messages."));
         return;
     }
 
-    const QString path = QFileDialog::getOpenFileName(this, QStringLiteral("Send Secure File"));
+    QDialog modeDialog(this);
+    modeDialog.setWindowTitle(QStringLiteral("Send File — %1").arg(window->displayName()));
+    modeDialog.setMinimumWidth(430);
+    auto *outer = new QVBoxLayout(&modeDialog);
+    auto *title = new QLabel(QStringLiteral("Choose transfer security"), &modeDialog);
+    title->setObjectName(QStringLiteral("CardTitle"));
+    outer->addWidget(title);
+    auto *secure = new QRadioButton(QStringLiteral("Secure — CPX encrypted and authenticated"), &modeDialog);
+    auto *unsecured = new QRadioButton(QStringLiteral("Unsecured — ordinary AIM/IRC private-message transport"), &modeDialog);
+    secure->setChecked(true);
+    outer->addWidget(secure);
+    outer->addWidget(unsecured);
+    auto *help = new QLabel(&modeDialog);
+    help->setWordWrap(true);
+    help->setObjectName(QStringLiteral("Muted"));
+    outer->addWidget(help);
+    auto updateHelp = [=] {
+        help->setText(secure->isChecked()
+            ? QStringLiteral("Secure transfer requires an established CPX secure DM with this peer. Open the PM, start the secure session, compare fingerprints, then send. WaffleHouse encrypts/authenticates the transfer and prefers the encrypted direct path when both peers support it.")
+            : QStringLiteral("Unsecured transfer proceeds over ordinary AIM/IRC PM traffic without CPX encryption or authentication. File chunks remain resumable and the completed file is still verified with SHA-256."));
+    };
+    connect(secure, &QRadioButton::toggled, &modeDialog, updateHelp);
+    updateHelp();
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &modeDialog);
+    buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Continue"));
+    connect(buttons, &QDialogButtonBox::accepted, &modeDialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &modeDialog, &QDialog::reject);
+    outer->addWidget(buttons);
+    if (modeDialog.exec() != QDialog::Accepted) return;
+
+    const bool secureTransfer = secure->isChecked();
+    if (secureTransfer) {
+        if (!m_secureReady || !m_secure.hasSession(state->profileId, window->target())) {
+            QMessageBox::information(
+                this, QStringLiteral("Secure File Transfer — Setup Required"),
+                QStringLiteral("To send securely:\n\n"
+                               "1. Open the private message with %1.\n"
+                               "2. Start a secure CPX session (Secure / Start Secure Session).\n"
+                               "3. Compare the displayed fingerprints with the other user and trust the peer.\n"
+                               "4. Choose Send File again and select Secure.\n\n"
+                               "Nothing will be sent until the secure session is established.")
+                    .arg(window->displayName()));
+            return;
+        }
+        if (!m_secure.peerSupports(state->profileId, window->target(), QStringLiteral("file-transfer"))) {
+            QMessageBox::information(this, QStringLiteral("Secure File Transfer"),
+                                     QStringLiteral("This peer has not advertised CPX file-transfer support. The peer may be running an older client."));
+            return;
+        }
+    }
+
+    const QString path = QFileDialog::getOpenFileName(
+        this, secureTransfer ? QStringLiteral("Send Secure File") : QStringLiteral("Send Unsecured File"));
     if (path.isEmpty()) return;
 
     QString transferId;
     QString offer;
     QString error;
-    const bool reliableTransfer = m_secure.peerSupports(
-        state->profileId, window->target(), QStringLiteral("file-ack"));
-    const bool directPreferred = reliableTransfer && m_secure.peerSupports(
+    const bool reliableTransfer = secureTransfer
+        ? m_secure.peerSupports(state->profileId, window->target(), QStringLiteral("file-ack"))
+        : true; // 3.0r1 unsecured peers use the ACK/resume framing by default.
+    const bool directPreferred = secureTransfer && reliableTransfer && m_secure.peerSupports(
         state->profileId, window->target(), QStringLiteral("file-direct-v1"));
     if (!m_fileTransfers.createOffer(window->target(), path, transferId, offer, &error,
                                      reliableTransfer)) {
-        QMessageBox::warning(this, QStringLiteral("Secure File Transfer"), error);
+        QMessageBox::warning(this, QStringLiteral("File Transfer"), error);
         return;
     }
     m_fileTransferProfiles.insert(transferId, state->profileId);
+    m_fileTransferSecure.insert(transferId, secureTransfer);
     m_fileTransferProgressShown.insert(transferId, -10);
 
     const QString peer = window->displayName();
     refreshTransferWindow(transferId, QStringLiteral("Upload"), peer, QStringLiteral("Offering"));
-    logTransfer(QStringLiteral("Offering %1 to %2 [%3]%4")
+    logTransfer(QStringLiteral("Offering %1 to %2 [%3] — %4")
                     .arg(QFileInfo(path).fileName(), peer, transferId,
-                         directPreferred ? QStringLiteral(" — direct encrypted transport preferred")
-                         : (reliableTransfer ? QStringLiteral(" — reliable ACK relay mode")
-                                             : QStringLiteral(" — legacy relay mode"))));
+                         secureTransfer
+                             ? (directPreferred ? QStringLiteral("secure CPX; encrypted direct transport preferred")
+                                                : QStringLiteral("secure CPX relay"))
+                             : QStringLiteral("UNSECURED AIM/IRC relay; SHA-256 verification enabled")));
 
     if (!sendSecureControlPayload(state, window->target(), offer)) {
         logTransfer(QStringLiteral("Failed to send file offer for %1 [%2]")
                         .arg(QFileInfo(path).fileName(), transferId));
+        m_fileTransfers.cancel(transferId, QStringLiteral("transport failed"));
         return;
     }
 }
@@ -3541,8 +3920,26 @@ bool MainWindow::sendSecureControlPayload(BackendState *state,
                                           const QString &target,
                                           const QString &plaintext)
 {
-    if (!state || !state->backend || !state->connected || !m_secureReady
-        || !m_secure.hasSession(state->profileId, target)) return false;
+    if (!state || !state->backend || !state->connected) return false;
+
+    const QString transferId = WaffleFileTransport::transferId(plaintext);
+    const bool secureTransfer = transferId.isEmpty()
+        ? true : m_fileTransferSecure.value(transferId, true);
+
+    if (!secureTransfer) {
+        const QString frame = WaffleFileTransport::wrapUnsecured(plaintext);
+        if (state->backend->settings().protocol == ConnectionSettings::Protocol::Irc
+            && frame.toUtf8().size() > 400) {
+            logTransfer(QStringLiteral("ERROR: unsecured IRC transfer frame exceeded the safe message size."));
+            return false;
+        }
+        m_outgoingUnsecuredFileFrames.insert(state->profileId + QChar(0x1f)
+            + target.toCaseFolded() + QChar(0x1f) + frame);
+        state->backend->sendPrivateMessage(target, frame);
+        return true;
+    }
+
+    if (!m_secureReady || !m_secure.hasSession(state->profileId, target)) return false;
     QString error;
     const QString frame = m_secure.encrypt(state->profileId, target, plaintext, &error);
     if (frame.isEmpty()) {
@@ -3614,7 +4011,8 @@ void MainWindow::appendTransferProgress(const CpxFileTransferManager::Event &eve
 bool MainWindow::handleFileTransferPayload(BackendState *state,
                                            const QString &target,
                                            const QString &plaintext,
-                                           ChatWindow *window)
+                                           ChatWindow *window,
+                                           bool secureTransport)
 {
     Q_UNUSED(window);
     if (!CpxFileTransferManager::looksLikeMessage(plaintext)) return false;
@@ -3622,7 +4020,10 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
 
     const QString peer = targetDisplayName(state, QStringLiteral("im"), target);
     const auto event = m_fileTransfers.processIncoming(target, plaintext);
-    if (!event.id.isEmpty()) m_fileTransferProfiles.insert(event.id, state->profileId);
+    if (!event.id.isEmpty()) {
+        m_fileTransferProfiles.insert(event.id, state->profileId);
+        m_fileTransferSecure.insert(event.id, secureTransport);
+    }
     if (!event.replyPayload.isEmpty()) {
         sendSecureControlPayload(state, target, event.replyPayload);
     }
@@ -3635,8 +4036,10 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
                         .arg(peer, event.fileName).arg(event.total).arg(event.id));
         const auto answer = QMessageBox::question(
             m_transferWindow ? static_cast<QWidget *>(m_transferWindow) : static_cast<QWidget *>(this),
-            QStringLiteral("Secure File Transfer"),
-            QStringLiteral("%1 wants to send:\n\n%2\n%3 bytes\n\nAccept this encrypted transfer?")
+            secureTransport ? QStringLiteral("Secure File Transfer") : QStringLiteral("Unsecured File Transfer"),
+            (secureTransport
+                ? QStringLiteral("%1 wants to send:\n\n%2\n%3 bytes\n\nAccept this encrypted CPX transfer?")
+                : QStringLiteral("%1 wants to send:\n\n%2\n%3 bytes\n\nThis transfer is NOT encrypted or authenticated by CPX. SHA-256 integrity verification remains enabled. Accept?"))
                 .arg(peer, event.fileName).arg(event.total),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (answer != QMessageBox::Yes) {
@@ -3651,7 +4054,7 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
         const QString suggested = QDir(downloadDir).filePath(event.fileName);
         const QString destination = QFileDialog::getSaveFileName(
             m_transferWindow ? static_cast<QWidget *>(m_transferWindow) : static_cast<QWidget *>(this),
-            QStringLiteral("Save Secure File"), suggested);
+            secureTransport ? QStringLiteral("Save Secure File") : QStringLiteral("Save Unsecured File"), suggested);
         if (destination.isEmpty()) {
             const QString reply = m_fileTransfers.declineIncoming(event.id, QStringLiteral("save cancelled"));
             sendSecureControlPayload(state, target, reply);
@@ -3675,7 +4078,8 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
         // at the receiver's current byte offset through the reliable relay.
         const QString relayReply = reply;
         bool directReady = false;
-        if (m_secure.peerSupports(state->profileId, target, QStringLiteral("file-direct-v1"))
+        if (secureTransport
+            && m_secure.peerSupports(state->profileId, target, QStringLiteral("file-direct-v1"))
             && m_secure.peerSupports(state->profileId, target, QStringLiteral("file-ack"))) {
             QString keyError;
             const QByteArray transferKey = m_secure.fileTransferKey(
@@ -3728,16 +4132,18 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
             logTransfer(QStringLiteral("Accepted %1 → %2 [%3] — encrypted direct transport prepared")
                             .arg(event.fileName, destination, event.id));
         } else {
+            const QString relayMode = secureTransport ? QStringLiteral("secure relay")
+                                                        : QStringLiteral("UNSECURED relay");
             logTransfer(info.transferred > 0
-                ? QStringLiteral("Resuming %1 at byte %2 → %3 [%4] by secure relay")
-                      .arg(event.fileName).arg(info.transferred).arg(destination, event.id)
-                : QStringLiteral("Receiving %1 → %2 [%3] by secure relay")
-                      .arg(event.fileName, destination, event.id));
+                ? QStringLiteral("Resuming %1 at byte %2 → %3 [%4] by %5")
+                      .arg(event.fileName).arg(info.transferred).arg(destination, event.id, relayMode)
+                : QStringLiteral("Receiving %1 → %2 [%3] by %4")
+                      .arg(event.fileName, destination, event.id, relayMode));
         }
         return true;
     }
     case Kind::Accepted:
-        if (event.direct) {
+        if (event.direct && m_fileTransferSecure.value(event.id, true)) {
             refreshTransferWindow(event.id, QStringLiteral("Upload"), peer,
                                   QStringLiteral("Connecting direct"));
             logTransfer(QStringLiteral("%1 accepted %2; establishing encrypted direct data connection [%3]")
@@ -3745,8 +4151,11 @@ bool MainWindow::handleFileTransferPayload(BackendState *state,
             startDirectOutgoing(event, state);
         } else {
             refreshTransferWindow(event.id, QStringLiteral("Upload"), peer, QStringLiteral("Sending by relay"));
-            logTransfer(QStringLiteral("%1 accepted %2; secure relay upload started [%3]")
-                            .arg(peer, event.fileName, event.id));
+            logTransfer(QStringLiteral("%1 accepted %2; %3 upload started [%4]")
+                            .arg(peer, event.fileName,
+                                 m_fileTransferSecure.value(event.id, true) ? QStringLiteral("secure relay")
+                                                                            : QStringLiteral("UNSECURED relay"),
+                                 event.id));
             appendTransferProgress(event, QStringLiteral("Upload"), peer);
         }
         return true;
@@ -3856,7 +4265,8 @@ bool MainWindow::resumeIncomingFileTransfer(const QString &transferId,
         refreshTransferWindow(transferId, QStringLiteral("Download"), peer, QStringLiteral("Cancelled"));
         return false;
     }
-    if (!m_secure.hasSession(state->profileId, info.target)) {
+    const bool secureTransfer = m_fileTransferSecure.value(transferId, true);
+    if (secureTransfer && !m_secure.hasSession(state->profileId, info.target)) {
         QMessageBox::information(this, QStringLiteral("Resume File Transfer"),
                                  QStringLiteral("Re-establish the secure CPX session with this peer before resuming the transfer."));
         return false;
@@ -3866,7 +4276,8 @@ bool MainWindow::resumeIncomingFileTransfer(const QString &transferId,
     QString error;
     QString payload;
     bool directReady = false;
-    if (m_secure.peerSupports(state->profileId, info.target, QStringLiteral("file-direct-v1"))
+    if (secureTransfer
+        && m_secure.peerSupports(state->profileId, info.target, QStringLiteral("file-direct-v1"))
         && m_secure.peerSupports(state->profileId, info.target, QStringLiteral("file-ack"))) {
         QString keyError;
         const QByteArray transferKey = m_secure.fileTransferKey(
@@ -3930,10 +4341,13 @@ void MainWindow::resumeFileTransfer(const QString &transferId)
         return;
     }
     BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    const bool secureTransfer = m_fileTransferSecure.value(transferId, true);
     if (!state || !state->connected || !state->backend
-        || !m_secure.hasSession(state->profileId, info.target)) {
+        || (secureTransfer && !m_secure.hasSession(state->profileId, info.target))) {
         QMessageBox::information(this, QStringLiteral("Resume File Transfer"),
-                                 QStringLiteral("Re-establish the connection and secure CPX session with this peer before resuming."));
+                                 secureTransfer
+                                     ? QStringLiteral("Re-establish the connection and secure CPX session with this peer before resuming.")
+                                     : QStringLiteral("Re-establish the AIM/IRC connection with this peer before resuming."));
         return;
     }
     const QString peer = targetDisplayName(state, QStringLiteral("im"), info.target);
@@ -3973,6 +4387,7 @@ void MainWindow::clearFileTransfer(const QString &transferId)
         return;
     }
     m_fileTransferProfiles.remove(transferId);
+    m_fileTransferSecure.remove(transferId);
     m_fileTransferProgressShown.remove(transferId);
     if (m_transferWindow) m_transferWindow->removeTransfer(transferId);
 }
@@ -4113,12 +4528,13 @@ void MainWindow::pumpFileTransfers()
             if (candidate && candidate->profileId == profileId) { state = candidate; break; }
         }
         const auto before = m_fileTransfers.transfer(id);
+        const bool secureTransfer = m_fileTransferSecure.value(id, true);
         if (!state || !state->connected || !state->backend
-            || !m_secure.hasSession(profileId, before.target)) continue;
+            || (secureTransfer && !m_secure.hasSession(profileId, before.target))) continue;
 
         const QString peer = targetDisplayName(state, QStringLiteral("im"), before.target);
         const bool irc = state->backend->settings().protocol == ConnectionSettings::Protocol::Irc;
-        const int rawChunk = irc ? 120 : 768;
+        const int rawChunk = irc ? (secureTransfer ? 120 : 96) : 768;
         const int minimumSendIntervalMs = irc ? 1000 : 500;
         bool finished = false;
         QString error;
@@ -4193,22 +4609,51 @@ void MainWindow::handleConversationMessage(ChatWindow *window, const QString &te
     BackendState *state = stateById(window->backendId());
     if (!state || !state->backend || !state->connected) return;
 
-    const QString command = text.trimmed().toCaseFolded();
+    const QString trimmedCommand = text.trimmed();
+    const QString command = trimmedCommand.toCaseFolded();
     if (window->kind() != QStringLiteral("terminal")) {
+        if (command == QStringLiteral("/version") || command.startsWith(QStringLiteral("/version "))) {
+            QString target = trimmedCommand.mid(QStringLiteral("/version").size()).trimmed();
+            if (target.isEmpty() && window->kind() == QStringLiteral("im")) target = window->target();
+            if (target.isEmpty()) {
+                window->appendMessage(QStringLiteral("[version] Usage: /version USER (or run /version in a PM)."));
+                return;
+            }
+            requestClientVersion(state, target);
+            return;
+        }
         if (command == QStringLiteral("/options")) { showOptionsDialog(); return; }
         if (command == QStringLiteral("/help")) { showHelpDialog(); return; }
         if (command == QStringLiteral("/fingerprint")) { selectState(state); showSelectedFingerprint(); return; }
-        if (window->kind() == QStringLiteral("im")) {
+        if (window->kind() == QStringLiteral("im") || window->kind() == QStringLiteral("chat")) {
             if (command == QStringLiteral("/secure")) { startSecureSession(window); return; }
             if (command == QStringLiteral("/securestatus")) { showSecureStatus(window); return; }
-            if (command == QStringLiteral("/trust")) { trustSecurePeer(window); return; }
-            if (command == QStringLiteral("/untrust")) { untrustSecurePeer(window); return; }
             if (command == QStringLiteral("/secureoff")) { closeSecureSession(window); return; }
+            if (window->kind() == QStringLiteral("im")) {
+                if (command == QStringLiteral("/trust")) { trustSecurePeer(window); return; }
+                if (command == QStringLiteral("/untrust")) { untrustSecurePeer(window); return; }
+            }
         }
     }
 
     if (window->kind() == QStringLiteral("chat")) {
-        state->backend->sendRoomMessage(window->target(), text);
+        if (m_secureRooms.hasRoom(state->profileId, window->target())) {
+            QString error;
+            const QString frame = m_secureRooms.encrypt(state->profileId, window->target(), text, &error);
+            if (frame.isEmpty()) {
+                window->appendMessage(QStringLiteral("[error] [secure-room] %1").arg(error));
+                return;
+            }
+            if (state->backend->settings().protocol == ConnectionSettings::Protocol::Irc
+                && frame.toUtf8().size() > 400) {
+                window->appendMessage(QStringLiteral(
+                    "[error] [secure-room] Encrypted IRC room message is too long; split it into shorter messages."));
+                return;
+            }
+            state->backend->sendRoomMessage(window->target(), frame);
+        } else {
+            state->backend->sendRoomMessage(window->target(), text);
+        }
     } else if (window->kind() == QStringLiteral("terminal")) {
         state->backend->sendPrivateMessage(window->target(), text);
     } else {
@@ -4218,12 +4663,25 @@ void MainWindow::handleConversationMessage(ChatWindow *window, const QString &te
 
 void MainWindow::updateConversationSecurity(ChatWindow *window)
 {
-    if (!window || window->kind() != QStringLiteral("im") || !m_secureReady) {
+    if (!window || !m_secureReady) {
         if (window) window->setSecurityState(false, false);
         return;
     }
     BackendState *state = stateById(window->backendId());
-    if (!state || !m_secure.hasSession(state->profileId, window->target())) {
+    if (!state) {
+        window->setSecurityState(false, false);
+        return;
+    }
+
+    if (window->kind() == QStringLiteral("chat")) {
+        const bool active = m_secureRooms.hasRoom(state->profileId, window->target());
+        window->setSecurityState(active, true,
+                                 active ? m_secureRooms.keyId(state->profileId, window->target()) : QString());
+        return;
+    }
+
+    if (window->kind() != QStringLiteral("im")
+        || !m_secure.hasSession(state->profileId, window->target())) {
         window->setSecurityState(false, false);
         return;
     }
@@ -4276,6 +4734,10 @@ void MainWindow::handleDisconnected(ChatBackend *backend, const QString &reason)
     state->connecting = false;
     state->connected = false;
     state->onlineBuddies.clear();
+    state->presenceState = QStringLiteral("ONLINE");
+    state->presenceMessage.clear();
+    state->idleSeconds = 0;
+    state->autoPresenceState.clear();
 
     if (failedWhileConnecting && state->secretRequired) {
         ConnectionSettings cleared = state->backend->settings();
@@ -4294,6 +4756,7 @@ void MainWindow::handleDisconnected(ChatBackend *backend, const QString &reason)
 
     if (!state->profileId.isEmpty()) {
         m_secure.closeConnection(state->profileId);
+        m_secureRooms.closeConnection(state->profileId);
     }
     const QString roomPrefix = backend->id() + QStringLiteral("|chat|");
     for (auto it = m_closedRoomKeys.begin(); it != m_closedRoomKeys.end();) {
@@ -4315,6 +4778,30 @@ void MainWindow::handleEvent(ChatBackend *backend,
     BackendState *state = stateFor(backend);
     if (!state) return;
 
+    if (kind == QStringLiteral("version-request")) {
+        if (auto *irc = qobject_cast<IrcBackend *>(backend); irc && !target.isEmpty()) {
+            const QString ctcp = QString(QChar(0x01))
+                + QStringLiteral("VERSION WaffleHouse-Client %1").arg(appVersionString())
+                + QChar(0x01);
+            irc->sendRaw(QStringLiteral("NOTICE %1 :%2").arg(target, ctcp));
+        }
+        return;
+    }
+    if (kind == QStringLiteral("version")) {
+        m_pendingVersionQueries.remove(state->profileId + QChar(0x1f) + target.toCaseFolded());
+        QString report = text.trimmed();
+        if (backend->settings().protocol == ConnectionSettings::Protocol::Irc
+            && !report.contains(QStringLiteral("WaffleHouse"), Qt::CaseInsensitive)) {
+            report = QStringLiteral("IRC client reports: %1 (not identified as WaffleHouse-Client)").arg(report);
+        }
+        const QString line = QStringLiteral("[version] %1: %2").arg(target, report);
+        ChatWindow *versionWindow = m_windows.value(conversationKey(backend, QStringLiteral("im"), target));
+        if (versionWindow) versionWindow->appendMessage(line);
+        else appendActivity(backend, line);
+        statusBar()->showMessage(line, 7000);
+        return;
+    }
+
     if (kind == QStringLiteral("status") || target.isEmpty()) {
         appendActivity(backend, text);
         return;
@@ -4323,6 +4810,19 @@ void MainWindow::handleEvent(ChatBackend *backend,
     if (kind == QStringLiteral("chat")
         && m_closedRoomKeys.contains(conversationKey(backend, kind, target))) {
         return;
+    }
+
+    if (kind == QStringLiteral("im")) {
+        const QString payload = imPayload(text);
+        const QString outgoingToken = state->profileId + QChar(0x1f)
+            + target.toCaseFolded() + QChar(0x1f) + payload;
+        if (m_outgoingUnsecuredFileFrames.remove(outgoingToken)) return;
+        QString filePayload;
+        if (WaffleFileTransport::unwrapUnsecured(payload, filePayload)) {
+            ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+            if (window) handleFileTransferPayload(state, target, filePayload, window, false);
+            return;
+        }
     }
 
     if (kind == QStringLiteral("im") && m_secureReady) {
@@ -4360,7 +4860,11 @@ void MainWindow::handleEvent(ChatBackend *backend,
             }
 
             if (result.kind == SecureChannelManager::IncomingKind::Decrypted) {
-                if (handleFileTransferPayload(state, target, result.plaintext, window)) {
+                if (handleSecureRoomKeyOffer(state, target, result.plaintext)) {
+                    updateConversationSecurity(window);
+                    return;
+                }
+                if (handleFileTransferPayload(state, target, result.plaintext, window, true)) {
                     updateConversationSecurity(window);
                     return;
                 }
@@ -4369,6 +4873,15 @@ void MainWindow::handleEvent(ChatBackend *backend,
                     prefix = QStringLiteral("<%1> ").arg(targetDisplayName(state, kind, target));
                 }
                 window->appendMessage(prefix + QStringLiteral("[secure] ") + result.plaintext);
+                if (const auto event = NotificationManager::classifyIncoming(
+                        state->backend->settings(), state->identity, kind, text)) {
+                    if (!NotificationManager::play(*event, false)) QApplication::beep();
+                    if (m_trayIcon && m_trayIcon->isVisible()) {
+                        m_trayIcon->showMessage(NotificationManager::displayName(*event),
+                                                targetDisplayName(state, kind, target),
+                                                QSystemTrayIcon::Information, 3000);
+                    }
+                }
                 updateConversationSecurity(window);
                 return;
             }
@@ -4405,13 +4918,58 @@ void MainWindow::handleEvent(ChatBackend *backend,
                     }
                 }
                 updateConversationSecurity(window);
+                flushPendingSecureRoomKeys(state, target);
                 return;
+            }
+        }
+    }
+
+    if (kind == QStringLiteral("chat") && m_secureReady) {
+        const QString payload = imPayload(text);
+        if (SecureRoomManager::looksLikeFrame(payload)) {
+            ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+            if (!window) return;
+            const auto result = m_secureRooms.processIncoming(state->profileId, target, payload);
+            if (result.kind == SecureRoomManager::IncomingKind::Decrypted) {
+                QString prefix = imSpeakerPrefix(text);
+                if (prefix.isEmpty()) prefix = QStringLiteral("<room> ");
+                window->appendMessage(prefix + QStringLiteral("[secure-room] ") + result.plaintext);
+                updateConversationSecurity(window);
+                if (const auto event = NotificationManager::classifyIncoming(
+                        state->backend->settings(), state->identity, kind, text)) {
+                    if (!NotificationManager::play(*event, false)) QApplication::beep();
+                }
+                return;
+            }
+            if (result.kind == SecureRoomManager::IncomingKind::Error) {
+                window->appendMessage(QStringLiteral("[error] [secure-room] %1").arg(result.notice));
+                return;
+            }
+        }
+
+        if (m_secureRooms.hasRoom(state->profileId, target)) {
+            const QString prefix = imSpeakerPrefix(text);
+            if (!prefix.isEmpty()) {
+                ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+                if (window) {
+                    window->appendMessage(prefix + QStringLiteral("[plaintext] ") + payload);
+                    return;
+                }
             }
         }
     }
 
     ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
     if (window) window->appendMessage(text);
+    if (const auto event = NotificationManager::classifyIncoming(
+            state->backend->settings(), state->identity, kind, text)) {
+        if (!NotificationManager::play(*event, false)) QApplication::beep();
+        if (m_trayIcon && m_trayIcon->isVisible()) {
+            m_trayIcon->showMessage(NotificationManager::displayName(*event),
+                                    targetDisplayName(state, kind, target),
+                                    QSystemTrayIcon::Information, 3000);
+        }
+    }
 }
 
 void MainWindow::handleMembers(ChatBackend *backend,
@@ -4431,6 +4989,20 @@ void MainWindow::handleMembers(ChatBackend *backend,
         backend, QStringLiteral("chat"), room, false);
     if (window) {
         window->updateMembers(action, names);
+        if ((action == QStringLiteral("add") || action == QStringLiteral("remove"))
+            && m_secureRooms.hasRoom(state->profileId, room)
+            && m_secureRooms.locallyOwned(state->profileId, room)) {
+            QString error;
+            if (m_secureRooms.createOrRotate(state->profileId, room, &error)) {
+                window->appendMessage(QStringLiteral(
+                    "[secure-room] Membership changed; rotated shared key to %1 and redistributing it to current members.")
+                    .arg(m_secureRooms.keyId(state->profileId, room)));
+                distributeSecureRoomKeyToMembers(state, window);
+                updateConversationSecurity(window);
+            } else {
+                window->appendMessage(QStringLiteral("[error] [secure-room] Key rotation failed: %1").arg(error));
+            }
+        }
     }
 }
 
@@ -4525,6 +5097,7 @@ void MainWindow::handleConversationClosing(ChatWindow *window)
     }
 
     if (state->connected && window->kind() == QStringLiteral("chat")) {
+        m_secureRooms.closeRoom(state->profileId, window->target());
         m_closedRoomKeys.insert(conversationKey(state->backend, QStringLiteral("chat"), window->target()));
         state->backend->leaveRoom(window->target());
     } else if (state->connected && window->kind() == QStringLiteral("terminal")) {

@@ -77,9 +77,10 @@
 #define __UINT32_MAX__ 0xffffffffU
 #define __GXX_EXPERIMENTAL_CXX0X__ 1
 #define __DBL_DENORM_MIN__ double(4.94065645841246544176568792868221372e-324L)
+#define WAFFLEHOUSE_SOURCE_SOUND_DIR "/home/gitsc/WaffleHouse-Client-Testing/sounds"
 #define __FLT128_MIN_EXP__ (-16381)
 #define __WINT_MIN__ 0U
-#define APP_VERSION_STRING "2.5.4-r5"
+#define APP_VERSION_STRING "3.1"
 #define __FLT128_MIN_10_EXP__ (-4931)
 #define __FLT32X_IS_IEC_60559__ 1
 #define __INT_LEAST16_WIDTH__ 16

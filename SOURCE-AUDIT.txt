@@ -1,3 +1,20 @@
+WaffleHouse-Client 3.1 — Modern UI/TUI + Presence/Version Audit
+---------------------------------------------------------
+- Source baseline: WaffleHouse-Client 2.5.4-r6.
+- CPX security, direct/relay file transfer, Telnet/BBS, ANSI, SIP/PJSUA2, and platform compatibility engines remain preserved. AIM/IRC backend changes in 3.0r2 are limited to peer-version request/response handling.
+- GUI presentation is rebuilt around a modern dashboard/sidebar/card layout.
+- CLI presentation is modernized while preserving the established command, buffer, BBS, and bottom-row interaction contracts.
+- Existing QSettings application identity is unchanged, preserving user profiles/settings.
+- The current 3.1 source gate passes 26/26 regression tests, including dedicated automatic OSCAR presence and peer-version tests.
+- See FEATURE-PRESERVATION-3.0.md and tests/core_300_preservation_test.sh.
+
+2.5.4-r6 AIM/OSCAR presence + AFK
+-----------------------------------
+- Sends native OSCAR LOCATE SET_INFO away messages and OSERVICE IDLE_NOTIFICATION seconds.
+- Adds CLI /away, /afk, /idle, /back, and /status.
+- Adds GUI AIM status/AFK controls and local status display.
+- AFK remains classic-client compatible by travelling as an AIM away message prefixed with [AFK].
+
 2.5.4-r5 AIM /join private-room compatibility
 --------------------------------------
 - AIM/OSCAR /join and /j route through private-room exchange semantics; IRC stays public-channel.
@@ -162,3 +179,8 @@ step. The source/builder validation above does not claim a completed native buil
 - Input is anchored to the terminal's final row; the old help footer no longer consumes a row beneath it.
 - tests/cli_irssi_statusbar_test.sh: PASSED.
 - Existing SIP empty-STUN/account-restore, GUI 2.5.1 workflow, and FreeBSD r14 audio compatibility regressions remain PASSED.
+
+Secure-room extension:
+- AIM/IRC room encryption is isolated in src/secureroom.* and negotiated as secure-room-v1.
+- Room keys travel only inside CPX encrypted PM sessions; public rooms carry authenticated ciphertext.
+- Main GUI Softphone controls were intentionally removed; the Softphone engine remains available via Tools/tray and CLI.

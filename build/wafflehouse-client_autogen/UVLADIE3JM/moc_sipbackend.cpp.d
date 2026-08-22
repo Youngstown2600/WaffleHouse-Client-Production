@@ -1,8 +1,8 @@
-/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipbackend.cpp: /home/gitsc/WaffleHouse-Client-Production/src/sipbackend.h \
-  /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Profile.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
+/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipbackend.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/sipbackend.h \
+  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

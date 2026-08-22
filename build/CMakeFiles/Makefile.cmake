@@ -7,7 +7,7 @@ set(CMAKE_DEPENDS_GENERATOR "Unix Makefiles")
 # The top level Makefile was generated from the following files:
 set(CMAKE_MAKEFILE_DEPENDS
   "CMakeCache.txt"
-  "/home/gitsc/WaffleHouse-Client-Production/CMakeLists.txt"
+  "/home/gitsc/WaffleHouse-Client-Testing/CMakeLists.txt"
   "CMakeFiles/3.28.3/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.28.3/CMakeSystem.cmake"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6/3rdparty/kwin/FindXKB.cmake"
@@ -39,6 +39,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigExtras.cmake"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigVersion.cmake"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigVersionImpl.cmake"
+  "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreDependencies.cmake"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake"
   "/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreTargets-none.cmake"
@@ -214,6 +215,8 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/3.28.3/CMakeSystem.cmake"
   "CMakeFiles/3.28.3/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.28.3/CMakeCXXCompiler.cmake"
+  ".rcc/wafflehouse_branding.qrc"
+  ".rcc/wafflehouse_icons.qrc"
   "CMakeFiles/wafflehouse_sipcore_autogen.dir/AutogenInfo.json"
   "CMakeFiles/wafflehouse-client_autogen.dir/AutogenInfo.json"
   ".qt/QtDeploySupport.cmake"
@@ -224,6 +227,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/wafflehouse_sipcore.dir/DependInfo.cmake"
   "CMakeFiles/wafflehouse-client.dir/DependInfo.cmake"
+  "CMakeFiles/wafflehouse-client_other_files.dir/DependInfo.cmake"
   "CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/DependInfo.cmake"
   "CMakeFiles/wafflehouse_sipcore_autogen.dir/DependInfo.cmake"
   "CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/DependInfo.cmake"

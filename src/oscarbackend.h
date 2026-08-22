@@ -33,6 +33,17 @@ public:
     void addBuddy(const QString &name) override;
     void removeBuddy(const QString &name) override;
 
+    // Native AIM/OSCAR presence controls. These enqueue work onto the OSCAR
+    // worker thread just like IM/chat operations.
+    void setAwayMessage(const QString &message);
+    void setAfkMessage(const QString &message);
+    void setIdleSeconds(quint32 seconds);
+    void setBack();
+    void requestClientVersion(const QString &target);
+
+signals:
+    void presenceChanged(const QString &state, const QString &message, quint32 idleSeconds);
+
 private:
     enum class CommandType {
         SendIm,
@@ -43,6 +54,10 @@ private:
         Raw,
         AddBuddy,
         RemoveBuddy,
+        SetAway,
+        SetAfk,
+        SetIdle,
+        SetBack,
     };
 
     struct Command {
@@ -51,6 +66,7 @@ private:
         QString b;
         QString c;
         bool flag = false;
+        quint32 number = 0;
     };
 
     struct ChatSession {
@@ -98,7 +114,7 @@ private:
     void dispatchChat(Oscar::FlapConnection &connection,
                       const Oscar::Snac &snac);
 
-    void doSendIm(const QString &recipient, const QString &message);
+    void doSendIm(const QString &recipient, const QString &message, bool echo = true);
     void doJoinRoom(const QString &name, bool privateRoom);
     void doSendRoom(const QString &name, const QString &message);
     void doLeaveRoom(const QString &name);
@@ -109,6 +125,10 @@ private:
                const QString &hexBody);
     void doAddBuddy(const QString &name);
     void doRemoveBuddy(const QString &name);
+    void doSetAway(const QString &message, bool afk);
+    void doSetIdle(quint32 seconds);
+    void doSetBack();
+    void emitPresence();
     void loadBuddyList();
     QList<FeedbagItem> parseFeedbagItems(const QByteArray &body) const;
     QStringList feedbagBuddyNames() const;
@@ -136,4 +156,9 @@ private:
     QHash<QString, std::shared_ptr<ChatSession>> m_chats;
     QSet<QString> m_buddies;
     QList<FeedbagItem> m_feedbagItems;
+
+    QString m_presenceState = QStringLiteral("ONLINE");
+    QString m_presenceMessage;
+    quint32 m_idleSeconds = 0;
+    QHash<QString, QString> m_peerClientHints;
 };

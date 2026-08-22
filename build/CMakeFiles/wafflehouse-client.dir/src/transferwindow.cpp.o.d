@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcontainertools_impl.h \
@@ -351,7 +351,7 @@ CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
- /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QCloseEvent \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qevent.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcoreevent.h \

@@ -1,6 +1,6 @@
-/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_backend.cpp: /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
-  /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
+/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_backend.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
+  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

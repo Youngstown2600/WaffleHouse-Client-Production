@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/mocs_compilation.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/mocs_compilation.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ansiterminalwidget.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ansiterminalwidget.cpp \
  /usr/include/c++/13/memory /usr/include/c++/13/bits/memoryfwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -118,8 +118,8 @@ CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cp
  /usr/include/c++/13/backward/auto_ptr.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ansiterminalwidget.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ansiterminal.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ansiterminalwidget.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \
@@ -364,23 +364,23 @@ CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cp
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qbitmap.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QFont \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qfont.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_backend.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/backend.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_backend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/backend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_chatwindow.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/chatwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_chatwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/chatwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qwidget.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QSet \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qset.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_directtransfer.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/directtransfer.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_directtransfer.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/directtransfer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h /usr/include/sodium.h \
  /usr/include/sodium/version.h /usr/include/sodium/export.h \
@@ -457,8 +457,8 @@ CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cp
  /usr/include/sodium/crypto_stream_salsa2012.h \
  /usr/include/sodium/crypto_stream_salsa208.h \
  /usr/include/sodium/crypto_stream_xchacha20.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ircbackend.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ircbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ircbackend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/ircbackend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qmutex.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtsan_impl.h \
@@ -474,13 +474,14 @@ CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cp
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/atomic_futex.h \
  /usr/include/c++/13/bits/std_thread.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_mainwindow.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/mainwindow.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/securechannel.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/filetransfer.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/oscarbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/oscarprotocol.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_mainwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/mainwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/securechannel.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/secureroom.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/filetransfer.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/oscarbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \
@@ -491,25 +492,25 @@ CMakeFiles/wafflehouse-client.dir/wafflehouse-client_autogen/mocs_compilation.cp
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qabstractsocket.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qiodevice.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipbackend.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/sipbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Profile.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipbackend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/sipbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QPointer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qpointer.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipcontroller.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_sipcontroller.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/sipcontroller.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QTimer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbasictimer.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_softphonewindow.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/softphonewindow.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_telnetbackend.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/telnetbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_terminalui.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/terminalui.h \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_transferwindow.cpp \
- /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/transferwindow.h
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_softphonewindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/softphonewindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_telnetbackend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/telnetbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_terminalui.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/terminalui.h \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_transferwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/../../../src/transferwindow.h

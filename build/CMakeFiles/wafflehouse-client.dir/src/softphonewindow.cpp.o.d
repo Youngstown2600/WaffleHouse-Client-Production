@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Profile.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -349,12 +349,12 @@ CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qsizepolicy.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcursor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qbitmap.h \
- /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
- /home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
@@ -400,6 +400,8 @@ CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qgridlayout.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGroupBox \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qgroupbox.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QFrame \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qframe.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QHBoxLayout \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qboxlayout.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QHeaderView \
@@ -464,6 +466,8 @@ CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qtextcursor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QTabWidget \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QTabBar \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabbar.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QVBoxLayout \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QAbstractItemView \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qabstractitemview.h

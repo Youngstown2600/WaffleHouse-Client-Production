@@ -84,6 +84,13 @@ void IrcBackend::sendPrivateMessage(const QString &target, const QString &messag
     enqueue({CommandType::SendIm, target, message});
 }
 
+void IrcBackend::requestClientVersion(const QString &target)
+{
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    sendRaw(QStringLiteral("PRIVMSG %1 :\x01VERSION\x01").arg(clean));
+}
+
 void IrcBackend::joinRoom(const QString &room, bool)
 {
     enqueue({CommandType::Join, room, {}});
@@ -394,7 +401,13 @@ void IrcBackend::processLine(const QString &line)
 
     if (parsed.command == QStringLiteral("PRIVMSG") && parsed.params.size() >= 2) {
         const QString target = parsed.params[0];
-        const QString text = stripFormatting(parsed.params[1]);
+        const QString rawText = parsed.params[1];
+        if (!isChannel(target)
+            && rawText == QString(QChar(0x01)) + QStringLiteral("VERSION") + QChar(0x01)) {
+            emit eventReceived(QStringLiteral("version-request"), nick, QString());
+            return;
+        }
+        const QString text = stripFormatting(rawText);
         if (isChannel(target)) {
             emit eventReceived(QStringLiteral("chat"), target,
                                QStringLiteral("<%1> %2").arg(nick, text));
@@ -408,12 +421,19 @@ void IrcBackend::processLine(const QString &line)
     if (parsed.command == QStringLiteral("NOTICE") && parsed.params.size() >= 2) {
         const QString target = parsed.params[0];
         const QString sender = nick.isEmpty() ? parsed.prefix : nick;
+        const QString rawText = parsed.params[1];
+        const QString ctcpPrefix = QString(QChar(0x01)) + QStringLiteral("VERSION ");
+        if (!isChannel(target) && rawText.startsWith(ctcpPrefix) && rawText.endsWith(QChar(0x01))) {
+            const QString reported = rawText.mid(ctcpPrefix.size(), rawText.size() - ctcpPrefix.size() - 1).trimmed();
+            emit eventReceived(QStringLiteral("version"), sender, reported);
+            return;
+        }
         if (isChannel(target)) {
             emit eventReceived(QStringLiteral("chat"), target,
-                               QStringLiteral("-%1- %2").arg(sender, stripFormatting(parsed.params[1])));
+                               QStringLiteral("-%1- %2").arg(sender, stripFormatting(rawText)));
         } else {
             emit eventReceived(QStringLiteral("status"), QString(),
-                               QStringLiteral("-%1- %2").arg(sender, stripFormatting(parsed.params[1])));
+                               QStringLiteral("-%1- %2").arg(sender, stripFormatting(rawText)));
         }
         return;
     }

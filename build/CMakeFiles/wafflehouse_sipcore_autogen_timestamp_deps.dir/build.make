@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Production
+CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Testing
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Production/build
+CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Testing/build
 
 # Utility rule file for wafflehouse_sipcore_autogen_timestamp_deps.
 
@@ -81,6 +81,6 @@ CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/clean:
 .PHONY : CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/clean
 
 CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/depend:
-	cd /home/gitsc/WaffleHouse-Client-Production/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/WaffleHouse-Client-Production /home/gitsc/WaffleHouse-Client-Production /home/gitsc/WaffleHouse-Client-Production/build /home/gitsc/WaffleHouse-Client-Production/build /home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/gitsc/WaffleHouse-Client-Testing/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/WaffleHouse-Client-Testing /home/gitsc/WaffleHouse-Client-Testing /home/gitsc/WaffleHouse-Client-Testing/build /home/gitsc/WaffleHouse-Client-Testing/build /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/wafflehouse_sipcore_autogen_timestamp_deps.dir/depend
 

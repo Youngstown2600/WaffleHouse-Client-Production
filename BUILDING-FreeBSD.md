@@ -1,6 +1,6 @@
-# WaffleHouse-Client 2.5 Alpha — FreeBSD build notes
+# WaffleHouse-Client 3.1 — FreeBSD build notes
 
-WaffleHouse-Client 2.5 fully integrates a multi-account PJSIP softphone while retaining the existing Qt GUI, ncurses CLI, AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, and file-transfer features.
+WaffleHouse-Client 3.1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 
@@ -13,7 +13,7 @@ The builder audits and, when necessary, installs the complete dependency set. Th
 
 ```sh
 pkg install cmake pkgconf qt6-base libsodium ncurses libxkbcommon \
-  gcc gmake git curl portaudio opus bcg729 libuuid
+  gcc gmake git curl portaudio opus bcg729 libuuid pulseaudio
 ```
 
 The builder then creates a managed **PJSIP/PJSUA2 2.17** installation under `~/.local/wafflehouse-pjsip`, configured for 32 SIP accounts and 64 call slots (50 active-call runtime ceiling). Use `./build.sh --pjsip` to force that dependency to be rebuilt.
@@ -51,3 +51,8 @@ That mode is read-only. To run a normal build while explicitly disabling recogni
 ```sh
 ./build.sh --no-audio-fix
 ```
+
+
+## Notification sounds
+
+WaffleHouse-Client uses `paplay` for built-in and user-selected notification audio on FreeBSD. The builder installs the `pulseaudio` package so GUI and CLI can use the same notification sound settings. WAV files are the recommended custom format.

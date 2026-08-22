@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iomanip>
 #include <thread>
+#include <pj/log.h>
 #ifndef _WIN32
 #include <sys/stat.h>
 #endif
@@ -31,6 +32,35 @@ static_assert(PJ_IOQUEUE_MAX_HANDLES >= 192,
               "WaffleHouse-Client requires PJ_IOQUEUE_MAX_HANDLES >= 192 for 64-call PJSIP. Rebuild PJSIP with scripts/build-pjsip.sh.");
 
 namespace {
+class PjBootstrapLogSilencer
+{
+public:
+    PjBootstrapLogSilencer()
+        : previousLevel_(pj_log_get_level())
+    {
+        // PJSIP emits several pjlib/pjsip startup messages from libCreate()
+        // before EpConfig::logConfig is installed by libInit(). In a curses
+        // frontend those raw console writes can bleed through between the
+        // splash screen and the first dashboard repaint. Silence only this
+        // pre-configuration bootstrap window; libInit() immediately installs
+        // WaffleHouse's normal file-backed PJSIP logger (consoleLevel=0).
+        pj_log_set_level(0);
+    }
+
+    void release() noexcept { restoreOnExit_ = false; }
+
+    ~PjBootstrapLogSilencer()
+    {
+        // If libCreate()/libInit() throws before PJSIP installs its configured
+        // logger, restore the process-global level we inherited.
+        if (restoreOnExit_) pj_log_set_level(previousLevel_);
+    }
+
+private:
+    int previousLevel_{0};
+    bool restoreOnExit_{true};
+};
+
 std::string trim(std::string value)
 {
     const auto isSpace=[](unsigned char c){ return std::isspace(c)!=0; };
@@ -390,6 +420,7 @@ void SipEngine::start(const std::vector<std::pair<std::string,SipProfile>>& init
 
     try{
         endpoint_=std::make_unique<pj::Endpoint>();
+        PjBootstrapLogSilencer bootstrapLogSilencer;
         endpoint_->libCreate();
 
         pj::EpConfig ec;
@@ -408,6 +439,10 @@ void SipEngine::start(const std::vector<std::pair<std::string,SipProfile>>& init
         }
         ec.uaConfig.stunServer=stunServers;
         endpoint_->libInit(ec);
+        // libInit() has now installed ec.logConfig, including consoleLevel=0
+        // and the normal pjsip-engine.log destination. Do not restore the old
+        // bootstrap level after this point.
+        bootstrapLogSilencer.release();
 
         sipMonitor_=std::make_unique<SipWireMonitor>(*this,logger_);
         sipMonitor_->start();

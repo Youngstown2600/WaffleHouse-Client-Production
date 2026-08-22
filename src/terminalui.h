@@ -2,6 +2,7 @@
 
 #include "backend.h"
 #include "securechannel.h"
+#include "secureroom.h"
 #include "filetransfer.h"
 #include "directtransfer.h"
 #include "ansiterminal.h"
@@ -44,6 +45,10 @@ private:
         QSet<QString> onlineBuddies;
         QHash<QString, QString> targetNames;
         QHash<QString, QString> discoveredRooms;
+        QString presenceState = QStringLiteral("ONLINE");
+        QString presenceMessage;
+        quint32 idleSeconds = 0;
+        QString autoPresenceState;
     };
 
     struct UiOptions {
@@ -54,6 +59,9 @@ private:
         bool encryptedDmEnabled = true;
         bool autoReplySecure = true;
         bool showSecureFingerprints = true;
+        bool autoPresenceEnabled = true;
+        int autoIdleMinutes = 5;
+        int autoAwayMinutes = 15;
         QString theme = QStringLiteral("phosphor");
     };
 
@@ -93,7 +101,8 @@ private:
     bool handleFileTransferPayload(ConnectionEntry *entry,
                                    const QString &target,
                                    const QString &plaintext,
-                                   Buffer *buffer);
+                                   Buffer *buffer,
+                                   bool secureTransport = true);
     void pumpFileTransfers();
     void appendTransferProgress(Buffer *buffer,
                                 const CpxFileTransferManager::Event &event,
@@ -169,6 +178,9 @@ private:
     void loadOptions();
     void saveOptions() const;
     void showOptions();
+    void markUserActivity();
+    void updateAutoPresence();
+    void requestClientVersion(ConnectionEntry *entry, QString target);
     bool ensureSecret(ConnectionEntry *entry);
 
     void onBackendEvent(ConnectionEntry *entry,
@@ -205,6 +217,13 @@ private:
     void setTrustedFingerprint(ConnectionEntry *entry, const QString &target, const QString &fingerprint);
     void clearTrustedFingerprint(ConnectionEntry *entry, const QString &target);
     bool secureTarget(ConnectionEntry *entry, QString target, bool switchTo = true);
+    bool startSecureRoom(ConnectionEntry *entry, Buffer *buffer);
+    void showSecureRoomStatus(ConnectionEntry *entry, Buffer *buffer);
+    void closeSecureRoom(ConnectionEntry *entry, Buffer *buffer);
+    void distributeSecureRoomKey(ConnectionEntry *entry, Buffer *buffer, const QString &peer);
+    void distributeSecureRoomKeyToMembers(ConnectionEntry *entry, Buffer *buffer);
+    void flushPendingSecureRoomKeys(ConnectionEntry *entry, const QString &peer);
+    bool handleSecureRoomKeyOffer(ConnectionEntry *entry, const QString &peer, const QString &plaintext);
     QString activeImTarget(ConnectionEntry *entry) const;
 
     void handleCommand(const QString &line);
@@ -231,6 +250,11 @@ private:
                                   bool &secretRequired,
                                   QString &sessionSecret,
                                   bool editing);
+    bool promptFileTransfer(ConnectionEntry *entry,
+                            QString &target,
+                            QString &path,
+                            bool &secureTransfer);
+    QString browseFile(const QString &initialPath);
 
     QString prompt(const QString &title,
                    const QString &label,
@@ -276,12 +300,19 @@ private:
 
     UiOptions m_options;
     SecureChannelManager m_secure;
+    SecureRoomManager m_secureRooms;
     bool m_secureReady = false;
     QSet<QString> m_outgoingSecureFrames;
+    QSet<QString> m_outgoingUnsecuredFileFrames;
+    QHash<QString, QSet<QString>> m_pendingSecureRoomKeys;
+    QSet<QString> m_pendingVersionQueries;
     CpxFileTransferManager m_fileTransfers;
     CpxDirectTransferManager m_directTransfers;
     SipController *m_sipController = nullptr;
     QHash<QString, QString> m_fileTransferProfiles;
+    QHash<QString, bool> m_fileTransferSecure;
     QHash<QString, int> m_fileTransferProgressShown;
     qint64 m_nextFilePumpMs = 0;
+    qint64 m_lastUserActivityMs = 0;
+    qint64 m_nextPresenceCheckMs = 0;
 };

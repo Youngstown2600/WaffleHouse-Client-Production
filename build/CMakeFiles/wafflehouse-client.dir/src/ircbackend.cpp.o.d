@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/ircbackend.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/ircbackend.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/ircbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \

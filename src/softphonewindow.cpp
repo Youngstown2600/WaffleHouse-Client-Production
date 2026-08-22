@@ -9,6 +9,7 @@
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -23,6 +24,7 @@
 #include <QTableWidgetItem>
 #include <QTextCursor>
 #include <QTabWidget>
+#include <QTabBar>
 #include <QVBoxLayout>
 #include <QAbstractItemView>
 
@@ -41,13 +43,50 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     : QWidget(parent), m_controller(controller)
 {
     setWindowTitle(QStringLiteral("%1 %2 — Softphone").arg(appDisplayName(), appVersionString()));
-    resize(980, 690);
-    setMinimumSize(720, 500);
+    resize(740, 550);
+    setMinimumSize(600, 450);
     setAttribute(Qt::WA_QuitOnClose, false);
 
-    auto *outer = new QVBoxLayout(this);
+    setObjectName(QStringLiteral("ModernRoot"));
+    auto *outer = new QHBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    auto *sidebar = new QFrame(this);
+    sidebar->setObjectName(QStringLiteral("Sidebar"));
+    sidebar->setFixedWidth(164);
+    auto *side = new QVBoxLayout(sidebar);
+    side->setContentsMargins(13, 15, 13, 13);
+    side->setSpacing(8);
+    auto *brand = new QLabel(QStringLiteral("SOFTPHONE"), sidebar);
+    brand->setObjectName(QStringLiteral("BrandTitle"));
+    auto *edition = new QLabel(QStringLiteral("WAFFLEHOUSE %1").arg(appVersionString().toUpper()), sidebar);
+    edition->setObjectName(QStringLiteral("BrandVersion"));
+    side->addWidget(brand); side->addWidget(edition); side->addSpacing(11);
+    auto makeNav = [sidebar](const QString &text, bool checked = false) {
+        auto *button = new QPushButton(text, sidebar);
+        button->setProperty("nav", true);
+        button->setCheckable(true);
+        button->setAutoExclusive(true);
+        button->setChecked(checked);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+    auto *navPhone = makeNav(QStringLiteral("  Phone"), true);
+    auto *navCalls = makeNav(QStringLiteral("  Active Calls"));
+    auto *navLog = makeNav(QStringLiteral("  SIP Log"));
+    auto *navLadder = makeNav(QStringLiteral("  SIP Ladder"));
+    auto *navProfile = makeNav(QStringLiteral("  Profile"));
+    auto *navActivity = makeNav(QStringLiteral("  Activity"));
+    const QList<QPushButton *> navButtons{navPhone, navCalls, navLog, navLadder, navProfile, navActivity};
+    for (auto *button : navButtons) side->addWidget(button);
+    side->addStretch(1);
+    outer->addWidget(sidebar);
+
     m_tabs = new QTabWidget(this);
-    outer->addWidget(m_tabs);
+    m_tabs->tabBar()->hide();
+    m_tabs->setDocumentMode(true);
+    outer->addWidget(m_tabs, 1);
 
     // Main
     auto *main = new QWidget(m_tabs);
@@ -72,24 +111,125 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     stateGrid->addWidget(m_autoAudio, 3, 0, 1, 3);
     mainLayout->addWidget(stateBox);
 
-    auto *dialBox = new QGroupBox(QStringLiteral("Place Call"), main);
+    auto *dialBox = new QGroupBox(QStringLiteral("Phone"), main);
     auto *dialGrid = new QGridLayout(dialBox);
+    dialGrid->setHorizontalSpacing(10);
+    dialGrid->setVerticalSpacing(10);
+    m_phoneStatus = new QLabel(QStringLiteral("READY — No active call"), dialBox);
+    m_phoneStatus->setObjectName(QStringLiteral("StatusPill"));
+    m_phoneStatus->setAlignment(Qt::AlignCenter);
+    dialGrid->addWidget(m_phoneStatus, 0, 0, 1, 4);
+
     m_destination = new QLineEdit(dialBox);
     m_destination->setPlaceholderText(QStringLiteral("extension, number, user@domain, or sip: URI"));
+    m_destination->setAlignment(Qt::AlignCenter);
+    QFont dialFont = m_destination->font(); dialFont.setPointSize(15); dialFont.setBold(true); m_destination->setFont(dialFont);
     m_runtimeDialPrefix = new QLineEdit(dialBox);
-    m_runtimeDialPrefix->setPlaceholderText(QStringLiteral("optional per-PBX prefix, e.g. 9 or 4071"));
+    m_runtimeDialPrefix->setPlaceholderText(QStringLiteral("e.g. 9 or 4071"));
+    m_runtimeDialPrefix->setMaximumWidth(180);
     m_runtimeDialPrefix->setToolTip(QStringLiteral("Session routing prefix for the selected SIP account. Change it without editing the saved account. Explicit sip:/sips: URIs and user@domain destinations are never modified."));
     m_callerId = new QLineEdit(dialBox);
     m_callerId->setPlaceholderText(QStringLiteral("optional caller ID override"));
-    auto *dialButton = new QPushButton(QStringLiteral("Dial"), dialBox);
+
+    // Call identity/routing follows a conventional softphone order:
+    // Caller ID on its own row, then Prefix before Destination.
+    dialGrid->addWidget(new QLabel(QStringLiteral("Caller ID:"), dialBox), 1, 0);
+    dialGrid->addWidget(m_callerId, 1, 1, 1, 3);
+    dialGrid->addWidget(new QLabel(QStringLiteral("Prefix:"), dialBox), 2, 0);
+    dialGrid->addWidget(m_runtimeDialPrefix, 2, 1);
+    dialGrid->addWidget(new QLabel(QStringLiteral("Destination:"), dialBox), 2, 2);
+    dialGrid->addWidget(m_destination, 2, 3);
+    dialGrid->setColumnStretch(3, 1);
+
+    // A real phone-style keypad: fixed-size, centered keys rather than buttons
+    // stretched by the page grid. The digit remains separate from the visible
+    // telephone legend so DTMF and destination entry stay exact.
+    auto *keypadHost = new QWidget(dialBox);
+    auto *keypadOuter = new QHBoxLayout(keypadHost);
+    keypadOuter->setContentsMargins(0, 8, 0, 2);
+    keypadOuter->addStretch(1);
+    auto *keypad = new QGridLayout;
+    keypad->setHorizontalSpacing(12);
+    keypad->setVerticalSpacing(10);
+    const QStringList digits{QStringLiteral("1"), QStringLiteral("2"), QStringLiteral("3"),
+                             QStringLiteral("4"), QStringLiteral("5"), QStringLiteral("6"),
+                             QStringLiteral("7"), QStringLiteral("8"), QStringLiteral("9"),
+                             QStringLiteral("*"), QStringLiteral("0"), QStringLiteral("#")};
+    const QStringList dialLabels{QStringLiteral("1"), QStringLiteral("2\nABC"), QStringLiteral("3\nDEF"),
+                                 QStringLiteral("4\nGHI"), QStringLiteral("5\nJKL"), QStringLiteral("6\nMNO"),
+                                 QStringLiteral("7\nPQRS"), QStringLiteral("8\nTUV"), QStringLiteral("9\nWXYZ"),
+                                 QStringLiteral("*"), QStringLiteral("0\n+"), QStringLiteral("#")};
+    for (int i = 0; i < digits.size(); ++i) {
+        auto *key = new QPushButton(dialLabels.at(i), keypadHost);
+        key->setProperty("dialKey", true);
+        key->setFixedSize(64, 64);
+        key->setCursor(Qt::PointingHandCursor);
+        QFont keyFont = key->font(); keyFont.setPointSize(11); keyFont.setBold(true); key->setFont(keyFont);
+        keypad->addWidget(key, i / 3, i % 3, Qt::AlignCenter);
+        connect(key, &QPushButton::clicked, this, [this, digit = digits.at(i)] {
+            int liveId = -1;
+            for (const auto &call : m_controller->calls()) {
+                if (!call.disconnected) {
+                    liveId = call.id;
+                    if (call.foreground) break;
+                }
+            }
+            if (liveId >= 0) {
+                QString error;
+                if (!m_controller->sendDtmf(liveId, digit, &error)) showError(QStringLiteral("DTMF Failed"), error);
+            } else {
+                m_destination->insert(digit);
+            }
+        });
+    }
+    keypadOuter->addLayout(keypad);
+    keypadOuter->addStretch(1);
+    dialGrid->addWidget(keypadHost, 3, 0, 1, 4);
+
+    auto *utilityRow = new QWidget(dialBox);
+    auto *utilityLayout = new QHBoxLayout(utilityRow);
+    utilityLayout->setContentsMargins(0, 0, 0, 0);
+    utilityLayout->addStretch(1);
+    auto *backspace = new QPushButton(QStringLiteral("⌫"), utilityRow);
+    auto *clear = new QPushButton(QStringLiteral("Clear"), utilityRow);
+    backspace->setProperty("phoneUtility", true);
+    clear->setProperty("phoneUtility", true);
+    backspace->setFixedSize(104, 34);
+    clear->setFixedSize(104, 34);
+    utilityLayout->addWidget(backspace);
+    utilityLayout->addSpacing(10);
+    utilityLayout->addWidget(clear);
+    utilityLayout->addStretch(1);
+    dialGrid->addWidget(utilityRow, 4, 0, 1, 4);
+
+    auto *actionRow = new QWidget(dialBox);
+    auto *actionLayout = new QHBoxLayout(actionRow);
+    actionLayout->setContentsMargins(0, 3, 0, 0);
+    actionLayout->addStretch(1);
+    auto *dialButton = new QPushButton(QStringLiteral("CALL"), actionRow);
+    dialButton->setProperty("phoneAction", "call");
     dialButton->setDefault(true);
-    dialGrid->addWidget(new QLabel(QStringLiteral("Destination:"), dialBox), 0, 0);
-    dialGrid->addWidget(m_destination, 0, 1);
-    dialGrid->addWidget(dialButton, 0, 2);
-    dialGrid->addWidget(new QLabel(QStringLiteral("Dial prefix:"), dialBox), 1, 0);
-    dialGrid->addWidget(m_runtimeDialPrefix, 1, 1, 1, 2);
-    dialGrid->addWidget(new QLabel(QStringLiteral("Caller ID:"), dialBox), 2, 0);
-    dialGrid->addWidget(m_callerId, 2, 1, 1, 2);
+    dialButton->setFixedSize(124, 38);
+    auto *hangupMain = new QPushButton(QStringLiteral("HANG UP"), actionRow);
+    hangupMain->setProperty("phoneAction", "hangup");
+    hangupMain->setFixedSize(124, 38);
+    actionLayout->addWidget(dialButton);
+    actionLayout->addSpacing(12);
+    actionLayout->addWidget(hangupMain);
+    actionLayout->addStretch(1);
+    dialGrid->addWidget(actionRow, 5, 0, 1, 4);
+
+    connect(backspace, &QPushButton::clicked, m_destination, &QLineEdit::backspace);
+    connect(clear, &QPushButton::clicked, m_destination, &QLineEdit::clear);
+    connect(hangupMain, &QPushButton::clicked, this, [this] {
+        int liveId = -1;
+        for (const auto &call : m_controller->calls()) {
+            if (!call.disconnected) { liveId = call.id; if (call.foreground) break; }
+        }
+        if (liveId < 0) return;
+        QString error;
+        if (!m_controller->hangup(liveId, &error)) showError(QStringLiteral("Hangup Failed"), error);
+    });
     mainLayout->addWidget(dialBox);
     mainLayout->addStretch(1);
     m_tabs->addTab(main, QStringLiteral("Main"));
@@ -163,6 +303,13 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     // Activity
     auto *activityTab = new QWidget(m_tabs); auto *activityLayout = new QVBoxLayout(activityTab); m_activity = new QPlainTextEdit(activityTab); m_activity->setReadOnly(true); activityLayout->addWidget(m_activity);
     m_tabs->addTab(activityTab, QStringLiteral("Activity"));
+
+    for (int i = 0; i < navButtons.size(); ++i) {
+        connect(navButtons.at(i), &QPushButton::clicked, this, [this, i] { m_tabs->setCurrentIndex(i); });
+    }
+    connect(m_tabs, &QTabWidget::currentChanged, this, [navButtons](int index) {
+        if (index >= 0 && index < navButtons.size()) navButtons.at(index)->setChecked(true);
+    });
 
     connect(dialButton, &QPushButton::clicked, this, &SoftphoneWindow::dial);
     connect(m_destination, &QLineEdit::returnPressed, this, &SoftphoneWindow::dial);
@@ -264,7 +411,19 @@ void SoftphoneWindow::refreshCalls()
 {
     const int previous=selectedCallId();const auto calls=m_controller->calls();m_calls->setRowCount(static_cast<int>(calls.size()));int selectedRow=-1;
     for(int row=0;row<static_cast<int>(calls.size());++row){const auto&c=calls.at(static_cast<std::size_t>(row));const QStringList values={QString::number(c.id),q(c.accountName).isEmpty()?q(c.accountId):q(c.accountName),c.direction==CallDirection::Incoming?QStringLiteral("IN"):QStringLiteral("OUT"),q(c.remoteUri),q(c.state),q(c.codecName),yesNo(c.mediaActive),yesNo(c.microphoneMuted),yesNo(c.foreground)};for(int col=0;col<values.size();++col)m_calls->setItem(row,col,new QTableWidgetItem(values.at(col)));if(c.id==previous)selectedRow=row;}
-    if(selectedRow>=0)m_calls->selectRow(selectedRow);else if(!calls.empty())m_calls->selectRow(static_cast<int>(calls.size())-1);populateCallCombos();refreshLadder();refreshSipLog();
+    if(selectedRow>=0)m_calls->selectRow(selectedRow);else if(!calls.empty())m_calls->selectRow(static_cast<int>(calls.size())-1);
+    if (m_phoneStatus) {
+        const trunkmonkey::CallSnapshot *live = nullptr;
+        for (const auto &call : calls) {
+            if (!call.disconnected) { live = &call; if (call.foreground) break; }
+        }
+        m_phoneStatus->setText(live
+            ? QStringLiteral("CALL #%1  •  %2  •  %3  •  %4")
+                  .arg(live->id).arg(q(live->remoteUri), q(live->state),
+                                     q(live->codecName).isEmpty() ? QStringLiteral("media pending") : q(live->codecName))
+            : QStringLiteral("READY — No active call"));
+    }
+    populateCallCombos();refreshLadder();refreshSipLog();
 }
 
 void SoftphoneWindow::populateCallCombos(){const int oldLog=comboCallId(m_logCall),oldLadder=comboCallId(m_ladderCall);const auto calls=m_controller->calls();{const QSignalBlocker b(m_logCall);m_logCall->clear();m_logCall->addItem(QStringLiteral("All calls"),-1);for(const auto&c:calls)m_logCall->addItem(QStringLiteral("%1 — %2 — %3 — %4").arg(c.id).arg(q(c.accountName),q(c.remoteUri),q(c.state)),c.id);int idx=m_logCall->findData(oldLog);m_logCall->setCurrentIndex(idx>=0?idx:0);}{const QSignalBlocker b(m_ladderCall);m_ladderCall->clear();for(const auto&c:calls)m_ladderCall->addItem(QStringLiteral("%1 — %2 — %3 — %4").arg(c.id).arg(q(c.accountName),q(c.remoteUri),q(c.state)),c.id);int idx=m_ladderCall->findData(oldLadder);if(idx<0&&m_ladderCall->count())idx=m_ladderCall->count()-1;if(idx>=0)m_ladderCall->setCurrentIndex(idx);}}
@@ -292,7 +451,7 @@ void SoftphoneWindow::saveProfile(bool reregister)
     const bool wasEnabled=m_controller->accountRegistrationEnabled(accountId);QString error;emit profileSaveRequested(accountId,p,m_savePassword->isChecked());bool ok=false;(void)m_controller->accountProfile(accountId,&ok);if(!ok){showError(QStringLiteral("SIP Account Save Failed"),QStringLiteral("The selected WaffleHouse SIP account could not be updated."));return;}if(reregister&&wasEnabled){m_controller->disconnectAccount(accountId,nullptr);if(!m_controller->connectAccount(accountId,&error))showError(QStringLiteral("SIP Re-registration Failed"),error);}refreshAccounts();refreshState();
 }
 
-void SoftphoneWindow::dial(){const QString id=selectedAccountId();if(id.isEmpty()||m_destination->text().trimmed().isEmpty())return;QString error;if(m_controller->dial(id,m_destination->text(),m_callerId->text(),&error)<0){showError(QStringLiteral("Call Failed"),error);return;}m_tabs->setCurrentIndex(1);}
+void SoftphoneWindow::dial(){const QString id=selectedAccountId();if(id.isEmpty()||m_destination->text().trimmed().isEmpty())return;QString error;if(m_controller->dial(id,m_destination->text(),m_callerId->text(),&error)<0){showError(QStringLiteral("Call Failed"),error);return;}refreshCalls();}
 int SoftphoneWindow::selectedCallId()const{const auto items=m_calls->selectedItems();if(items.isEmpty())return-1;bool ok=false;const int id=m_calls->item(items.first()->row(),0)->text().toInt(&ok);return ok?id:-1;}
 int SoftphoneWindow::comboCallId(QComboBox*combo)const{return(!combo||combo->currentIndex()<0)?-1:combo->currentData().toInt();}
 #define CALL_ACTION(method,title) do{const int id=selectedCallId();if(id<0)return;QString error;if(!m_controller->method(id,&error))showError(QStringLiteral(title),error);}while(0)

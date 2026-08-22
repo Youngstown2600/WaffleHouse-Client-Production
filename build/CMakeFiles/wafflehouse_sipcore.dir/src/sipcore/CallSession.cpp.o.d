@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/sipcore/CallSession.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/sipcore/CallSession.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSession.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSession.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -128,7 +128,7 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator.h \
  /usr/include/c++/13/bits/uses_allocator_args.h /usr/include/c++/13/tuple \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/ext/aligned_buffer.h \
  /usr/include/c++/13/bits/node_handle.h \
@@ -540,7 +540,7 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
  /usr/include/c++/13/backward/auto_ptr.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Logger.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Logger.h \
  /usr/include/c++/13/algorithm \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /usr/include/c++/13/chrono /usr/include/c++/13/filesystem \

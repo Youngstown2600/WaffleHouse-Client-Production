@@ -1,10 +1,70 @@
-# WaffleHouse-Client 2.5.4-r5
+# WaffleHouse-Client 3.1
 
-**WaffleHouse-Client 2.5.4-r5** is an experimental single-executable C++ edition that combines the WaffleHouse Qt GUI and ncurses CLI into one program.
+**WaffleHouse-Client 3.1** is the current WaffleHouse-Client release, rebuilt from the working 2.5.4-r6 unified C++ client with a modern GUI and terminal interface. It keeps the same single executable, shared connection store, protocol engines, CPX security layer, file-transfer system, BBS terminal model, and multi-account SIP/PJSUA2 core while replacing the front-end presentation with a modern GUI and modern terminal dashboard.
 
-It is based on the stabilized WaffleHouse 1.9.1 Beta C++ code and includes AIM/OSCAR, IRC, Telnet/MUD/BBS, CPX secure messaging, capability negotiation, encrypted file transfer, IRC buddy/watch lists, nickname completion, themes, and the other 1.9.1 fixes.
+> **Release channel:** 3.1 is the current release and is being validated in the `WaffleHouse-Client-Testing` repository before production promotion. The 2.5.4-r6 regression suite remains the compatibility gate.
 
-> This is an **Alpha** development branch. WaffleHouse 1.9.1 Beta remains the current Beta family release.
+
+
+## Secure AIM/IRC room chat
+
+WaffleHouse-Client 3.1 can encrypt AIM chatroom and IRC channel messages between WaffleHouse peers. Start a CPX secure private session with each participant who should receive the room key, then open the room/channel and use **Security → Start Secure Room** or `/secure`. The room key is sent only through the encrypted private sessions; the public channel receives authenticated `CPXROOM1` ciphertext. WaffleHouse labels successfully decrypted traffic `[secure-room]` and marks ordinary traffic `[plaintext]` while secure-room mode is active.
+
+The Communications Hub keeps SIP accounts in the Accounts & Buddies tree. The embedded Softphone quick-dial card has been removed from the right side of the hub, while **Softphone remains on the left navigation rail** and is still available from **Tools → Open Softphone** and the tray menu. The former **Messages** navigation label is now **Communications**.
+
+
+## 3.1 secure AIM/IRC rooms
+
+WaffleHouse can now create encrypted sub-conversations inside ordinary AIM chat rooms and IRC channels. Start a secure room from the GUI **Security → Start Secure Room** action or type `/secure` while a room/channel buffer is active.
+
+The room owner generates a random XChaCha20-Poly1305 shared key. The key is **not** sent to the channel. WaffleHouse distributes it individually to room members who already have an established CPX encrypted PM session and advertise `secure-room-v1`. Members without a secure PM are excluded until that one-to-one secure session is established; pending room-key delivery then completes automatically.
+
+On the public transport, encrypted messages look like `[[CPXROOM1:...]]`. WaffleHouse clients holding the room key authenticate/decrypt them and display `[secure-room]` beside the recovered text. While secure-room mode is active, ordinary unencrypted room messages are explicitly marked `[plaintext]`, making a two-client encryption test easy to verify. The client that created the room key rotates it when members join or leave and redistributes the replacement key to current secure peers.
+
+The main GUI no longer contains the right-side Softphone quick-dial card or SIP contact/call children under the buddy tree. **SIP accounts themselves remain visible as top-level Communications Hub accounts**, and the **Softphone button remains on the left navigation rail**. Softphone is also available through **Tools → Open Softphone** and the system tray. The sidebar item formerly named **Messages** is now **Communications**.
+
+## 3.0r2 automatic OSCAR presence + peer version discovery
+
+- AIM/OSCAR accounts now support automatic presence changes. By default WaffleHouse publishes **Idle after 5 minutes** and **Away after 15 minutes** of inactivity, then automatically returns to Online when activity resumes. Manual Away/AFK/Idle states are respected and are never overwritten by the automation.
+- GUI Settings exposes the automatic presence toggle plus Idle/Away thresholds. CLI uses `/autopresence`, `/autopresence on|off`, `/autopresence idle MINUTES`, and `/autopresence away MINUTES`.
+- On X11, WaffleHouse uses the optional `xprintidle` helper when available so OSCAR presence follows workstation-wide keyboard/mouse inactivity. Other sessions fall back safely to activity seen by the WaffleHouse GUI/CLI.
+- `/version [USER]` queries peers from the CLI; `/version` is also available inside GUI IM windows. IRC uses standards-compatible CTCP VERSION. AIM uses a hidden WaffleHouse version request/reply frame.
+- WaffleHouse 3.1 peers report the exact release. Older AIM peers that expose a legacy CPX3 signature are identified as legacy compatible clients with exact version unavailable; a non-response is reported explicitly rather than guessed.
+
+## 3.0r1 guided file transfer + softphone/CLI polish
+
+- **Send File** now offers **Secure (CPX)** or **Unsecured (AIM/IRC relay)** transfer modes. Secure mode explains how to establish/verify a CPX session when needed; unsecured mode proceeds without CPX encryption/authentication while retaining chunking, resume support, and final SHA-256 verification.
+- CLI `/sendfile` opens an interactive recipient/file/security dialog. **F2** opens a curses file browser, so paths do not need to be typed by hand.
+- The CLI shortcut cheat-sheet now lives below the main-screen separator and uses each theme's own secondary accent color.
+- The GUI Softphone now uses a left navigation rail matching the modern WaffleHouse shell. Its Phone page retains Prefix, Destination, and Caller ID and adds a usable 12-key dial pad, Call/Hang Up controls, and live call status.
+- Existing custom notification sounds, PJSIP startup-log cleanup, messaging/BBS behavior, and secure CPX file transfer remain available.
+
+## 3.0 modern interface rebuild
+
+### GUI
+
+- New wide communications dashboard with persistent left navigation, including a dedicated Softphone launcher.
+- Compact Accounts & Buddies workspace; the former right-side Softphone quick-dial card is removed while SIP accounts stay visible in the account tree.
+- New Connections workspace with card-based profile and activity panels.
+- One shared Qt styling layer (`modernstyle.cpp`) now drives the main window, chat windows, softphone, transfer UI, dialogs, menus, inputs, tabs, lists, and secondary windows.
+- Existing theme keys are retained, including System, Hacker, Matrix, Midnight, Amber, Ice, Cyberpunk, Synthwave, Dracula, Vaporwave, Blood Moon, C64, DOS, Solarized, Nord, 2600, WarGames, VT220, Cobalt, Stealth, Waffle Iron, Ghostline, Hot Dog Stand, and Neon Miami.
+- The application settings identity remains `WaffleHouseClient`, so saved profiles/password choices, buddy/watch data, SIP profiles, CPX identity/trust state, and UI settings continue to use the existing store.
+
+### CLI / TUI
+
+- New 3.0 terminal shell with Unicode dashboard chrome, modern connection indicators, and a `❯` command prompt.
+- The proven bottom-three-row contract is intentionally retained: shortcut rail, context/status bar, then input.
+- The exact keyboard help line remains available: `Tab completes /commands | Ctrl-N/P buffers | Alt-1..9/F1..F9 jump | PgUp/PgDn scroll |`.
+- Existing BBS raw-terminal semantics, 80x24 NAWS behavior, password masking, buffer navigation, commands, and theme engine remain intact.
+
+### Compatibility gate
+
+The original 15 source regression tests from 2.5.4-r6 pass against the 3.0 rebuild. Additional 3.0 tests verify the modern shell and pin the untouched protocol/security/transfer core to the known-good 2.5.4-r6 source checksums. See `FEATURE-PRESERVATION-3.0.md`.
+
+
+## 2.5.4-r6 AIM/OSCAR presence + custom AFK
+
+WaffleHouse can now publish real OSCAR Away and Idle presence. CLI commands are `/away [MESSAGE]`, `/afk [MESSAGE]`, `/idle [SECONDS|off]`, `/back`, and `/status`. AFK is a WaffleHouse convenience state transported as a standards-compatible AIM Away message prefixed with `[AFK]`, so classic clients still see a meaningful away message. The GUI exposes the same controls from each connected AIM account under Accounts -> Set AIM Status / AFK.
 
 
 
@@ -426,7 +486,7 @@ A custom prefix follows the same standard layout. For example, `--prefix "$HOME/
 
 The build remains portable between source locations. If a copied source tree contains a CMake cache pointing at another user's or another directory's absolute path, the builder discards only that generated `build/` tree and reconfigures it.
 
-Until project-specific 2.3 artwork is added, GUI tray setup uses the desktop theme's `internet-chat` icon and falls back to a Qt-provided icon when necessary, preventing the null-icon tray warning.
+WaffleHouse-Client 3.1 embeds the WaffleHouse-Client badge as its application/window and system-tray icon. Multi-resolution hicolor copies are installed for Linux/FreeBSD desktops; the older `internet-chat` theme icon remains only as a last-resort runtime fallback.
 
 ### Saved connection passwords (2.1 Alpha)
 
@@ -494,3 +554,22 @@ All interactive CLI text-entry paths (main input, password/text prompts, and `/a
 ### Resume / Clear behavior
 
 The GUI File Transfers window keeps active transfers separate from chat. Active rows provide **Cancel**. Cancelled or interrupted transfers provide **Resume** and **Clear**. Resume continues from the existing `.cpxpart` byte offset and renegotiates direct encrypted transfer when possible. Clear discards an incomplete `.cpxpart` download and removes the transfer entry; it never deletes a successfully completed download or the sender's original file. Successful transfers automatically leave the active list shortly after verification while their log entry remains. CLI mode provides `/resume ID` and `/cleartransfer ID`.
+
+
+## Notification sounds
+
+WaffleHouse-Client 3.1 can play notification sounds in both the GUI and CLI for IRC channel mentions, IRC private messages, AIM instant messages, and AIM chat messages. The built-in sound pack is enabled by default. In the GUI open **Settings → Notification Sounds** to enable/disable each event, choose **Built-in**, **Custom file**, or **None**, browse for a sound, and test it. WAV is the recommended custom format.
+
+The CLI uses the same settings store:
+
+```text
+/notifications
+/notify on|off
+/sound irc-mention builtin
+/sound irc-pm "/home/user/Sounds/irc-message.wav"
+/sound aim-im /home/user/Sounds/aim.wav
+/sound aim-chat off
+/soundtest irc-mention
+```
+
+Outgoing message echoes do not trigger notifications. IRC channel audio triggers only when the active IRC nickname is mentioned; AIM chat audio triggers for incoming chat-room messages.

@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/mainwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/mainwindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/mainwindow.h \
- /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/mainwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -300,14 +300,15 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Production/src/securechannel.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QSet \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
- /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.h \
- /home/gitsc/WaffleHouse-Client-Production/src/directtransfer.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.h \
  /usr/include/sodium.h /usr/include/sodium/version.h \
  /usr/include/sodium/export.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/limits.h \
@@ -441,9 +442,14 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcursor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qbitmap.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \
- /home/gitsc/WaffleHouse-Client-Production/src/platforminfo.h \
- /home/gitsc/WaffleHouse-Client-Production/src/chatwindow.h \
- /home/gitsc/WaffleHouse-Client-Production/src/ircbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/platforminfo.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appicon.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/QIcon \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qicon.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/QPixmap \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qpixmap.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qmutex.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtsan_impl.h \
@@ -459,8 +465,8 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/atomic_futex.h \
  /usr/include/c++/13/bits/std_thread.h \
- /home/gitsc/WaffleHouse-Client-Production/src/oscarbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/src/oscarprotocol.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \
@@ -471,28 +477,32 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qabstractsocket.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qiodevice.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
- /home/gitsc/WaffleHouse-Client-Production/src/telnetbackend.h \
- /home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/telnetbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvector.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QtGlobal \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qglobal.h \
- /home/gitsc/WaffleHouse-Client-Production/src/transferwindow.h \
- /home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/Profile.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QTimer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbasictimer.h \
- /home/gitsc/WaffleHouse-Client-Production/src/sipbackend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/sipbackend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QPointer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qpointer.h \
- /home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QWidget \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qwidget.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/modernstyle.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/filetransport.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/useractivity.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QAction \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qaction.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QActionGroup \
@@ -576,8 +586,6 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qdatetime.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QCryptographicHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcryptographichash.h \
- /usr/include/x86_64-linux-gnu/qt6/QtGui/QIcon \
- /usr/include/x86_64-linux-gnu/qt6/QtGui/qicon.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QDialog \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qdialog.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QDialogButtonBox \
@@ -596,6 +604,12 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qdialog.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QFileInfo \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qfileinfo.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QEvent \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qcoreevent.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QFrame \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qframe.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/QFont \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qfont.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGroupBox \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qgroupbox.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGridLayout \
@@ -639,6 +653,8 @@ CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qglyphrun.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qrawfont.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qfontdatabase.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QRadioButton \
+ /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qradiobutton.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QTextBrowser \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtextbrowser.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QTabWidget \

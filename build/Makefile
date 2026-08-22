@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Production
+CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Testing
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Production/build
+CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Testing/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -132,9 +132,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles /home/gitsc/WaffleHouse-Client-Production/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles /home/gitsc/WaffleHouse-Client-Testing/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -188,6 +188,19 @@ wafflehouse-client/fast:
 .PHONY : wafflehouse-client/fast
 
 #=============================================================================
+# Target rules for targets named wafflehouse-client_other_files
+
+# Build rule for target.
+wafflehouse-client_other_files: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 wafflehouse-client_other_files
+.PHONY : wafflehouse-client_other_files
+
+# fast build rule for target.
+wafflehouse-client_other_files/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client_other_files.dir/build.make CMakeFiles/wafflehouse-client_other_files.dir/build
+.PHONY : wafflehouse-client_other_files/fast
+
+#=============================================================================
 # Target rules for targets named wafflehouse_sipcore_autogen_timestamp_deps
 
 # Build rule for target.
@@ -238,6 +251,54 @@ wafflehouse-client_autogen: cmake_check_build_system
 wafflehouse-client_autogen/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client_autogen.dir/build.make CMakeFiles/wafflehouse-client_autogen.dir/build
 .PHONY : wafflehouse-client_autogen/fast
+
+build/.rcc/qrc_wafflehouse_branding.o: build/.rcc/qrc_wafflehouse_branding.cpp.o
+.PHONY : build/.rcc/qrc_wafflehouse_branding.o
+
+# target to build an object file
+build/.rcc/qrc_wafflehouse_branding.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_branding.cpp.o
+.PHONY : build/.rcc/qrc_wafflehouse_branding.cpp.o
+
+build/.rcc/qrc_wafflehouse_branding.i: build/.rcc/qrc_wafflehouse_branding.cpp.i
+.PHONY : build/.rcc/qrc_wafflehouse_branding.i
+
+# target to preprocess a source file
+build/.rcc/qrc_wafflehouse_branding.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_branding.cpp.i
+.PHONY : build/.rcc/qrc_wafflehouse_branding.cpp.i
+
+build/.rcc/qrc_wafflehouse_branding.s: build/.rcc/qrc_wafflehouse_branding.cpp.s
+.PHONY : build/.rcc/qrc_wafflehouse_branding.s
+
+# target to generate assembly for a file
+build/.rcc/qrc_wafflehouse_branding.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_branding.cpp.s
+.PHONY : build/.rcc/qrc_wafflehouse_branding.cpp.s
+
+build/.rcc/qrc_wafflehouse_icons.o: build/.rcc/qrc_wafflehouse_icons.cpp.o
+.PHONY : build/.rcc/qrc_wafflehouse_icons.o
+
+# target to build an object file
+build/.rcc/qrc_wafflehouse_icons.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_icons.cpp.o
+.PHONY : build/.rcc/qrc_wafflehouse_icons.cpp.o
+
+build/.rcc/qrc_wafflehouse_icons.i: build/.rcc/qrc_wafflehouse_icons.cpp.i
+.PHONY : build/.rcc/qrc_wafflehouse_icons.i
+
+# target to preprocess a source file
+build/.rcc/qrc_wafflehouse_icons.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_icons.cpp.i
+.PHONY : build/.rcc/qrc_wafflehouse_icons.cpp.i
+
+build/.rcc/qrc_wafflehouse_icons.s: build/.rcc/qrc_wafflehouse_icons.cpp.s
+.PHONY : build/.rcc/qrc_wafflehouse_icons.s
+
+# target to generate assembly for a file
+build/.rcc/qrc_wafflehouse_icons.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/build/.rcc/qrc_wafflehouse_icons.cpp.s
+.PHONY : build/.rcc/qrc_wafflehouse_icons.cpp.s
 
 src/ansiterminal.o: src/ansiterminal.cpp.o
 .PHONY : src/ansiterminal.o
@@ -479,6 +540,54 @@ src/mainwindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.s
 .PHONY : src/mainwindow.cpp.s
 
+src/modernstyle.o: src/modernstyle.cpp.o
+.PHONY : src/modernstyle.o
+
+# target to build an object file
+src/modernstyle.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/modernstyle.cpp.o
+.PHONY : src/modernstyle.cpp.o
+
+src/modernstyle.i: src/modernstyle.cpp.i
+.PHONY : src/modernstyle.i
+
+# target to preprocess a source file
+src/modernstyle.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/modernstyle.cpp.i
+.PHONY : src/modernstyle.cpp.i
+
+src/modernstyle.s: src/modernstyle.cpp.s
+.PHONY : src/modernstyle.s
+
+# target to generate assembly for a file
+src/modernstyle.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/modernstyle.cpp.s
+.PHONY : src/modernstyle.cpp.s
+
+src/notificationmanager.o: src/notificationmanager.cpp.o
+.PHONY : src/notificationmanager.o
+
+# target to build an object file
+src/notificationmanager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/notificationmanager.cpp.o
+.PHONY : src/notificationmanager.cpp.o
+
+src/notificationmanager.i: src/notificationmanager.cpp.i
+.PHONY : src/notificationmanager.i
+
+# target to preprocess a source file
+src/notificationmanager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/notificationmanager.cpp.i
+.PHONY : src/notificationmanager.cpp.i
+
+src/notificationmanager.s: src/notificationmanager.cpp.s
+.PHONY : src/notificationmanager.s
+
+# target to generate assembly for a file
+src/notificationmanager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/notificationmanager.cpp.s
+.PHONY : src/notificationmanager.cpp.s
+
 src/oscarbackend.o: src/oscarbackend.cpp.o
 .PHONY : src/oscarbackend.o
 
@@ -574,6 +683,30 @@ src/securechannel.s: src/securechannel.cpp.s
 src/securechannel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.s
 .PHONY : src/securechannel.cpp.s
+
+src/secureroom.o: src/secureroom.cpp.o
+.PHONY : src/secureroom.o
+
+# target to build an object file
+src/secureroom.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/secureroom.cpp.o
+.PHONY : src/secureroom.cpp.o
+
+src/secureroom.i: src/secureroom.cpp.i
+.PHONY : src/secureroom.i
+
+# target to preprocess a source file
+src/secureroom.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/secureroom.cpp.i
+.PHONY : src/secureroom.cpp.i
+
+src/secureroom.s: src/secureroom.cpp.s
+.PHONY : src/secureroom.s
+
+# target to generate assembly for a file
+src/secureroom.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/secureroom.cpp.s
+.PHONY : src/secureroom.cpp.s
 
 src/sipbackend.o: src/sipbackend.cpp.o
 .PHONY : src/sipbackend.o
@@ -935,6 +1068,30 @@ src/transferwindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/transferwindow.cpp.s
 .PHONY : src/transferwindow.cpp.s
 
+src/useractivity.o: src/useractivity.cpp.o
+.PHONY : src/useractivity.o
+
+# target to build an object file
+src/useractivity.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/useractivity.cpp.o
+.PHONY : src/useractivity.cpp.o
+
+src/useractivity.i: src/useractivity.cpp.i
+.PHONY : src/useractivity.i
+
+# target to preprocess a source file
+src/useractivity.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/useractivity.cpp.i
+.PHONY : src/useractivity.cpp.i
+
+src/useractivity.s: src/useractivity.cpp.s
+.PHONY : src/useractivity.s
+
+# target to generate assembly for a file
+src/useractivity.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/useractivity.cpp.s
+.PHONY : src/useractivity.cpp.s
+
 wafflehouse-client_autogen/mocs_compilation.o: wafflehouse-client_autogen/mocs_compilation.cpp.o
 .PHONY : wafflehouse-client_autogen/mocs_compilation.o
 
@@ -997,10 +1154,17 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... wafflehouse-client_autogen"
 	@echo "... wafflehouse-client_autogen_timestamp_deps"
+	@echo "... wafflehouse-client_other_files"
 	@echo "... wafflehouse_sipcore_autogen"
 	@echo "... wafflehouse_sipcore_autogen_timestamp_deps"
 	@echo "... wafflehouse-client"
 	@echo "... wafflehouse_sipcore"
+	@echo "... build/.rcc/qrc_wafflehouse_branding.o"
+	@echo "... build/.rcc/qrc_wafflehouse_branding.i"
+	@echo "... build/.rcc/qrc_wafflehouse_branding.s"
+	@echo "... build/.rcc/qrc_wafflehouse_icons.o"
+	@echo "... build/.rcc/qrc_wafflehouse_icons.i"
+	@echo "... build/.rcc/qrc_wafflehouse_icons.s"
 	@echo "... src/ansiterminal.o"
 	@echo "... src/ansiterminal.i"
 	@echo "... src/ansiterminal.s"
@@ -1031,6 +1195,12 @@ help:
 	@echo "... src/mainwindow.o"
 	@echo "... src/mainwindow.i"
 	@echo "... src/mainwindow.s"
+	@echo "... src/modernstyle.o"
+	@echo "... src/modernstyle.i"
+	@echo "... src/modernstyle.s"
+	@echo "... src/notificationmanager.o"
+	@echo "... src/notificationmanager.i"
+	@echo "... src/notificationmanager.s"
 	@echo "... src/oscarbackend.o"
 	@echo "... src/oscarbackend.i"
 	@echo "... src/oscarbackend.s"
@@ -1043,6 +1213,9 @@ help:
 	@echo "... src/securechannel.o"
 	@echo "... src/securechannel.i"
 	@echo "... src/securechannel.s"
+	@echo "... src/secureroom.o"
+	@echo "... src/secureroom.i"
+	@echo "... src/secureroom.s"
 	@echo "... src/sipbackend.o"
 	@echo "... src/sipbackend.i"
 	@echo "... src/sipbackend.s"
@@ -1088,6 +1261,9 @@ help:
 	@echo "... src/transferwindow.o"
 	@echo "... src/transferwindow.i"
 	@echo "... src/transferwindow.s"
+	@echo "... src/useractivity.o"
+	@echo "... src/useractivity.i"
+	@echo "... src/useractivity.s"
 	@echo "... wafflehouse-client_autogen/mocs_compilation.o"
 	@echo "... wafflehouse-client_autogen/mocs_compilation.i"
 	@echo "... wafflehouse-client_autogen/mocs_compilation.s"

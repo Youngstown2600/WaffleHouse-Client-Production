@@ -1,6 +1,6 @@
 # WaffleHouse-Client Themes
 
-WaffleHouse-Client 2.5.3 includes the complete S.I.P.H.E.R. GUI/CLI theme family plus the WaffleHouse-specific palettes.
+WaffleHouse-Client 3.1 retains the complete GUI/CLI theme family plus the WaffleHouse-specific palettes. The CLI shortcut footer uses each theme's own secondary accent.
 
 ## S.I.P.H.E.R. theme family
 

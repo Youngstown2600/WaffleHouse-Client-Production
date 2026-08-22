@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 2.5.4 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 3.1.0 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -90,16 +90,42 @@ qt_add_executable(${APP_EXECUTABLE}
     src/ansiterminalwidget.cpp
     src/bbsdirectory.cpp
     src/securechannel.cpp
+    src/secureroom.cpp
     src/filetransfer.cpp
     src/directtransfer.cpp
     src/transferwindow.cpp
     src/platforminfo.cpp
     src/chatwindow.cpp
     src/mainwindow.cpp
+    src/modernstyle.cpp
+    src/notificationmanager.cpp
+    src/useractivity.cpp
     src/terminalui.cpp
     src/sipcontroller.cpp
     src/sipbackend.cpp
     src/softphonewindow.cpp
+)
+
+qt_add_resources(${APP_EXECUTABLE} wafflehouse_branding
+    PREFIX "/branding"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding"
+    FILES
+        assets/branding/wafflehouse-client-logo.png
+)
+
+qt_add_resources(${APP_EXECUTABLE} wafflehouse_icons
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons"
+    FILES
+        assets/icons/16x16/wafflehouse-client.png
+        assets/icons/22x22/wafflehouse-client.png
+        assets/icons/24x24/wafflehouse-client.png
+        assets/icons/32x32/wafflehouse-client.png
+        assets/icons/48x48/wafflehouse-client.png
+        assets/icons/64x64/wafflehouse-client.png
+        assets/icons/128x128/wafflehouse-client.png
+        assets/icons/256x256/wafflehouse-client.png
+        assets/icons/512x512/wafflehouse-client.png
 )
 
 target_include_directories(${APP_EXECUTABLE} PRIVATE src include)
@@ -108,7 +134,8 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="2.5.4-r5"
+    APP_VERSION_STRING="3.1"
+    WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
 )
 
 target_link_libraries(${APP_EXECUTABLE} PRIVATE
@@ -139,4 +166,15 @@ install(TARGETS ${APP_EXECUTABLE}
 
 install(FILES data/wafflehouse-client.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+foreach(_wh_icon_size IN ITEMS 16 22 24 32 48 64 128 256 512)
+    install(FILES assets/icons/${_wh_icon_size}x${_wh_icon_size}/wafflehouse-client.png
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_wh_icon_size}x${_wh_icon_size}/apps
+    )
+endforeach()
+
+install(DIRECTORY sounds/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/wafflehouse-client/sounds
+    FILES_MATCHING PATTERN "*.wav"
 )

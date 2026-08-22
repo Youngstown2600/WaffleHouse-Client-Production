@@ -44,9 +44,9 @@ ChatWindow::ChatWindow(ChatBackend *backend,
       m_opacitySettingsKey(std::move(opacitySettingsKey))
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
-    resize(m_kind == QStringLiteral("chat") ? 700 : 590, 440);
-    setMinimumSize(m_kind == QStringLiteral("chat") ? QSize(520, 330)
-                                                     : QSize(430, 300));
+    resize(m_kind == QStringLiteral("chat") ? 560 : 480, 360);
+    setMinimumSize(m_kind == QStringLiteral("chat") ? QSize(440, 300)
+                                                     : QSize(380, 280));
     buildMenus();
     buildUi();
     loadOpacity();
@@ -66,24 +66,38 @@ void ChatWindow::buildMenus()
     connect(resetOpacity, &QAction::triggered,
             this, &ChatWindow::setTransparency);
 
-    if (m_kind == QStringLiteral("im")) {
+    if (m_kind == QStringLiteral("im") || m_kind == QStringLiteral("chat")) {
         QMenu *securityMenu = menuBar()->addMenu(QStringLiteral("&Security"));
-        QAction *start = securityMenu->addAction(QStringLiteral("Start &Secure Session"));
-        QAction *status = securityMenu->addAction(QStringLiteral("Secure Session &Status"));
+        const bool room = m_kind == QStringLiteral("chat");
+        QAction *start = securityMenu->addAction(room
+            ? QStringLiteral("Start &Secure Room")
+            : QStringLiteral("Start &Secure Session"));
+        QAction *status = securityMenu->addAction(room
+            ? QStringLiteral("Secure Room &Status")
+            : QStringLiteral("Secure Session &Status"));
+        QAction *trust = nullptr;
+        QAction *untrust = nullptr;
+        QAction *sendFile = nullptr;
+        if (!room) {
+            securityMenu->addSeparator();
+            trust = securityMenu->addAction(QStringLiteral("&Trust Peer Fingerprint"));
+            untrust = securityMenu->addAction(QStringLiteral("&Forget Trusted Fingerprint"));
+        }
         securityMenu->addSeparator();
-        QAction *trust = securityMenu->addAction(QStringLiteral("&Trust Peer Fingerprint"));
-        QAction *untrust = securityMenu->addAction(QStringLiteral("&Forget Trusted Fingerprint"));
-        securityMenu->addSeparator();
-        QAction *off = securityMenu->addAction(QStringLiteral("&Close Secure Session"));
-        securityMenu->addSeparator();
-        QAction *sendFile = securityMenu->addAction(QStringLiteral("Send &File…"));
+        QAction *off = securityMenu->addAction(room
+            ? QStringLiteral("&Close Secure Room")
+            : QStringLiteral("&Close Secure Session"));
+        if (!room) {
+            securityMenu->addSeparator();
+            sendFile = securityMenu->addAction(QStringLiteral("Send &File…"));
+        }
 
         connect(start, &QAction::triggered, this, [this] { emit secureRequested(this); });
         connect(status, &QAction::triggered, this, [this] { emit secureStatusRequested(this); });
-        connect(trust, &QAction::triggered, this, [this] { emit trustRequested(this); });
-        connect(untrust, &QAction::triggered, this, [this] { emit untrustRequested(this); });
+        if (trust) connect(trust, &QAction::triggered, this, [this] { emit trustRequested(this); });
+        if (untrust) connect(untrust, &QAction::triggered, this, [this] { emit untrustRequested(this); });
         connect(off, &QAction::triggered, this, [this] { emit secureOffRequested(this); });
-        connect(sendFile, &QAction::triggered, this, [this] { emit fileSendRequested(this); });
+        if (sendFile) connect(sendFile, &QAction::triggered, this, [this] { emit fileSendRequested(this); });
     }
 }
 
@@ -148,7 +162,7 @@ void ChatWindow::buildUi()
         m_membersTitle->setFont(memberTitleFont);
 
         m_members = new QListWidget(memberFrame);
-        m_members->setMinimumWidth(125);
+        m_members->setMinimumWidth(110);
         m_members->setMaximumWidth(220);
         memberLayout->addWidget(m_membersTitle);
         memberLayout->addWidget(m_members, 1);
@@ -162,17 +176,18 @@ void ChatWindow::buildUi()
         outer->addWidget(m_transcript, 1);
     }
 
-    if (m_kind == QStringLiteral("im")) {
+    if (m_kind == QStringLiteral("im") || m_kind == QStringLiteral("chat")) {
+        const bool room = m_kind == QStringLiteral("chat");
         auto *securityRow = new QHBoxLayout;
         securityRow->setSpacing(4);
-        m_secureButton = new QPushButton(QStringLiteral("Secure"), central);
+        m_secureButton = new QPushButton(room ? QStringLiteral("Secure Room") : QStringLiteral("Secure"), central);
         m_secureStatusButton = new QPushButton(QStringLiteral("Status"), central);
-        m_secureCloseButton = new QPushButton(QStringLiteral("Close Secure"), central);
-        m_sendFileButton = new QPushButton(QStringLiteral("Send File…"), central);
+        m_secureCloseButton = new QPushButton(room ? QStringLiteral("Close Secure Room") : QStringLiteral("Close Secure"), central);
+        if (!room) m_sendFileButton = new QPushButton(QStringLiteral("Send File…"), central);
         securityRow->addWidget(m_secureButton);
         securityRow->addWidget(m_secureStatusButton);
         securityRow->addWidget(m_secureCloseButton);
-        securityRow->addWidget(m_sendFileButton);
+        if (m_sendFileButton) securityRow->addWidget(m_sendFileButton);
         securityRow->addStretch(1);
         outer->addLayout(securityRow);
 
@@ -182,7 +197,7 @@ void ChatWindow::buildUi()
                 this, [this] { emit secureStatusRequested(this); });
         connect(m_secureCloseButton, &QPushButton::clicked,
                 this, [this] { emit secureOffRequested(this); });
-        connect(m_sendFileButton, &QPushButton::clicked,
+        if (m_sendFileButton) connect(m_sendFileButton, &QPushButton::clicked,
                 this, [this] { emit fileSendRequested(this); });
     }
 
@@ -236,14 +251,16 @@ QStringList ChatWindow::availableSlashCommands() const
     QStringList commands = {
         QStringLiteral("/fingerprint"),
         QStringLiteral("/help"),
-        QStringLiteral("/options")
+        QStringLiteral("/options"),
+        QStringLiteral("/version")
     };
-    if (m_kind == QStringLiteral("im")) {
+    if (m_kind == QStringLiteral("im") || m_kind == QStringLiteral("chat")) {
         commands << QStringLiteral("/secure")
                  << QStringLiteral("/secureoff")
-                 << QStringLiteral("/securestatus")
-                 << QStringLiteral("/trust")
-                 << QStringLiteral("/untrust");
+                 << QStringLiteral("/securestatus");
+        if (m_kind == QStringLiteral("im")) {
+            commands << QStringLiteral("/trust") << QStringLiteral("/untrust");
+        }
     }
     commands.sort(Qt::CaseInsensitive);
     return commands;
@@ -517,26 +534,36 @@ void ChatWindow::setSecurityState(bool active,
     }
 
     const bool isIm = m_kind == QStringLiteral("im");
-    m_secureActive = isIm && active;
-    if (m_secureButton) m_secureButton->setEnabled(isIm && !m_secureActive && m_online);
-    if (m_secureStatusButton) m_secureStatusButton->setEnabled(isIm && m_online);
-    if (m_secureCloseButton) m_secureCloseButton->setEnabled(isIm && m_secureActive && m_online);
+    const bool isRoom = m_kind == QStringLiteral("chat");
+    const bool supportsSecurity = isIm || isRoom;
+    m_secureActive = supportsSecurity && active;
+    if (m_secureButton) m_secureButton->setEnabled(supportsSecurity && !m_secureActive && m_online);
+    if (m_secureStatusButton) m_secureStatusButton->setEnabled(supportsSecurity && m_online);
+    if (m_secureCloseButton) m_secureCloseButton->setEnabled(supportsSecurity && m_secureActive && m_online);
     if (m_sendFileButton) m_sendFileButton->setEnabled(isIm && m_secureActive && m_online);
 
-    if (!active || !isIm) {
+    if (!active || !supportsSecurity) {
         m_securityLabel->clear();
         m_securityLabel->setToolTip(QString());
         m_securityLabel->setVisible(false);
         return;
     }
 
-    m_securityLabel->setText(trusted
-        ? QStringLiteral("🔒 secure · trusted")
-        : QStringLiteral("🔒 secure · unverified"));
-    m_securityLabel->setToolTip(
-        QStringLiteral("Peer fingerprint: %1\nLocal fingerprint: %2")
-            .arg(peerFingerprint.isEmpty() ? QStringLiteral("unknown") : peerFingerprint,
-                 localFingerprint.isEmpty() ? QStringLiteral("unknown") : localFingerprint));
+    if (isRoom) {
+        const QString shortId = peerFingerprint.left(8);
+        m_securityLabel->setText(QStringLiteral("🔒 secure room%1")
+            .arg(shortId.isEmpty() ? QString() : QStringLiteral(" · %1").arg(shortId)));
+        m_securityLabel->setToolTip(QStringLiteral("Shared authenticated room key ID: %1")
+            .arg(peerFingerprint.isEmpty() ? QStringLiteral("unknown") : peerFingerprint));
+    } else {
+        m_securityLabel->setText(trusted
+            ? QStringLiteral("🔒 secure · trusted")
+            : QStringLiteral("🔒 secure · unverified"));
+        m_securityLabel->setToolTip(
+            QStringLiteral("Peer fingerprint: %1\nLocal fingerprint: %2")
+                .arg(peerFingerprint.isEmpty() ? QStringLiteral("unknown") : peerFingerprint,
+                     localFingerprint.isEmpty() ? QStringLiteral("unknown") : localFingerprint));
+    }
     m_securityLabel->setVisible(true);
 }
 

@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/filetransfer.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \

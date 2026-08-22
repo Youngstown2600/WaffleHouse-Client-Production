@@ -1,15 +1,15 @@
 {
-	"BUILD_DIR" : "/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen",
-	"CMAKE_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Production/build",
-	"CMAKE_CURRENT_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Production/build",
-	"CMAKE_CURRENT_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Production",
+	"BUILD_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen",
+	"CMAKE_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing",
 	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
 	"CMAKE_LIST_FILES" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Production/CMakeLists.txt",
+		"/home/gitsc/WaffleHouse-Client-Testing/CMakeLists.txt",
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystem.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/3.28.3/CMakeSystem.cmake",
+		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystemSpecificInitialize.cmake",
 		"/usr/share/cmake-3.28/Modules/Platform/Linux-Initialize.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake",
@@ -62,7 +62,7 @@
 		"/usr/share/cmake-3.28/Modules/CMakeFindBinUtils.cmake",
 		"/usr/share/cmake-3.28/Modules/Compiler/GNU-FindBinUtils.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompiler.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
+		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystemSpecificInformation.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeGenericSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeInitializeConfigs.cmake",
@@ -87,7 +87,7 @@
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineCompileFeatures.cmake",
 		"/usr/share/cmake-3.28/Modules/Internal/FeatureTesting.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompiler.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
+		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
 		"/usr/share/cmake-3.28/Modules/FindThreads.cmake",
 		"/usr/share/cmake-3.28/Modules/CheckLibraryExists.cmake",
 		"/usr/share/cmake-3.28/Modules/CheckIncludeFileCXX.cmake",
@@ -242,143 +242,170 @@
 		"/usr/share/cmake-3.28/Modules/FindPackageHandleStandardArgs.cmake",
 		"/usr/share/cmake-3.28/Modules/FindPackageMessage.cmake",
 		"/usr/share/cmake-3.28/Modules/GNUInstallDirs.cmake",
-		"/usr/share/cmake-3.28/Modules/GNUInstallDirs.cmake"
+		"/usr/share/cmake-3.28/Modules/GNUInstallDirs.cmake",
+		"/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in"
 	],
-	"CMAKE_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Production",
-	"DEP_FILE" : "/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/deps",
+	"CMAKE_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing",
+	"DEP_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/deps",
 	"DEP_FILE_RULE_NAME" : "wafflehouse-client_autogen/timestamp",
 	"HEADERS" : 
 	[
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h",
 			"Mu",
 			"UVLADIE3JM/moc_ansiterminal.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ansiterminalwidget.h",
 			"Mu",
 			"UVLADIE3JM/moc_ansiterminalwidget.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/backend.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/backend.h",
 			"Mu",
 			"UVLADIE3JM/moc_backend.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.h",
 			"Mu",
 			"UVLADIE3JM/moc_bbsdirectory.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/chatwindow.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.h",
 			"Mu",
 			"UVLADIE3JM/moc_chatwindow.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/directtransfer.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.h",
 			"Mu",
 			"UVLADIE3JM/moc_directtransfer.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/filetransfer.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h",
 			"Mu",
 			"UVLADIE3JM/moc_filetransfer.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ircbackend.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.h",
 			"Mu",
 			"UVLADIE3JM/moc_ircbackend.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/mainwindow.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/mainwindow.h",
 			"Mu",
 			"UVLADIE3JM/moc_mainwindow.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/oscarbackend.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/modernstyle.h",
+			"Mu",
+			"UVLADIE3JM/moc_modernstyle.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.h",
+			"Mu",
+			"UVLADIE3JM/moc_notificationmanager.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.h",
 			"Mu",
 			"UVLADIE3JM/moc_oscarbackend.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/oscarprotocol.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h",
 			"Mu",
 			"UVLADIE3JM/moc_oscarprotocol.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/platforminfo.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/platforminfo.h",
 			"Mu",
 			"UVLADIE3JM/moc_platforminfo.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/securechannel.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h",
 			"Mu",
 			"UVLADIE3JM/moc_securechannel.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/sipbackend.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h",
+			"Mu",
+			"UVLADIE3JM/moc_secureroom.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/sipbackend.h",
 			"Mu",
 			"UVLADIE3JM/moc_sipbackend.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h",
 			"Mu",
 			"UVLADIE3JM/moc_sipcontroller.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.h",
 			"Mu",
 			"UVLADIE3JM/moc_softphonewindow.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/telnetbackend.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/telnetbackend.h",
 			"Mu",
 			"UVLADIE3JM/moc_telnetbackend.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/terminalui.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/terminalui.h",
 			"Mu",
 			"UVLADIE3JM/moc_terminalui.cpp",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/transferwindow.h",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.h",
 			"Mu",
 			"UVLADIE3JM/moc_transferwindow.cpp",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/useractivity.h",
+			"Mu",
+			"UVLADIE3JM/moc_useractivity.cpp",
 			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
-	"INCLUDE_DIR" : "/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/include",
-	"MOC_COMPILATION_FILE" : "/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/mocs_compilation.cpp",
+	"INCLUDE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/mocs_compilation.cpp",
 	"MOC_DEFINITIONS" : 
 	[
 		"APP_DISPLAY_NAME=\"WaffleHouse-Client\"",
 		"APP_EXECUTABLE=\"wafflehouse-client\"",
 		"APP_ID=\"WaffleHouseClient\"",
-		"APP_VERSION_STRING=\"2.5.4-r5\"",
+		"APP_VERSION_STRING=\"3.1\"",
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
 		"QT_NETWORK_LIB",
 		"QT_NO_DEBUG",
 		"QT_WIDGETS_LIB",
-		"WAFFLEHOUSE_LINUX=1"
+		"WAFFLEHOUSE_LINUX=1",
+		"WAFFLEHOUSE_SOURCE_SOUND_DIR=\"/home/gitsc/WaffleHouse-Client-Testing/sounds\""
 	],
 	"MOC_DEPEND_FILTERS" : 
 	[
@@ -389,8 +416,8 @@
 	],
 	"MOC_INCLUDES" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Production/src",
-		"/home/gitsc/WaffleHouse-Client-Production/include",
+		"/home/gitsc/WaffleHouse-Client-Testing/src",
+		"/home/gitsc/WaffleHouse-Client-Testing/include",
 		"/home/gitsc/.local/wafflehouse-pjsip/include",
 		"/usr/include/x86_64-linux-gnu/qt6/QtCore",
 		"/usr/include/x86_64-linux-gnu/qt6",
@@ -425,115 +452,133 @@
 		"-c",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
 	],
-	"MOC_PREDEFS_FILE" : "/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h",
+	"MOC_PREDEFS_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h",
 	"MOC_RELAXED_MODE" : false,
 	"MOC_SKIP" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp"
+		"/home/gitsc/WaffleHouse-Client-Testing/build/.rcc/qrc_wafflehouse_branding.cpp",
+		"/home/gitsc/WaffleHouse-Client-Testing/build/.rcc/qrc_wafflehouse_icons.cpp",
+		"/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp"
 	],
 	"MULTI_CONFIG" : false,
 	"PARALLEL" : 6,
-	"PARSE_CACHE_FILE" : "/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/wafflehouse-client_autogen.dir/ParseCache.txt",
+	"PARSE_CACHE_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse-client_autogen.dir/ParseCache.txt",
 	"QT_MOC_EXECUTABLE" : "/usr/lib/qt6/libexec/moc",
 	"QT_UIC_EXECUTABLE" : "",
 	"QT_VERSION_MAJOR" : 6,
 	"QT_VERSION_MINOR" : 4,
-	"SETTINGS_FILE" : "/home/gitsc/WaffleHouse-Client-Production/build/CMakeFiles/wafflehouse-client_autogen.dir/AutogenUsed.txt",
+	"SETTINGS_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse-client_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ansiterminalwidget.cpp",
+			"Mu",
+			null
+		],
+		[ "/home/gitsc/WaffleHouse-Client-Testing/src/backend.cpp", "Mu", null ],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/backend.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/bbsdirectory.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/directtransfer.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.cpp",
+			"Mu",
+			null
+		],
+		[ "/home/gitsc/WaffleHouse-Client-Testing/src/main.cpp", "Mu", null ],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/mainwindow.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/filetransfer.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/modernstyle.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/ircbackend.cpp",
-			"Mu",
-			null
-		],
-		[ "/home/gitsc/WaffleHouse-Client-Production/src/main.cpp", "Mu", null ],
-		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/mainwindow.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/oscarbackend.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/oscarprotocol.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/platforminfo.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/platforminfo.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/securechannel.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/securechannel.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/sipbackend.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/secureroom.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/sipcontroller.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/sipbackend.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/softphonewindow.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/telnetbackend.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/terminalui.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/telnetbackend.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Production/src/transferwindow.cpp",
+			"/home/gitsc/WaffleHouse-Client-Testing/src/terminalui.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/transferwindow.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/gitsc/WaffleHouse-Client-Testing/src/useractivity.cpp",
 			"Mu",
 			null
 		]

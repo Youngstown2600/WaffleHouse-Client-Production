@@ -176,7 +176,8 @@ QStringList SecureChannelManager::localCapabilities()
             QStringLiteral("file-transfer"),
             QStringLiteral("file-resume"),
             QStringLiteral("file-ack"),
-            QStringLiteral("file-direct-v1")};
+            QStringLiteral("file-direct-v1"),
+            QStringLiteral("secure-room-v1")};
 }
 
 QString SecureChannelManager::capabilitiesFrame(const QString &connectionId,

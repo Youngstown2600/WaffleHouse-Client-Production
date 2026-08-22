@@ -2,6 +2,7 @@
 
 #include "backend.h"
 #include "securechannel.h"
+#include "secureroom.h"
 #include "filetransfer.h"
 #include "directtransfer.h"
 
@@ -24,8 +25,10 @@ class QTreeWidget;
 class QTreeWidgetItem;
 class QTimer;
 class QCloseEvent;
+class QEvent;
 class QComboBox;
 class QLineEdit;
+class QPoint;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -35,6 +38,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     struct UiOptions {
@@ -44,6 +48,9 @@ private:
         bool encryptedDmEnabled = true;
         bool autoReplySecure = true;
         bool showSecureFingerprints = true;
+        bool autoPresenceEnabled = true;
+        int autoIdleMinutes = 5;
+        int autoAwayMinutes = 15;
     };
 
     struct BackendState {
@@ -60,6 +67,10 @@ private:
         QSet<QString> onlineBuddies;
         QHash<QString, QString> targetNames;
         QHash<QString, QString> discoveredRooms;
+        QString presenceState = QStringLiteral("ONLINE");
+        QString presenceMessage;
+        quint32 idleSeconds = 0;
+        QString autoPresenceState;
     };
 
     void buildMenus();
@@ -105,6 +116,7 @@ private:
     void rebuildTrayMenu();
     void rebuildAccountsMenu();
     QString accountMenuLabel(BackendState *state) const;
+    void showAccountContextMenu(BackendState *state, const QPoint &globalPos);
     void openMessagingDialog(BackendState *state, const QString &presetTarget = QString(), bool startRoomTab = false);
     void openBuddyManager(BackendState *state);
 
@@ -134,6 +146,10 @@ private:
     void addBuddy();
     void removeBuddy();
     void changePassword();
+    void setAimPresence(BackendState *state);
+    void markUserActivity();
+    void updateAutoPresence();
+    void requestClientVersion(BackendState *state, const QString &target);
     void changeIrcNick();
     void rawProtocolCommand();
 
@@ -158,6 +174,13 @@ private:
     void trustSecurePeer(ChatWindow *window);
     void untrustSecurePeer(ChatWindow *window);
     void closeSecureSession(ChatWindow *window);
+    void startSecureRoom(ChatWindow *window);
+    void showSecureRoomStatus(ChatWindow *window);
+    void closeSecureRoom(ChatWindow *window);
+    void distributeSecureRoomKey(BackendState *state, ChatWindow *window, const QString &peer);
+    void distributeSecureRoomKeyToMembers(BackendState *state, ChatWindow *window);
+    void flushPendingSecureRoomKeys(BackendState *state, const QString &peer);
+    bool handleSecureRoomKeyOffer(BackendState *state, const QString &peer, const QString &plaintext);
     void showSelectedFingerprint();
     void sendFile(ChatWindow *window);
     bool sendSecureControlPayload(BackendState *state,
@@ -166,7 +189,8 @@ private:
     bool handleFileTransferPayload(BackendState *state,
                                    const QString &target,
                                    const QString &plaintext,
-                                   ChatWindow *window);
+                                   ChatWindow *window,
+                                   bool secureTransport = true);
     void pumpFileTransfers();
     void appendTransferProgress(const CpxFileTransferManager::Event &event,
                                 const QString &direction,
@@ -224,10 +248,6 @@ private:
 
     // Main Buddy List window.
     QTreeWidget *m_buddyTree = nullptr;
-    QPushButton *m_newImButton = nullptr;
-    QPushButton *m_optionsButton = nullptr;
-    QPushButton *m_buddyConnectButton = nullptr;
-    QPushButton *m_buddyDisconnectButton = nullptr;
     QComboBox *m_buddySipAccount = nullptr;
     QLineEdit *m_buddyDialPrefix = nullptr;
     QLineEdit *m_buddyDial = nullptr;
@@ -278,15 +298,22 @@ private:
 
     UiOptions m_options;
     SecureChannelManager m_secure;
+    SecureRoomManager m_secureRooms;
     bool m_secureReady = false;
     QString m_secureError;
     QSet<QString> m_outgoingSecureFrames;
+    QSet<QString> m_outgoingUnsecuredFileFrames;
+    QHash<QString, QSet<QString>> m_pendingSecureRoomKeys;
+    QSet<QString> m_pendingVersionQueries;
     QSet<QString> m_closedRoomKeys;
     CpxFileTransferManager m_fileTransfers;
     CpxDirectTransferManager m_directTransfers;
     QHash<QString, QString> m_fileTransferProfiles;
+    QHash<QString, bool> m_fileTransferSecure;
     QHash<QString, int> m_fileTransferProgressShown;
     QTimer *m_fileTransferTimer = nullptr;
+    QTimer *m_presenceTimer = nullptr;
+    qint64 m_lastUserActivityMs = 0;
     TransferWindow *m_transferWindow = nullptr;
     SipController *m_sipController = nullptr;
     SoftphoneWindow *m_softphoneWindow = nullptr;

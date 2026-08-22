@@ -46,7 +46,7 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 2.5.4-r5, the unified C++ GUI/CLI executable.
+Build WaffleHouse-Client 3.1, the unified C++ GUI/CLI executable.
 
 The builder performs a full dependency preflight. Missing dependencies are
 installed automatically on supported Linux package managers or with FreeBSD pkg,
@@ -151,6 +151,7 @@ INSTALL_BINDIR="$INSTALL_PREFIX/bin"
 INSTALL_DESKTOPDIR="$INSTALL_PREFIX/share/applications"
 INSTALL_BIN="$INSTALL_BINDIR/wafflehouse-client"
 INSTALL_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-client.desktop"
+INSTALL_ICON_THEME_DIR="$INSTALL_PREFIX/share/icons/hicolor"
 LEGACY_GUI="$INSTALL_BINDIR/wafflehouse-gui"
 LEGACY_CLI="$INSTALL_BINDIR/wafflehouse-cli"
 LEGACY_GUI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-gui.desktop"
@@ -159,7 +160,7 @@ LEGACY_CLI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-cli.desktop"
 show_header() {
   cat <<EOF2
 ============================================================
-              WAFFLEHOUSE-CLIENT 2.5.4-r5 + SIP SOFTPHONE
+              WAFFLEHOUSE-CLIENT 3.1 + SIP SOFTPHONE
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
@@ -466,6 +467,7 @@ scan_dependencies() {
   check_pkg_module xkbcommon  "xkbcommon development"    xkbcommon || true
 
   check_command_dep "Git" git git || true
+  check_command_dep "Notification sound player" paplay paplay || true
   if [ "$OS_FAMILY" = linux ]; then
     check_pkg_module alsa     "ALSA development"          alsa || true
     check_pkg_module openssl  "OpenSSL development"       openssl || true
@@ -1127,7 +1129,7 @@ install_freebsd_dependencies() {
   echo "Installing complete FreeBSD dependency set..."
   run_as_root env ASSUME_ALWAYS_YES=yes pkg install -y \
     cmake pkgconf qt6-base libsodium ncurses libxkbcommon gcc gmake ca_root_nss \
-    git curl portaudio opus bcg729 libuuid
+    git curl portaudio opus bcg729 libuuid pulseaudio
 
   # FreeBSD normally supplies Clang in the base system. If this installation
   # does not, install LLVM so an ABI-compatible Clang/libc++ compiler is present.
@@ -1332,6 +1334,13 @@ refresh_desktop_database() {
   update-desktop-database "$INSTALL_DESKTOPDIR" >/dev/null 2>&1 || true
 }
 
+refresh_icon_cache() {
+  [ "$DRY_RUN" -eq 0 ] || return 0
+  command -v gtk-update-icon-cache >/dev/null 2>&1 || return 0
+  [ -d "$INSTALL_ICON_THEME_DIR" ] || return 0
+  gtk-update-icon-cache -f -t "$INSTALL_ICON_THEME_DIR" >/dev/null 2>&1 || true
+}
+
 remove_path_if_present() {
   target=$1
   if [ -e "$target" ] || [ -L "$target" ]; then
@@ -1354,8 +1363,12 @@ uninstall_application_files() {
   echo "==> Removing installed WaffleHouse-Client application files"
   remove_path_if_present "$INSTALL_BIN"
   remove_path_if_present "$INSTALL_DESKTOP"
+  for size in 16 22 24 32 48 64 128 256 512; do
+    remove_path_if_present "$INSTALL_ICON_THEME_DIR/${size}x${size}/apps/wafflehouse-client.png"
+  done
   cleanup_legacy_installation
   refresh_desktop_database
+  refresh_icon_cache
   echo
   echo "Application files removed. Per-user WaffleHouse configuration was preserved."
 }
@@ -1399,7 +1412,7 @@ ask_install
 if [ "$INSTALL_MODE" = yes ]; then echo "Build will be installed after compilation succeeds."; else echo "Build only; no system installation will be performed."; fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 2.5.4-r5"
+echo "==> Configuring WaffleHouse-Client 3.1"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1410,12 +1423,12 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE"
 
 echo
-echo "==> Building WaffleHouse-Client 2.5.4-r5"
+echo "==> Building WaffleHouse-Client 3.1"
 run_cmd cmake --build build --parallel "$JOBS"
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 2.5.4-r5"
+  echo "==> Installing WaffleHouse-Client 3.1"
   prepare_privileges
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
     echo "Existing WaffleHouse-Client detected; performing in-place upgrade after successful build."
@@ -1423,6 +1436,7 @@ if [ "$INSTALL_MODE" = yes ]; then
   cleanup_legacy_installation
   run_privileged cmake --install "$ROOT_DIR/build" --prefix "$INSTALL_PREFIX"
   refresh_desktop_database
+  refresh_icon_cache
   echo
   echo "Installed executable: $INSTALL_BIN"
   echo "Installed desktop entry: $INSTALL_DESKTOP"
@@ -1439,4 +1453,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 2.5.4-r5 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 3.1 build complete."; fi

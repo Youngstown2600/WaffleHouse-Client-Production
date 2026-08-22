@@ -1,6 +1,6 @@
-/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ansiterminalwidget.cpp: /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.h \
-  /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h \
+/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_ansiterminalwidget.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminalwidget.h \
+  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

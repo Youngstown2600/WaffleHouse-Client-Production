@@ -1,4 +1,5 @@
 #include "appbranding.h"
+#include "appicon.h"
 #include "backend.h"
 #include "mainwindow.h"
 #include "platforminfo.h"
@@ -14,6 +15,7 @@
 #include <QHash>
 #include <QList>
 #include <QPair>
+#include <QPixmap>
 #include <QSet>
 #include <QLabel>
 #include <QSettings>
@@ -191,6 +193,7 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     QApplication app(argc, argv);
     configureApplicationIdentity();
     QApplication::setApplicationDisplayName(appDisplayName());
+    QApplication::setWindowIcon(appIcon());
     QApplication::setQuitOnLastWindowClosed(false);
 
     QCommandLineParser parser;
@@ -288,14 +291,21 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     splash.setWindowFlag(Qt::FramelessWindowHint, true);
     auto *layout = new QVBoxLayout(&splash);
     auto *logo = new QLabel(&splash);
-    logo->setTextFormat(Qt::PlainText);
-    QFont mono(QStringLiteral("monospace"));
-    mono.setStyleHint(QFont::Monospace);
-    logo->setFont(mono);
-    logo->setText(appAsciiLogo());
+    const QPixmap logoPixmap = appLogoPixmap();
+    if (!logoPixmap.isNull()) {
+        logo->setPixmap(logoPixmap.scaled(220, 220, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    } else {
+        // The embedded image should always be present. Keep the terminal-era
+        // text logo as a last-resort GUI fallback for damaged resource builds.
+        logo->setTextFormat(Qt::PlainText);
+        QFont mono(QStringLiteral("monospace"));
+        mono.setStyleHint(QFont::Monospace);
+        logo->setFont(mono);
+        logo->setText(appAsciiLogo());
+    }
     logo->setAlignment(Qt::AlignCenter);
     layout->addWidget(logo);
-    auto *edition = new QLabel(QStringLiteral("WAFFLEHOUSE-CLIENT — VERSION 2.3 ALPHA"), &splash);
+    auto *edition = new QLabel(QStringLiteral("WAFFLEHOUSE-CLIENT — VERSION %1").arg(appVersionString().toUpper()), &splash);
     QFont editionFont = edition->font();
     editionFont.setBold(true);
     edition->setFont(editionFont);
@@ -347,7 +357,7 @@ int main(int argc, char *argv[])
     if (mode == FrontendMode::Gui) {
         if (!runtime.graphicalSession && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             fprintf(stderr,
-                    "WaffleHouse-Client 2.5.4-r5: GUI mode requested but no X11/Wayland session was detected.\n"
+                    "WaffleHouse-Client 3.1: GUI mode requested but no X11/Wayland session was detected.\n"
                     "Detected: %s\nUse --cli from an interactive terminal.\n",
                     runtime.summary().toUtf8().constData());
             return 2;
@@ -357,7 +367,7 @@ int main(int argc, char *argv[])
 
     if (!runtime.ttyAttached) {
         fprintf(stderr,
-                "WaffleHouse-CLI 2.5.4-r5: CLI mode requires an interactive terminal.\n"
+                "WaffleHouse-CLI 3.1: CLI mode requires an interactive terminal.\n"
                 "Detected: %s\nUse --gui inside a graphical session.\n",
                 runtime.summary().toUtf8().constData());
         return 2;

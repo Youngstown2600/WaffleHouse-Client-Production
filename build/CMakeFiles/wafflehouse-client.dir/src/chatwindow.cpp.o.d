@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/chatwindow.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/chatwindow.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtwidgetsglobal.h \
@@ -355,14 +355,14 @@ CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
- /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
- /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Production/src/ansiterminalwidget.h \
- /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminalwidget.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QColor \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcolor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \

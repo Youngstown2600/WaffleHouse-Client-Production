@@ -62,6 +62,7 @@ private:
     QComboBox *m_profileAccount = nullptr;
     QLabel *m_registration = nullptr;
     QLabel *m_audio = nullptr;
+    QLabel *m_phoneStatus = nullptr;
     QLineEdit *m_destination = nullptr;
     QLineEdit *m_runtimeDialPrefix = nullptr;
     QLineEdit *m_callerId = nullptr;

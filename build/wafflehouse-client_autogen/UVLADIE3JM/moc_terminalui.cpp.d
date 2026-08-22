@@ -1,11 +1,12 @@
-/home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/UVLADIE3JM/moc_terminalui.cpp: /home/gitsc/WaffleHouse-Client-Production/src/terminalui.h \
-  /home/gitsc/WaffleHouse-Client-Production/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/ansiterminal.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/appbranding.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/backend.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/directtransfer.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/filetransfer.h \
-  /home/gitsc/WaffleHouse-Client-Production/src/securechannel.h \
+/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_terminalui.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/terminalui.h \
+  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h \
+  /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

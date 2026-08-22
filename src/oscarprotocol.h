@@ -39,6 +39,11 @@ constexpr quint16 OS_RATE_REPLY = 0x0007;
 constexpr quint16 OS_RATE_ACK = 0x0008;
 constexpr quint16 OS_CLIENT_VERSIONS = 0x0017;
 constexpr quint16 OS_HOST_VERSIONS = 0x0018;
+constexpr quint16 OS_IDLE_NOTIFICATION = 0x0011;
+
+constexpr quint16 LOCATE_SET_INFO = 0x0004;
+constexpr quint16 LOCATE_TLV_UNAVAILABLE_TYPE = 0x0003;
+constexpr quint16 LOCATE_TLV_UNAVAILABLE_DATA = 0x0004;
 
 constexpr quint16 BUCP_LOGIN_REQUEST = 0x0002;
 constexpr quint16 BUCP_LOGIN_RESPONSE = 0x0003;

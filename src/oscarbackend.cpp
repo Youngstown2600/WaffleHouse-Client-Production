@@ -104,6 +104,33 @@ void OscarBackend::removeBuddy(const QString &name)
     enqueue({CommandType::RemoveBuddy, name.trimmed(), {}, {}, false});
 }
 
+void OscarBackend::setAwayMessage(const QString &message)
+{
+    enqueue({CommandType::SetAway, message.trimmed(), {}, {}, false, 0});
+}
+
+void OscarBackend::setAfkMessage(const QString &message)
+{
+    enqueue({CommandType::SetAfk, message.trimmed(), {}, {}, true, 0});
+}
+
+void OscarBackend::setIdleSeconds(quint32 seconds)
+{
+    enqueue({CommandType::SetIdle, {}, {}, {}, false, seconds});
+}
+
+void OscarBackend::setBack()
+{
+    enqueue({CommandType::SetBack, {}, {}, {}, false, 0});
+}
+
+void OscarBackend::requestClientVersion(const QString &target)
+{
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    enqueue({CommandType::SendIm, clean, QStringLiteral("[[WHVER:Q]]"), {}, true, 0});
+}
+
 void OscarBackend::protocolLog(const QString &text)
 {
     emit eventReceived(QStringLiteral("status"), QString(), text);
@@ -385,7 +412,7 @@ FlapConnection &OscarBackend::ensureChatNav()
     return *m_chatNav;
 }
 
-void OscarBackend::doSendIm(const QString &recipient, const QString &message)
+void OscarBackend::doSendIm(const QString &recipient, const QString &message, bool echo)
 {
     if (!m_bos) {
         fail(QStringLiteral("not logged in"));
@@ -404,8 +431,10 @@ void OscarBackend::doSendIm(const QString &recipient, const QString &message)
     body += tlv(ICBM_TLV_IM_DATA, marshalIcbmFragments(message));
     body += tlv(ICBM_TLV_ACK, QByteArray());
     m_bos->sendSnac(FAM_ICBM, ICBM_MSG_TO_HOST, body);
-    emit eventReceived(QStringLiteral("im"), recipient,
-                       QStringLiteral("<%1> %2").arg(m_settings.username, message));
+    if (echo) {
+        emit eventReceived(QStringLiteral("im"), recipient,
+                           QStringLiteral("<%1> %2").arg(m_settings.username, message));
+    }
 }
 
 void OscarBackend::doJoinRoom(const QString &name, bool privateRoom)
@@ -1027,12 +1056,83 @@ void OscarBackend::doRemoveBuddy(const QString &name)
                        QStringLiteral("[buddy] persistently removed %1").arg(cleaned));
 }
 
+void OscarBackend::emitPresence()
+{
+    emit presenceChanged(m_presenceState, m_presenceMessage, m_idleSeconds);
+    QString summary = m_presenceState;
+    if (m_idleSeconds > 0) {
+        summary += QStringLiteral(" + IDLE %1s").arg(m_idleSeconds);
+    }
+    if (!m_presenceMessage.isEmpty()) {
+        summary += QStringLiteral(" — %1").arg(m_presenceMessage);
+    }
+    emit eventReceived(QStringLiteral("status"), QString(),
+                       QStringLiteral("[presence] %1").arg(summary));
+}
+
+void OscarBackend::doSetAway(const QString &message, bool afk)
+{
+    if (!m_bos) fail(QStringLiteral("not logged in"));
+
+    QString clean = message.trimmed();
+    if (clean.isEmpty()) clean = afk ? QStringLiteral("AFK") : QStringLiteral("Away");
+    QString wireText = afk && !clean.startsWith(QStringLiteral("[AFK]"), Qt::CaseInsensitive)
+        ? QStringLiteral("[AFK] %1").arg(clean)
+        : clean;
+    const QString html = QStringLiteral("<HTML><BODY>%1</BODY></HTML>")
+                             .arg(wireText.toHtmlEscaped());
+
+    QByteArray body;
+    body += tlv(LOCATE_TLV_UNAVAILABLE_TYPE,
+                QByteArray("text/x-aolrtf; charset=\"us-ascii\""));
+    body += tlv(LOCATE_TLV_UNAVAILABLE_DATA, html.toLatin1());
+    m_bos->sendSnac(FAM_LOCATE, LOCATE_SET_INFO, body);
+
+    m_presenceState = afk ? QStringLiteral("AFK") : QStringLiteral("AWAY");
+    m_presenceMessage = clean;
+    emitPresence();
+}
+
+void OscarBackend::doSetIdle(quint32 seconds)
+{
+    if (!m_bos) fail(QStringLiteral("not logged in"));
+    QByteArray body;
+    appendU32(body, seconds);
+    m_bos->sendSnac(FAM_OSERVICE, OS_IDLE_NOTIFICATION, body);
+    m_idleSeconds = seconds;
+    emitPresence();
+}
+
+void OscarBackend::doSetBack()
+{
+    if (!m_bos) fail(QStringLiteral("not logged in"));
+
+    // Empty UNAVAILABLE tags clear the classic AIM away message.
+    QByteArray locateBody;
+    locateBody += tlv(LOCATE_TLV_UNAVAILABLE_TYPE, QByteArray());
+    locateBody += tlv(LOCATE_TLV_UNAVAILABLE_DATA, QByteArray());
+    m_bos->sendSnac(FAM_LOCATE, LOCATE_SET_INFO, locateBody);
+
+    QByteArray idleBody;
+    appendU32(idleBody, 0);
+    m_bos->sendSnac(FAM_OSERVICE, OS_IDLE_NOTIFICATION, idleBody);
+
+    m_presenceState = QStringLiteral("ONLINE");
+    m_presenceMessage.clear();
+    m_idleSeconds = 0;
+    emitPresence();
+}
+
 void OscarBackend::processCommand(const Command &command)
 {
     try {
         switch (command.type) {
         case CommandType::SendIm:
-            doSendIm(command.a, command.b);
+            doSendIm(command.a, command.b, !command.flag);
+            if (command.flag) {
+                const QString hint = m_peerClientHints.value(command.a.toCaseFolded());
+                if (!hint.isEmpty()) emit eventReceived(QStringLiteral("version"), command.a, hint);
+            }
             break;
         case CommandType::JoinRoom:
             doJoinRoom(command.a, command.flag);
@@ -1054,6 +1154,18 @@ void OscarBackend::processCommand(const Command &command)
             break;
         case CommandType::RemoveBuddy:
             doRemoveBuddy(command.a);
+            break;
+        case CommandType::SetAway:
+            doSetAway(command.a, false);
+            break;
+        case CommandType::SetAfk:
+            doSetAway(command.a, true);
+            break;
+        case CommandType::SetIdle:
+            doSetIdle(command.number);
+            break;
+        case CommandType::SetBack:
+            doSetBack();
             break;
         }
     } catch (const std::exception &e) {
@@ -1078,6 +1190,26 @@ void OscarBackend::dispatchBos(const Snac &snac)
         const QString message = messageBlob.isEmpty()
                               ? QStringLiteral("<non-text ICBM>")
                               : stripAimHtml(parseIcbmMessage(messageBlob));
+        const QString peerKey = sender.name.toCaseFolded();
+        if (message == QStringLiteral("[[WHVER:Q]]")) {
+            doSendIm(sender.name,
+                     QStringLiteral("[[WHVER:R:%1]]").arg(appVersionString()),
+                     false);
+            return;
+        }
+        if (message.startsWith(QStringLiteral("[[WHVER:R:")) && message.endsWith(QStringLiteral("]]"))) {
+            const QString version = message.mid(10, message.size() - 12).trimmed();
+            const QString reported = version.isEmpty()
+                ? QStringLiteral("WaffleHouse-Client (version unavailable)")
+                : QStringLiteral("WaffleHouse-Client %1").arg(version);
+            m_peerClientHints.insert(peerKey, reported);
+            emit eventReceived(QStringLiteral("version"), sender.name, reported);
+            return;
+        }
+        if (message.startsWith(QStringLiteral("[[CPX3:")) && !m_peerClientHints.contains(peerKey)) {
+            m_peerClientHints.insert(peerKey,
+                QStringLiteral("Legacy CPX3-compatible client detected; exact WaffleHouse-Client version unavailable"));
+        }
         emit eventReceived(QStringLiteral("im"), sender.name,
                            QStringLiteral("<%1> %2").arg(sender.name, message));
         return;
@@ -1252,6 +1384,11 @@ void OscarBackend::run()
             [this](const QString &s) { protocolLog(s); });
         bootstrapService(*m_bos, authResult.second, true);
         loadBuddyList();
+
+        m_presenceState = QStringLiteral("ONLINE");
+        m_presenceMessage.clear();
+        m_idleSeconds = 0;
+        emit presenceChanged(m_presenceState, m_presenceMessage, m_idleSeconds);
 
         emit eventReceived(QStringLiteral("status"), QString(),
                            QStringLiteral("[online] signed on as %1 via %2:%3")

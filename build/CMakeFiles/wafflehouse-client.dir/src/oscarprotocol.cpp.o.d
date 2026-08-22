@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/oscarprotocol.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/oscarprotocol.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/src/oscarprotocol.h \
+ /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \

@@ -8,6 +8,9 @@
 #include "bbsdirectory.h"
 #include "sipbackend.h"
 #include "sipcontroller.h"
+#include "notificationmanager.h"
+#include "filetransport.h"
+#include "useractivity.h"
 #include "trunkmonkey/Profile.h"
 
 #include <QCoreApplication>
@@ -38,6 +41,7 @@ constexpr int PairError = 3;
 constexpr int PairUnread = 4;
 constexpr int PairBorder = 5;
 constexpr int PairSecure = 6;
+constexpr int PairFooter = 7;
 
 QString timestamp()
 {
@@ -122,9 +126,17 @@ bool TerminalUi::start()
 {
     std::setlocale(LC_ALL, "");
     loadOptions();
+    m_lastUserActivityMs = QDateTime::currentMSecsSinceEpoch();
 
     QString secureError;
     m_secureReady = m_secure.initialize(&secureError);
+    if (m_secureReady) {
+        QString roomError;
+        if (!m_secureRooms.initialize(&roomError)) {
+            m_secureReady = false;
+            secureError = roomError;
+        }
+    }
 
     initCurses();
     if (m_options.showSplash) {
@@ -167,7 +179,7 @@ bool TerminalUi::start()
                false);
     } else {
         append(global,
-               QStringLiteral("[error] encrypted DMs unavailable: %1").arg(secureError),
+               QStringLiteral("[error] encrypted communications unavailable: %1").arg(secureError),
                false);
     }
 
@@ -231,6 +243,7 @@ void TerminalUi::applyTheme()
     short unread = COLOR_MAGENTA;
     short border = COLOR_CYAN;
     short secure = COLOR_GREEN;
+    short footer = COLOR_MAGENTA;
     short background = -1;
 
     if (theme == QStringLiteral("phosphor")) {
@@ -468,8 +481,12 @@ void TerminalUi::applyTheme()
     init_pair(PairOnline, online, background);
     init_pair(PairError, COLOR_RED, background);
     init_pair(PairUnread, unread, background);
+    // Footer help uses each theme's own secondary/unread accent so the
+    // shortcut rail is distinct without introducing a hard-coded color.
+    footer = unread;
     init_pair(PairBorder, border, background);
     init_pair(PairSecure, secure, background);
+    init_pair(PairFooter, footer, background);
 }
 
 void TerminalUi::showSplash()
@@ -495,12 +512,12 @@ void TerminalUi::showSplash()
         safeAdd(startY + i, x, line, attr);
     }
     const QString edition = QStringLiteral("WAFFLEHOUSE-CLI — VERSION %1").arg(appVersionString().toUpper());
-    const QString subtitle = QStringLiteral("MULTI-PROTOCOL COMMUNICATIONS TERMINAL");
+    const QString subtitle = QStringLiteral("MODERN MULTI-PROTOCOL COMMUNICATIONS TERMINAL");
     const QString protocols = QStringLiteral("AIM/OSCAR  |  IRC  |  TELNET/BBS  |  SIP/VOIP");
     safeAdd(startY + logoHeight + 1, std::max(0, (COLS - static_cast<int>(edition.size())) / 2), edition, A_BOLD);
     safeAdd(startY + logoHeight + 2, std::max(0, (COLS - static_cast<int>(subtitle.size())) / 2), subtitle, A_BOLD);
     safeAdd(startY + logoHeight + 3, std::max(0, (COLS - static_cast<int>(protocols.size())) / 2), protocols, A_DIM);
-    const QString hint = QStringLiteral("Press any key to continue");
+    const QString hint = QStringLiteral("Press any key to enter the communications hub");
     safeAdd(startY + logoHeight + 5, std::max(0, (COLS - static_cast<int>(hint.size())) / 2), hint, A_DIM);
     refresh();
     wtimeout(stdscr, 75);
@@ -532,8 +549,99 @@ void TerminalUi::tick()
         return;
     }
     handleInput();
+    updateAutoPresence();
     pumpFileTransfers();
     draw();
+}
+
+void TerminalUi::markUserActivity()
+{
+    m_lastUserActivityMs = QDateTime::currentMSecsSinceEpoch();
+    for (ConnectionEntry *entry : m_connections) {
+        if (!entry || entry->autoPresenceState.isEmpty() || !entry->connected || !entry->backend) continue;
+        if (auto *oscar = qobject_cast<OscarBackend *>(entry->backend)) {
+            oscar->setBack();
+            entry->autoPresenceState.clear();
+        }
+    }
+}
+
+void TerminalUi::updateAutoPresence()
+{
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (now < m_nextPresenceCheckMs) return;
+    m_nextPresenceCheckMs = now + 1000;
+    if (!m_options.autoPresenceEnabled || m_lastUserActivityMs <= 0) return;
+
+    const qint64 inactiveSeconds = UserActivity::idleMilliseconds(m_lastUserActivityMs) / 1000;
+    const qint64 idleThreshold = static_cast<qint64>(m_options.autoIdleMinutes) * 60;
+    const qint64 awayThreshold = static_cast<qint64>(m_options.autoAwayMinutes) * 60;
+    for (ConnectionEntry *entry : m_connections) {
+        if (!entry || !entry->connected || !entry->backend
+            || entry->settings.protocol != ConnectionSettings::Protocol::Oscar) continue;
+        auto *oscar = qobject_cast<OscarBackend *>(entry->backend);
+        if (!oscar) continue;
+
+        const bool managed = !entry->autoPresenceState.isEmpty();
+        const bool manuallyChanged = !managed
+            && (entry->presenceState.compare(QStringLiteral("ONLINE"), Qt::CaseInsensitive) != 0
+                || entry->idleSeconds > 0);
+        if (manuallyChanged) continue;
+        if (managed && inactiveSeconds < idleThreshold) {
+            oscar->setBack();
+            entry->autoPresenceState.clear();
+            continue;
+        }
+
+        if (inactiveSeconds >= awayThreshold) {
+            if (entry->autoPresenceState != QStringLiteral("AWAY")) {
+                oscar->setAwayMessage(QStringLiteral("Auto-away — inactive for %1 minutes")
+                                          .arg(m_options.autoAwayMinutes));
+                oscar->setIdleSeconds(static_cast<quint32>(std::min<qint64>(inactiveSeconds, 0xffffffffLL)));
+                entry->autoPresenceState = QStringLiteral("AWAY");
+            }
+        } else if (inactiveSeconds >= idleThreshold) {
+            if (entry->autoPresenceState.isEmpty()) {
+                oscar->setIdleSeconds(static_cast<quint32>(std::min<qint64>(inactiveSeconds, 0xffffffffLL)));
+                entry->autoPresenceState = QStringLiteral("IDLE");
+            }
+        }
+    }
+}
+
+void TerminalUi::requestClientVersion(ConnectionEntry *entry, QString target)
+{
+    if (!entry || !entry->connected || !entry->backend) {
+        status(QStringLiteral("Select and connect an AIM/OSCAR or IRC connection first."));
+        return;
+    }
+    target = target.trimmed();
+    if (target.isEmpty()) target = activeImTarget(entry);
+    if (target.isEmpty()) {
+        status(QStringLiteral("Usage: /version USER (or run /version from a PM buffer)."));
+        return;
+    }
+    const QString key = entry->id + QChar(0x1f) + target.toCaseFolded();
+    m_pendingVersionQueries.insert(key);
+    const auto protocol = entry->settings.protocol;
+    QTimer::singleShot(3500, this, [this, key, target, protocol] {
+        if (!m_pendingVersionQueries.remove(key)) return;
+        status(protocol == ConnectionSettings::Protocol::Oscar
+            ? QStringLiteral("[version] %1: no 3.1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(target)
+            : QStringLiteral("[version] %1: no CTCP VERSION reply received").arg(target));
+    });
+    if (auto *irc = qobject_cast<IrcBackend *>(entry->backend)) {
+        irc->requestClientVersion(target);
+        status(QStringLiteral("Version query sent to %1 via IRC CTCP.").arg(target));
+        return;
+    }
+    if (auto *oscar = qobject_cast<OscarBackend *>(entry->backend)) {
+        oscar->requestClientVersion(target);
+        status(QStringLiteral("WaffleHouse version query sent to %1 via AIM.").arg(target));
+        return;
+    }
+    m_pendingVersionQueries.remove(key);
+    status(QStringLiteral("/version is available for AIM/OSCAR and IRC peers."));
 }
 
 void TerminalUi::safeAdd(int y, int x, const QString &text, int attr, int maxWidth)
@@ -803,6 +911,7 @@ void TerminalUi::closeActiveBuffer()
     }
 
     if (buffer->kind == QStringLiteral("chat")) {
+        m_secureRooms.closeRoom(buffer->connectionId, buffer->target);
         // Mark this room/channel as explicitly closed *before* asking the
         // backend to leave it. IRC emits PART/member-list events during the
         // leave sequence; without this guard those events can recreate the
@@ -925,32 +1034,45 @@ void TerminalUi::drawHeader(int width)
     Buffer *buffer = activeBuffer();
     ConnectionEntry *entry = buffer ? connectionById(buffer->connectionId) : nullptr;
 
-    QString left = QStringLiteral(" WaffleHouse-CLI ");
-    if (entry) {
-        left += QStringLiteral("| %1 ").arg(connectionLabel(entry));
-    }
+    QString context;
+    if (entry) context += QStringLiteral("  •  %1").arg(connectionLabel(entry));
     if (buffer) {
-        left += QStringLiteral("| [%1:%2] ").arg(buffer->number).arg(buffer->name);
+        context += QStringLiteral("  •  %1:%2").arg(buffer->number).arg(buffer->name);
+        if (buffer->kind == QStringLiteral("chat")
+            && m_secureRooms.hasRoom(buffer->connectionId, buffer->target)) {
+            context += QStringLiteral("  •  🔒 ROOM %1")
+                .arg(m_secureRooms.keyId(buffer->connectionId, buffer->target).left(8));
+        }
     }
 
-    safeAdd(0, 0, left.left(width).leftJustified(width),
-            A_REVERSE | (has_colors() ? COLOR_PAIR(PairHeader) : 0), width);
+    const QString label = QStringLiteral("╭─ WAFFLEHOUSE-CLI %1%2 ").arg(appVersionString().toUpper(), context);
+    QString line = label;
+    const int fill = std::max(0, width - static_cast<int>(line.size()) - 1);
+    line += QString(fill, QChar(0x2500)); // ─
+    if (line.size() < width) line += QChar(0x256e); // ╮
+    safeAdd(0, 0, line.left(width), A_BOLD | (has_colors() ? COLOR_PAIR(PairHeader) : 0), width);
 }
 
 void TerminalUi::drawConnectionsBar(int row, int width)
 {
-    QString line = QStringLiteral(" Connections: ");
+    QString line = QStringLiteral("│ ");
     int active = 0;
     for (int i = 0; i < m_connections.size(); ++i) {
         ConnectionEntry *entry = m_connections.at(i);
         if (!entry || (!entry->connected && !entry->connecting)) continue;
         ++active;
         const bool selected = entry->id == m_selectedConnectionId;
-        const QString token = QStringLiteral("%1:%2").arg(i + 1).arg(connectionLabel(entry));
-        line += selected ? QStringLiteral("[%1] ").arg(token) : QStringLiteral(" %1  ").arg(token);
+        const QString stateGlyph = entry->connecting ? QStringLiteral("◌") : QStringLiteral("●");
+        const QString token = QStringLiteral("%1 %2:%3")
+                                  .arg(stateGlyph)
+                                  .arg(i + 1)
+                                  .arg(connectionLabel(entry));
+        line += selected ? QStringLiteral("[%1]  ").arg(token) : QStringLiteral("%1  ").arg(token);
     }
     if (!active) line += QStringLiteral("none active — /connect PROTOCOL:name or /telnet host:port");
-    safeAdd(row, 0, line.left(width).leftJustified(width), A_DIM, width);
+    if (line.size() < width) line = line.leftJustified(width - 1);
+    if (line.size() < width) line += QChar(0x2502); // │
+    safeAdd(row, 0, line.left(width), A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width);
 }
 
 void TerminalUi::drawBuddyPane(ConnectionEntry *entry,
@@ -962,7 +1084,7 @@ void TerminalUi::drawBuddyPane(ConnectionEntry *entry,
 
     if (entry->settings.protocol == ConnectionSettings::Protocol::Sip) {
         for (int row = top; row <= bottom; ++row) {
-            safeAdd(row, startX, QStringLiteral("|"),
+            safeAdd(row, startX, QStringLiteral("│"),
                     A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
         }
 
@@ -978,10 +1100,10 @@ void TerminalUi::drawBuddyPane(ConnectionEntry *entry,
         }
 
         const QString title = QStringLiteral(" CALLS (%1) ").arg(accountCalls.size());
-        safeAdd(top, startX, QStringLiteral("+"),
+        safeAdd(top, startX, QStringLiteral("╭"),
                 A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
         safeAdd(top, startX + 1,
-                title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QLatin1Char('-')),
+                title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QChar(0x2500)),
                 A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width - 1);
 
         int row = top + 1;
@@ -1009,13 +1131,13 @@ void TerminalUi::drawBuddyPane(ConnectionEntry *entry,
     }
 
     for (int row = top; row <= bottom; ++row) {
-        safeAdd(row, startX, QStringLiteral("|"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+        safeAdd(row, startX, QStringLiteral("│"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     }
 
     const QString title = QStringLiteral(" BUDDIES (%1) ").arg(entry->buddies.size());
-    safeAdd(top, startX, QStringLiteral("+"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+    safeAdd(top, startX, QStringLiteral("╭"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     safeAdd(top, startX + 1,
-            title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QLatin1Char('-')),
+            title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QChar(0x2500)),
             A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width - 1);
 
     QStringList buddies = entry->buddies.values();
@@ -1036,7 +1158,7 @@ void TerminalUi::drawBuddyPane(ConnectionEntry *entry,
             break;
         }
         const bool online = isOnlineBuddy(entry->onlineBuddies, buddy);
-        const QString marker = online ? QStringLiteral("[+] ") : QStringLiteral("[-] ");
+        const QString marker = online ? QStringLiteral("● ") : QStringLiteral("○ ");
         const int attr = online
             ? (A_BOLD | (has_colors() ? COLOR_PAIR(PairOnline) : 0))
             : A_DIM;
@@ -1059,13 +1181,13 @@ void TerminalUi::drawMemberPane(Buffer *buffer,
     }
 
     for (int row = top; row <= bottom; ++row) {
-        safeAdd(row, startX, QStringLiteral("|"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+        safeAdd(row, startX, QStringLiteral("│"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     }
 
     const QString title = QStringLiteral(" MEMBERS (%1) ").arg(buffer->members.size());
-    safeAdd(top, startX, QStringLiteral("+"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+    safeAdd(top, startX, QStringLiteral("╭"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     safeAdd(top, startX + 1,
-            title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QLatin1Char('-')),
+            title + QString(std::max(0, width - static_cast<int>(title.size()) - 1), QChar(0x2500)),
             A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width - 1);
 
     QStringList members = buffer->members.values();
@@ -1104,7 +1226,7 @@ void TerminalUi::drawScrollBar(int top, int bottom, int x,
     }
 
     for (int row = top; row <= bottom; ++row) {
-        safeAdd(row, x, QStringLiteral(":"), A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+        safeAdd(row, x, QStringLiteral("│"), A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     }
 
     const int thumbHeight = std::max(1,
@@ -1116,7 +1238,7 @@ void TerminalUi::drawScrollBar(int top, int bottom, int x,
         0, maxPos);
 
     for (int i = 0; i < thumbHeight && top + thumbPos + i <= bottom; ++i) {
-        safeAdd(top + thumbPos + i, x, QStringLiteral("#"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
+        safeAdd(top + thumbPos + i, x, QStringLiteral("█"), A_BOLD | (has_colors() ? COLOR_PAIR(PairBorder) : 0), 1);
     }
 }
 
@@ -1226,9 +1348,12 @@ void TerminalUi::drawShortcutHint(int row, int width)
     move(row, 0);
     clrtoeol();
 
+    // Keep the proven keyboard cheat-sheet text intact while presenting it as
+    // the muted command rail in the 3.0 terminal shell.
     const QString hint = QStringLiteral(
         " Tab completes /commands | Ctrl-N/P buffers | Alt-1..9/F1..F9 jump | PgUp/PgDn scroll | ");
-    safeAdd(row, 0, hint.left(width), A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width);
+    safeAdd(row, 0, hint.left(width).leftJustified(width),
+            A_DIM | (has_colors() ? COLOR_PAIR(PairFooter) : 0), width);
 }
 
 void TerminalUi::drawStatusBar(int row, int width)
@@ -1239,8 +1364,7 @@ void TerminalUi::drawStatusBar(int row, int width)
     Buffer *buffer = activeBuffer();
     // The active screen is authoritative for the status bar. Do not fall back
     // to the merely selected account: doing so produced a redundant unnumbered
-    // [AIM:name] field next to the numbered [screen:buffer] field and could
-    // make the global Status screen look like it belonged to an offline account.
+    // connection field and could make Status look like it belonged elsewhere.
     ConnectionEntry *entry = buffer ? connectionById(buffer->connectionId) : nullptr;
 
     const QString clock = QDateTime::currentDateTime().toString(QStringLiteral("HH:mm"));
@@ -1258,7 +1382,17 @@ void TerminalUi::drawStatusBar(int row, int width)
         } else if (entry->connecting) {
             stateText = QStringLiteral("CONNECTING");
         } else if (entry->connected) {
-            stateText = QStringLiteral("ONLINE");
+            if (entry->settings.protocol == ConnectionSettings::Protocol::Oscar) {
+                stateText = entry->presenceState.isEmpty() ? QStringLiteral("ONLINE") : entry->presenceState;
+                if (entry->idleSeconds > 0) {
+                    const quint32 minutes = entry->idleSeconds / 60;
+                    stateText += minutes > 0
+                        ? QStringLiteral(" · IDLE %1m").arg(minutes)
+                        : QStringLiteral(" · IDLE %1s").arg(entry->idleSeconds);
+                }
+            } else {
+                stateText = QStringLiteral("ONLINE");
+            }
         } else {
             stateText = QStringLiteral("OFFLINE");
         }
@@ -1266,21 +1400,16 @@ void TerminalUi::drawStatusBar(int row, int width)
 
     int unread = 0;
     for (Buffer *candidate : m_buffers) {
-        if (candidate) {
-            unread += candidate->unread;
-        }
+        if (candidate) unread += candidate->unread;
     }
 
     QString text = QStringLiteral(" [%1] [%2] [%3]")
                        .arg(clock)
                        .arg(bufferText)
                        .arg(stateText);
-    if (unread > 0) {
-        text += QStringLiteral(" [unread:%1]").arg(unread);
-    }
+    text.prepend(QStringLiteral(" ◉"));
+    if (unread > 0) text += QStringLiteral(" [unread:%1]").arg(unread);
 
-    // Irssi-style persistent status line: fill the full terminal width so the
-    // current context remains visually anchored directly above the input row.
     safeAdd(row, 0, text.left(width).leftJustified(width),
             A_REVERSE | A_BOLD | (has_colors() ? COLOR_PAIR(PairHeader) : 0), width);
 }
@@ -1290,17 +1419,17 @@ void TerminalUi::drawInputLine(int row, int width)
     Buffer *buffer = activeBuffer();
     QString promptText;
     if (buffer && buffer->kind == QStringLiteral("terminal")) {
-        promptText = QStringLiteral("[BBS raw · Ctrl-N/P leaves]> ");
+        promptText = QStringLiteral("[BBS raw · Ctrl-N/P leaves] ❯ ");
     } else if (!buffer || buffer->kind == QStringLiteral("global")
         || buffer->kind == QStringLiteral("connection")) {
-        promptText = QStringLiteral("> ");
+        promptText = QStringLiteral("❯ ");
     } else {
-        promptText = QStringLiteral("[%1]> ").arg(buffer->name);
+        promptText = QStringLiteral("[%1] ❯ ").arg(buffer->name);
     }
 
     move(row, 0);
     clrtoeol();
-    safeAdd(row, 0, promptText, A_BOLD, width);
+    safeAdd(row, 0, promptText, A_BOLD | (has_colors() ? COLOR_PAIR(PairHeader) : 0), width);
 
     const int promptWidth = promptText.size();
     const int available = std::max(1, width - promptWidth - 1);
@@ -1318,27 +1447,31 @@ void TerminalUi::drawInputLine(int row, int width)
 
 void TerminalUi::draw()
 {
-    if (!m_cursesActive || m_quitting) {
-        return;
-    }
+    if (!m_cursesActive || m_quitting) return;
 
     erase();
     const int height = LINES;
     const int width = COLS;
 
     if (height < 8 || width < 42) {
-        safeAdd(0, 0, QStringLiteral("WaffleHouse-CLI: terminal too small"), A_BOLD, width);
+        safeAdd(0, 0, QStringLiteral("WaffleHouse-CLI %1: terminal too small").arg(appVersionString()), A_BOLD, width);
         safeAdd(1, 0,
-                QStringLiteral("Current size %1x%2; need at least 42x8.")
-                    .arg(width).arg(height),
+                QStringLiteral("Current size %1x%2; need at least 42x8.").arg(width).arg(height),
                 0, width);
         refresh();
         return;
     }
 
+    // The 3.0 shell deliberately keeps the bottom-three-row contract from the
+    // proven 2.5.4-r6 TUI so keyboard hints, status, and input never move.
     drawHeader(width);
     drawConnectionsBar(1, width);
-    drawBufferPane(activeBuffer(), 2, height - 4, width);
+    // Keep the navigation cheat-sheet outside the main screen chrome.  The
+    // separator is the visual bottom edge of the conversation/dashboard area;
+    // shortcut help sits beneath it as a theme-aware footer.
+    drawBufferPane(activeBuffer(), 2, height - 5, width);
+    safeAdd(height - 4, 0, QString(width, QChar(0x2500)),
+            A_DIM | (has_colors() ? COLOR_PAIR(PairBorder) : 0), width);
     drawShortcutHint(height - 3, width);
     drawStatusBar(height - 2, width);
     drawInputLine(height - 1, width);
@@ -1353,6 +1486,7 @@ void TerminalUi::handleInput()
         if (result == ERR) {
             break;
         }
+        markUserActivity();
         if (result == KEY_CODE_YES) {
             handleSpecialKey(static_cast<int>(value));
         } else {
@@ -1587,12 +1721,17 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/joinprivate"), QStringLiteral("/members"),
         QStringLiteral("/msg"), QStringLiteral("/names"),
         QStringLiteral("/nick"), QStringLiteral("/options"),
+        QStringLiteral("/notifications"), QStringLiteral("/notify"),
+        QStringLiteral("/sound"), QStringLiteral("/soundtest"),
         QStringLiteral("/theme"), QStringLiteral("/themes"),
         QStringLiteral("/passwd"), QStringLiteral("/part"),
         QStringLiteral("/query"), QStringLiteral("/quit"),
         QStringLiteral("/raw"), QStringLiteral("/telnet"), QStringLiteral("/bbsimport"),
         QStringLiteral("/removebuddy"), QStringLiteral("/rooms"),
         QStringLiteral("/say"), QStringLiteral("/secure"),
+        QStringLiteral("/away"), QStringLiteral("/afk"), QStringLiteral("/back"),
+        QStringLiteral("/idle"), QStringLiteral("/status"), QStringLiteral("/autopresence"),
+        QStringLiteral("/version"),
         QStringLiteral("/secureoff"), QStringLiteral("/securestatus"),
         QStringLiteral("/phone"), QStringLiteral("/phoneprofile"),
         QStringLiteral("/phoneconfig"), QStringLiteral("/phonestart"),
@@ -1766,7 +1905,20 @@ void TerminalUi::submitInput()
     if (buffer->kind == QStringLiteral("im")) {
         sendPrivateText(entry, buffer->target, line, buffer);
     } else if (buffer->kind == QStringLiteral("chat")) {
-        entry->backend->sendRoomMessage(buffer->target, line);
+        if (m_secureRooms.hasRoom(entry->id, buffer->target)) {
+            QString error;
+            const QString frame = m_secureRooms.encrypt(entry->id, buffer->target, line, &error);
+            if (frame.isEmpty()) {
+                append(buffer, QStringLiteral("[error] [secure-room] %1").arg(error), false);
+            } else if (entry->settings.protocol == ConnectionSettings::Protocol::Irc
+                       && frame.toUtf8().size() > 400) {
+                append(buffer, QStringLiteral("[error] [secure-room] encrypted IRC room message is too long; split it into shorter messages"), false);
+            } else {
+                entry->backend->sendRoomMessage(buffer->target, frame);
+            }
+        } else {
+            entry->backend->sendRoomMessage(buffer->target, line);
+        }
     } else {
         entry->backend->sendTerminalInput(line.toUtf8() + QByteArray("\r"));
     }
@@ -1852,6 +2004,16 @@ void TerminalUi::attachBackend(ConnectionEntry *entry, ChatBackend *backend)
                     onBackendError(current, context, message);
                 }
             });
+    if (auto *oscar = qobject_cast<OscarBackend *>(backend)) {
+        connect(oscar, &OscarBackend::presenceChanged, this,
+                [this, entryId, backend](const QString &state, const QString &message, quint32 idleSeconds) {
+                    if (ConnectionEntry *current = connectionById(entryId); current && current->backend == backend) {
+                        current->presenceState = state;
+                        current->presenceMessage = message;
+                        current->idleSeconds = idleSeconds;
+                    }
+                });
+    }
 }
 
 TerminalUi::ConnectionEntry *TerminalUi::addConnectionEntry(
@@ -2453,6 +2615,12 @@ void TerminalUi::loadOptions()
     m_options.showSecureFingerprints = settings.value(QStringLiteral("showSecureFingerprints"), true).toBool();
     settings.endGroup();
 
+    settings.beginGroup(QStringLiteral("presence"));
+    m_options.autoPresenceEnabled = settings.value(QStringLiteral("autoEnabled"), true).toBool();
+    m_options.autoIdleMinutes = std::clamp(settings.value(QStringLiteral("idleMinutes"), 5).toInt(), 1, 1440);
+    m_options.autoAwayMinutes = std::clamp(settings.value(QStringLiteral("awayMinutes"), 15).toInt(), m_options.autoIdleMinutes + 1, 2880);
+    settings.endGroup();
+
     static const QSet<QString> validThemes = {
         QStringLiteral("system"), QStringLiteral("classic"), QStringLiteral("phosphor"),
         QStringLiteral("amber"), QStringLiteral("ice"), QStringLiteral("hacker"),
@@ -2487,6 +2655,12 @@ void TerminalUi::saveOptions() const
     settings.setValue(QStringLiteral("encryptedDmEnabled"), m_options.encryptedDmEnabled);
     settings.setValue(QStringLiteral("autoReplySecure"), m_options.autoReplySecure);
     settings.setValue(QStringLiteral("showSecureFingerprints"), m_options.showSecureFingerprints);
+    settings.endGroup();
+
+    settings.beginGroup(QStringLiteral("presence"));
+    settings.setValue(QStringLiteral("autoEnabled"), m_options.autoPresenceEnabled);
+    settings.setValue(QStringLiteral("idleMinutes"), m_options.autoIdleMinutes);
+    settings.setValue(QStringLiteral("awayMinutes"), m_options.autoAwayMinutes);
     settings.endGroup();
     settings.sync();
 }
@@ -2543,7 +2717,7 @@ void TerminalUi::showOptions()
             {QStringLiteral("Show timestamps"), &pending.showTimestamps},
             {QStringLiteral("Show scrollbars"), &pending.showScrollbars},
             {QStringLiteral("Show buddy/member side panes"), &pending.showSidePanes},
-            {QStringLiteral("Enable encrypted DMs"), &pending.encryptedDmEnabled},
+            {QStringLiteral("Enable encrypted communications (DMs + rooms)"), &pending.encryptedDmEnabled},
             {QStringLiteral("Auto-reply to secure handshakes"), &pending.autoReplySecure},
             {QStringLiteral("Show secure fingerprint notices"), &pending.showSecureFingerprints},
         };
@@ -2717,7 +2891,7 @@ bool TerminalUi::secureTarget(ConnectionEntry *entry, QString target, bool switc
         return false;
     }
     if (!m_options.encryptedDmEnabled || !m_secureReady) {
-        status(QStringLiteral("Encrypted DMs are disabled or unavailable. Use /options."));
+        status(QStringLiteral("Encrypted communications are disabled or unavailable. Use /options."));
         return false;
     }
     if (target.trimmed().isEmpty()) {
@@ -2742,15 +2916,190 @@ bool TerminalUi::secureTarget(ConnectionEntry *entry, QString target, bool switc
     return true;
 }
 
+bool TerminalUi::startSecureRoom(ConnectionEntry *entry, Buffer *buffer)
+{
+    if (!entry || !buffer || buffer->kind != QStringLiteral("chat")
+        || buffer->connectionId != entry->id || !entry->connected || !entry->backend) {
+        status(QStringLiteral("Run /secure from an active AIM/IRC room or channel buffer."));
+        return false;
+    }
+    if (entry->settings.protocol != ConnectionSettings::Protocol::Oscar
+        && entry->settings.protocol != ConnectionSettings::Protocol::Irc) {
+        status(QStringLiteral("Secure rooms are available only for AIM/OSCAR and IRC."));
+        return false;
+    }
+    if (!m_options.encryptedDmEnabled || !m_secureReady) {
+        status(QStringLiteral("Secure communications are disabled or unavailable. Use /options."));
+        return false;
+    }
+
+    QString error;
+    if (!m_secureRooms.createOrRotate(entry->id, buffer->target, &error)) {
+        append(buffer, QStringLiteral("[error] [secure-room] %1").arg(error), false);
+        return false;
+    }
+    append(buffer,
+           QStringLiteral("[secure-room] New shared key %1 created. Public room traffic will carry ciphertext; the key is sent only through encrypted CPX PM sessions.")
+               .arg(m_secureRooms.keyId(entry->id, buffer->target)),
+           false);
+    distributeSecureRoomKeyToMembers(entry, buffer);
+    return true;
+}
+
+void TerminalUi::showSecureRoomStatus(ConnectionEntry *entry, Buffer *buffer)
+{
+    if (!entry || !buffer || buffer->kind != QStringLiteral("chat")) {
+        status(QStringLiteral("Run /securestatus from a room/channel buffer."));
+        return;
+    }
+    const bool active = m_secureRooms.hasRoom(entry->id, buffer->target);
+    if (!active) {
+        append(buffer, QStringLiteral("[secure-room] no shared room key is active; use /secure"), false);
+        return;
+    }
+    append(buffer,
+           QStringLiteral("[secure-room] active | key=%1 | role=%2 | members=%3")
+               .arg(m_secureRooms.keyId(entry->id, buffer->target),
+                    m_secureRooms.locallyOwned(entry->id, buffer->target)
+                        ? QStringLiteral("owner/distributor") : QStringLiteral("participant"))
+               .arg(buffer->members.size()),
+           false);
+    append(buffer,
+           QStringLiteral("[secure-room] XChaCha20-Poly1305 room messages; key delivery uses CPX encrypted PMs. Plaintext received while active is marked [plaintext]."),
+           false);
+}
+
+void TerminalUi::closeSecureRoom(ConnectionEntry *entry, Buffer *buffer)
+{
+    if (!entry || !buffer || buffer->kind != QStringLiteral("chat")) {
+        status(QStringLiteral("Run /secureoff from a room/channel buffer."));
+        return;
+    }
+    m_secureRooms.closeRoom(entry->id, buffer->target);
+    append(buffer, QStringLiteral("[secure-room] closed locally; outgoing room messages are plaintext again"), false);
+}
+
+void TerminalUi::distributeSecureRoomKey(ConnectionEntry *entry,
+                                         Buffer *buffer,
+                                         const QString &peer)
+{
+    if (!entry || !entry->backend || !buffer || peer.trimmed().isEmpty()) return;
+    const QString cleanPeer = peer.trimmed();
+    const QString own = entry->identity.isEmpty() ? entry->settings.username : entry->identity;
+    if (!own.isEmpty() && cleanPeer.compare(own, Qt::CaseInsensitive) == 0) return;
+
+    const QString pendingKey = entry->id + QChar(0x1f) + cleanPeer.toCaseFolded();
+    if (!m_secure.hasSession(entry->id, cleanPeer)) {
+        m_pendingSecureRoomKeys[pendingKey].insert(buffer->target);
+        append(buffer,
+               QStringLiteral("[secure-room] %1 not included yet: establish /secure %1 in a PM first; the room key will be sent automatically afterward.")
+                   .arg(cleanPeer),
+               false);
+        return;
+    }
+
+    const QStringList caps = m_secure.peerCapabilities(entry->id, cleanPeer);
+    if (!m_secure.peerSupports(entry->id, cleanPeer, QStringLiteral("secure-room-v1"))) {
+        if (caps.isEmpty()) {
+            m_pendingSecureRoomKeys[pendingKey].insert(buffer->target);
+            append(buffer, QStringLiteral("[secure-room] waiting for %1 secure-room capability advertisement").arg(cleanPeer), false);
+        } else {
+            m_pendingSecureRoomKeys[pendingKey].remove(buffer->target);
+            append(buffer, QStringLiteral("[secure-room] %1 does not advertise secure-room-v1; not included").arg(cleanPeer), false);
+        }
+        return;
+    }
+
+    QString error;
+    const QString offer = m_secureRooms.keyOffer(entry->id, buffer->target, &error);
+    const QString encrypted = offer.isEmpty() ? QString() : m_secure.encrypt(entry->id, cleanPeer, offer, &error);
+    if (encrypted.isEmpty()) {
+        append(buffer, QStringLiteral("[error] [secure-room] key delivery to %1 failed: %2").arg(cleanPeer, error), false);
+        return;
+    }
+
+    m_outgoingSecureFrames.insert(entry->id + QChar(0x1f)
+        + cleanPeer.toCaseFolded() + QChar(0x1f) + encrypted);
+    entry->backend->sendPrivateMessage(cleanPeer, encrypted);
+    m_pendingSecureRoomKeys[pendingKey].remove(buffer->target);
+    if (m_pendingSecureRoomKeys[pendingKey].isEmpty()) m_pendingSecureRoomKeys.remove(pendingKey);
+    append(buffer,
+           QStringLiteral("[secure-room] key %1 sent privately to %2 over CPX encryption")
+               .arg(m_secureRooms.keyId(entry->id, buffer->target), cleanPeer),
+           false);
+}
+
+void TerminalUi::distributeSecureRoomKeyToMembers(ConnectionEntry *entry, Buffer *buffer)
+{
+    if (!entry || !buffer) return;
+    QStringList members = buffer->members.values();
+    members.sort(Qt::CaseInsensitive);
+    int peers = 0;
+    for (const QString &member : members) {
+        const QString own = entry->identity.isEmpty() ? entry->settings.username : entry->identity;
+        if (!own.isEmpty() && member.compare(own, Qt::CaseInsensitive) == 0) continue;
+        ++peers;
+        distributeSecureRoomKey(entry, buffer, member);
+    }
+    if (peers == 0) append(buffer, QStringLiteral("[secure-room] no other members are known yet"), false);
+}
+
+void TerminalUi::flushPendingSecureRoomKeys(ConnectionEntry *entry, const QString &peer)
+{
+    if (!entry || peer.trimmed().isEmpty()) return;
+    const QString key = entry->id + QChar(0x1f) + peer.trimmed().toCaseFolded();
+    const QSet<QString> rooms = m_pendingSecureRoomKeys.value(key);
+    for (const QString &room : rooms) {
+        Buffer *buffer = findBuffer(bufferKey(QStringLiteral("chat"), entry->id, room));
+        if (buffer && m_secureRooms.hasRoom(entry->id, room)) {
+            distributeSecureRoomKey(entry, buffer, peer);
+        }
+    }
+}
+
+bool TerminalUi::handleSecureRoomKeyOffer(ConnectionEntry *entry,
+                                          const QString &peer,
+                                          const QString &plaintext)
+{
+    if (!entry || !SecureRoomManager::looksLikeKeyOffer(plaintext)) return false;
+    QString room, id, error;
+    if (!m_secureRooms.installKeyOffer(entry->id, plaintext, &room, &id, &error)) {
+        status(QStringLiteral("[error] [secure-room] key offer from %1 rejected: %2").arg(peer, error));
+        return true;
+    }
+    Buffer *buffer = ensureBuffer(QStringLiteral("chat"), entry->id, room, room, false);
+    append(buffer,
+           QStringLiteral("[secure-room] installed shared room key %1 received privately from %2; room ciphertext can now be decrypted")
+               .arg(id, peer),
+           activeBuffer() != buffer);
+    return true;
+}
+
 bool TerminalUi::sendSecureControlPayload(ConnectionEntry *entry,
                                                const QString &target,
                                                const QString &plaintext,
                                                Buffer *buffer)
 {
-    if (!entry || !entry->backend || !entry->connected || !m_secureReady
-        || !m_secure.hasSession(entry->id, target)) {
-        return false;
+    if (!entry || !entry->backend || !entry->connected) return false;
+
+    const QString transferId = WaffleFileTransport::transferId(plaintext);
+    const bool secureTransfer = transferId.isEmpty()
+        ? true : m_fileTransferSecure.value(transferId, true);
+
+    if (!secureTransfer) {
+        const QString frame = WaffleFileTransport::wrapUnsecured(plaintext);
+        if (entry->settings.protocol == ConnectionSettings::Protocol::Irc
+            && frame.toUtf8().size() > 400) {
+            append(buffer, QStringLiteral("[file] unsecured IRC transfer frame is too large; transfer stopped."), false);
+            return false;
+        }
+        m_outgoingUnsecuredFileFrames.insert(entry->id + QChar(0x1f) + target.toCaseFolded()
+                                             + QChar(0x1f) + frame);
+        entry->backend->sendPrivateMessage(target, frame);
+        return true;
     }
+
+    if (!m_secureReady || !m_secure.hasSession(entry->id, target)) return false;
     QString error;
     const QString frame = m_secure.encrypt(entry->id, target, plaintext, &error);
     if (frame.isEmpty()) {
@@ -2791,11 +3140,15 @@ void TerminalUi::appendTransferProgress(Buffer *buffer,
 bool TerminalUi::handleFileTransferPayload(ConnectionEntry *entry,
                                            const QString &target,
                                            const QString &plaintext,
-                                           Buffer *buffer)
+                                           Buffer *buffer,
+                                           bool secureTransport)
 {
     if (!CpxFileTransferManager::looksLikeMessage(plaintext)) return false;
     const auto event = m_fileTransfers.processIncoming(target, plaintext);
-    if (!event.id.isEmpty()) m_fileTransferProfiles.insert(event.id, entry->id);
+    if (!event.id.isEmpty()) {
+        m_fileTransferProfiles.insert(event.id, entry->id);
+        m_fileTransferSecure.insert(event.id, secureTransport);
+    }
     if (!event.replyPayload.isEmpty()) {
         sendSecureControlPayload(entry, target, event.replyPayload, buffer);
     }
@@ -2804,22 +3157,26 @@ bool TerminalUi::handleFileTransferPayload(ConnectionEntry *entry,
     switch (event.kind) {
     case Kind::OfferReceived:
         append(buffer,
-               QStringLiteral("[file] OFFER from %1: %2 (%3 bytes) [%4]")
-                   .arg(target, event.fileName).arg(event.total).arg(event.id), false);
+               QStringLiteral("[file] %1 OFFER from %2: %3 (%4 bytes) [%5]")
+                   .arg(secureTransport ? QStringLiteral("SECURE") : QStringLiteral("UNSECURED"),
+                        target, event.fileName).arg(event.total).arg(event.id), false);
         append(buffer,
                QStringLiteral("[file] Accept with /accept %1 [PATH] or decline with /decline %1 [reason].")
                    .arg(event.id), false);
         break;
     case Kind::Accepted:
-        if (event.direct) {
+        if (event.direct && m_fileTransferSecure.value(event.id, true)) {
             append(buffer,
                    QStringLiteral("[file] %1 accepted %2; establishing encrypted direct transport [%3]")
                        .arg(target, event.fileName, event.id), false);
             startDirectOutgoing(event, entry, buffer);
         } else {
             append(buffer,
-                   QStringLiteral("[file] %1 accepted %2; secure relay starting at byte %3 [%4]")
-                       .arg(target, event.fileName).arg(event.transferred).arg(event.id), false);
+                   QStringLiteral("[file] %1 accepted %2; %3 starting at byte %4 [%5]")
+                       .arg(target, event.fileName,
+                            m_fileTransferSecure.value(event.id, true) ? QStringLiteral("secure relay")
+                                                                       : QStringLiteral("UNSECURED relay"))
+                       .arg(event.transferred).arg(event.id), false);
         }
         break;
     case Kind::Fallback:
@@ -2880,7 +3237,8 @@ bool TerminalUi::resumeIncomingFileTransfer(const QString &transferId,
         append(buffer, QStringLiteral("[file] transfer %1 is not resumable").arg(transferId), false);
         return false;
     }
-    if (!m_secure.hasSession(entry->id, info.target)) {
+    const bool secureTransfer = m_fileTransferSecure.value(transferId, true);
+    if (secureTransfer && !m_secure.hasSession(entry->id, info.target)) {
         append(buffer, QStringLiteral("[file] re-establish the secure session before resuming %1").arg(transferId), false);
         return false;
     }
@@ -2889,7 +3247,8 @@ bool TerminalUi::resumeIncomingFileTransfer(const QString &transferId,
     QString error;
     QString payload;
     bool directReady = false;
-    if (m_secure.peerSupports(entry->id, info.target, QStringLiteral("file-direct-v1"))
+    if (secureTransfer
+        && m_secure.peerSupports(entry->id, info.target, QStringLiteral("file-direct-v1"))
         && m_secure.peerSupports(entry->id, info.target, QStringLiteral("file-ack"))) {
         QString keyError;
         const QByteArray transferKey = m_secure.fileTransferKey(entry->id, info.target, transferId, &keyError);
@@ -2929,7 +3288,8 @@ bool TerminalUi::resumeIncomingFileTransfer(const QString &transferId,
            QStringLiteral("[file] resuming %1 at byte %2 [%3] %4")
                .arg(resumed.fileName).arg(resumed.transferred).arg(transferId)
                .arg(directReady ? QStringLiteral("[direct encrypted transport]")
-                                : QStringLiteral("[secure relay]")), false);
+                                : (secureTransfer ? QStringLiteral("[secure relay]")
+                                                  : QStringLiteral("[UNSECURED relay]"))), false);
     m_fileTransferProgressShown.insert(transferId, -10);
     return true;
 }
@@ -3046,8 +3406,10 @@ void TerminalUi::pumpFileTransfers()
         Buffer *buffer = ensureBuffer(QStringLiteral("im"), entry->id, info.target, info.target);
         QString error;
         bool finished = false;
+        const bool secureTransfer = m_fileTransferSecure.value(id, true);
+        if (secureTransfer && !m_secure.hasSession(entry->id, info.target)) continue;
         const bool irc = entry->settings.protocol == ConnectionSettings::Protocol::Irc;
-        const int chunkBytes = irc ? 120 : 768;
+        const int chunkBytes = irc ? (secureTransfer ? 120 : 96) : 768;
         const int minimumSendIntervalMs = irc ? 1000 : 500;
         const QString payload = m_fileTransfers.nextOutgoingPayload(
             id, chunkBytes, &finished, &error, minimumSendIntervalMs);
@@ -3056,7 +3418,7 @@ void TerminalUi::pumpFileTransfers()
             continue;
         }
         if (!payload.isEmpty() && !sendSecureControlPayload(entry, info.target, payload, buffer)) {
-            const QString cancelPayload = m_fileTransfers.cancel(id, QStringLiteral("secure transport failed"));
+            const QString cancelPayload = m_fileTransfers.cancel(id, QStringLiteral("file transport failed"));
             Q_UNUSED(cancelPayload);
             continue;
         }
@@ -3126,6 +3488,28 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
         return;
     }
 
+    if (kind == QStringLiteral("version-request")) {
+        if (auto *irc = qobject_cast<IrcBackend *>(entry->backend); irc && !target.isEmpty()) {
+            const QString ctcp = QString(QChar(0x01))
+                + QStringLiteral("VERSION WaffleHouse-Client %1").arg(appVersionString())
+                + QChar(0x01);
+            irc->sendRaw(QStringLiteral("NOTICE %1 :%2").arg(target, ctcp));
+        }
+        return;
+    }
+    if (kind == QStringLiteral("version")) {
+        m_pendingVersionQueries.remove(entry->id + QChar(0x1f) + target.toCaseFolded());
+        QString report = text.trimmed();
+        if (entry->settings.protocol == ConnectionSettings::Protocol::Irc
+            && !report.contains(QStringLiteral("WaffleHouse"), Qt::CaseInsensitive)) {
+            report = QStringLiteral("IRC client reports: %1 (not identified as WaffleHouse-Client)").arg(report);
+        }
+        const QString line = QStringLiteral("[version] %1: %2").arg(target, report);
+        if (Buffer *buffer = findBuffer(bufferKey(QStringLiteral("im"), entry->id, target))) append(buffer, line, false);
+        status(line);
+        return;
+    }
+
     if (kind == QStringLiteral("status")) {
         connectionStatus(entry, text);
         return;
@@ -3141,6 +3525,21 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
     if (kind == QStringLiteral("chat")
         && m_closedChatBuffers.contains(bufferKey(kind, entry->id, target))) {
         return;
+    }
+
+    if (kind == QStringLiteral("im")) {
+        const QString payload = imPayload(text);
+        const QString outgoingToken = entry->id + QChar(0x1f) + target.toCaseFolded()
+            + QChar(0x1f) + payload;
+        if (m_outgoingUnsecuredFileFrames.remove(outgoingToken)) return;
+        QString filePayload;
+        if (WaffleFileTransport::unwrapUnsecured(payload, filePayload)) {
+            const QString displayName = entry->targetNames.value(
+                QStringLiteral("im|%1").arg(target), target);
+            Buffer *buffer = ensureBuffer(QStringLiteral("im"), entry->id, target, displayName);
+            handleFileTransferPayload(entry, target, filePayload, buffer, false);
+            return;
+        }
     }
 
     if (kind == QStringLiteral("im") && m_secureReady) {
@@ -3178,7 +3577,10 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
             }
 
             if (result.kind == SecureChannelManager::IncomingKind::Decrypted) {
-                if (handleFileTransferPayload(entry, target, result.plaintext, buffer)) {
+                if (handleSecureRoomKeyOffer(entry, target, result.plaintext)) {
+                    return;
+                }
+                if (handleFileTransferPayload(entry, target, result.plaintext, buffer, true)) {
                     return;
                 }
                 QString prefix = imSpeakerPrefix(text);
@@ -3186,6 +3588,10 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
                     prefix = QStringLiteral("<%1> ").arg(displayName);
                 }
                 append(buffer, prefix + QStringLiteral("[secure] ") + result.plaintext);
+                if (const auto event = NotificationManager::classifyIncoming(
+                        entry->settings, entry->identity, kind, text)) {
+                    NotificationManager::play(*event, true);
+                }
                 return;
             }
 
@@ -3220,6 +3626,39 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
                             : QStringLiteral("[secure] WaffleHouse-CLI secure session established [UNVERIFIED — use /securestatus, compare, then /trust]."));
                     }
                 }
+                flushPendingSecureRoomKeys(entry, target);
+                return;
+            }
+        }
+    }
+
+    if (kind == QStringLiteral("chat") && m_secureReady) {
+        const QString payload = imPayload(text);
+        if (SecureRoomManager::looksLikeFrame(payload)) {
+            const QString displayName = entry->targetNames.value(QStringLiteral("chat|%1").arg(target), target);
+            Buffer *buffer = ensureBuffer(QStringLiteral("chat"), entry->id, target, displayName);
+            const auto result = m_secureRooms.processIncoming(entry->id, target, payload);
+            if (result.kind == SecureRoomManager::IncomingKind::Decrypted) {
+                QString prefix = imSpeakerPrefix(text);
+                if (prefix.isEmpty()) prefix = QStringLiteral("<room> ");
+                append(buffer, prefix + QStringLiteral("[secure-room] ") + result.plaintext);
+                if (const auto event = NotificationManager::classifyIncoming(
+                        entry->settings, entry->identity, kind, text)) {
+                    NotificationManager::play(*event, true);
+                }
+                return;
+            }
+            if (result.kind == SecureRoomManager::IncomingKind::Error) {
+                append(buffer, QStringLiteral("[error] [secure-room] %1").arg(result.notice));
+                return;
+            }
+        }
+        if (m_secureRooms.hasRoom(entry->id, target)) {
+            const QString prefix = imSpeakerPrefix(text);
+            if (!prefix.isEmpty()) {
+                const QString displayName = entry->targetNames.value(QStringLiteral("chat|%1").arg(target), target);
+                Buffer *buffer = ensureBuffer(QStringLiteral("chat"), entry->id, target, displayName);
+                append(buffer, prefix + QStringLiteral("[plaintext] ") + payload);
                 return;
             }
         }
@@ -3248,6 +3687,10 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
         return;
     }
     append(buffer, text);
+    if (const auto event = NotificationManager::classifyIncoming(
+            entry->settings, entry->identity, kind, text)) {
+        NotificationManager::play(*event, true);
+    }
 }
 
 void TerminalUi::onMembersChanged(ConnectionEntry *entry,
@@ -3287,6 +3730,19 @@ void TerminalUi::onMembersChanged(ConnectionEntry *entry,
                     ++it;
                 }
             }
+        }
+    }
+
+    if ((action == QStringLiteral("add") || action == QStringLiteral("remove"))
+        && m_secureRooms.hasRoom(entry->id, room)
+        && m_secureRooms.locallyOwned(entry->id, room)) {
+        QString error;
+        if (m_secureRooms.createOrRotate(entry->id, room, &error)) {
+            append(buffer, QStringLiteral("[secure-room] membership changed; rotated key to %1 and redistributing")
+                               .arg(m_secureRooms.keyId(entry->id, room)), false);
+            distributeSecureRoomKeyToMembers(entry, buffer);
+        } else {
+            append(buffer, QStringLiteral("[error] [secure-room] key rotation failed: %1").arg(error), false);
         }
     }
 }
@@ -3384,7 +3840,12 @@ void TerminalUi::onDisconnected(ConnectionEntry *entry, const QString &reason)
     entry->identity.clear();
     entry->endpoint.clear();
     entry->onlineBuddies.clear();
+    entry->presenceState = QStringLiteral("ONLINE");
+    entry->presenceMessage.clear();
+    entry->idleSeconds = 0;
+    entry->autoPresenceState.clear();
     m_secure.closeConnection(entry->id);
+    m_secureRooms.closeConnection(entry->id);
 
     // Preserve a Telnet/BBS terminal exactly as it looked at disconnect.
     // The user can review/copy it and explicitly remove it with /close.
@@ -3672,6 +4133,126 @@ void TerminalUi::handleCommand(const QString &line)
     }
     if (command == QStringLiteral("options")) {
         showOptions();
+        return;
+    }
+    if (command == QStringLiteral("version")) {
+        requestClientVersion(selectedConnection(), rest.trimmed());
+        return;
+    }
+    if (command == QStringLiteral("autopresence")) {
+        QString args = rest.trimmed();
+        QString action = takeArgument(args).toCaseFolded();
+        if (action.isEmpty()) {
+            status(QStringLiteral("Auto OSCAR presence: %1 | idle after %2 min | away after %3 min")
+                       .arg(m_options.autoPresenceEnabled ? QStringLiteral("ON") : QStringLiteral("OFF"))
+                       .arg(m_options.autoIdleMinutes).arg(m_options.autoAwayMinutes));
+            return;
+        }
+        if (action == QStringLiteral("on") || action == QStringLiteral("off")) {
+            m_options.autoPresenceEnabled = action == QStringLiteral("on");
+            if (!m_options.autoPresenceEnabled) markUserActivity();
+            saveOptions();
+            status(QStringLiteral("Automatic OSCAR idle/away %1.").arg(action.toUpper()));
+            return;
+        }
+        bool ok = false;
+        const int minutes = takeArgument(args).toInt(&ok);
+        if (!ok || minutes < 1) {
+            status(QStringLiteral("Usage: /autopresence [on|off|idle MINUTES|away MINUTES]"));
+            return;
+        }
+        if (action == QStringLiteral("idle")) {
+            if (minutes >= m_options.autoAwayMinutes) {
+                status(QStringLiteral("Auto-idle must be less than auto-away (%1 minutes).").arg(m_options.autoAwayMinutes));
+                return;
+            }
+            m_options.autoIdleMinutes = minutes;
+        } else if (action == QStringLiteral("away")) {
+            if (minutes <= m_options.autoIdleMinutes) {
+                status(QStringLiteral("Auto-away must be greater than auto-idle (%1 minutes).").arg(m_options.autoIdleMinutes));
+                return;
+            }
+            m_options.autoAwayMinutes = minutes;
+        } else {
+            status(QStringLiteral("Usage: /autopresence [on|off|idle MINUTES|away MINUTES]"));
+            return;
+        }
+        saveOptions();
+        status(QStringLiteral("Auto OSCAR presence: idle after %1 min, away after %2 min.")
+                   .arg(m_options.autoIdleMinutes).arg(m_options.autoAwayMinutes));
+        return;
+    }
+    if (command == QStringLiteral("notifications")) {
+        QStringList lines;
+        lines << QStringLiteral("Notification sounds: %1").arg(NotificationManager::globalEnabled() ? QStringLiteral("ON") : QStringLiteral("OFF"));
+        lines << QStringLiteral("Event keys: irc-mention, irc-pm, aim-im, aim-chat");
+        lines << QStringLiteral("");
+        for (const auto event : NotificationManager::configurableEvents()) {
+            const auto cfg = NotificationManager::setting(event);
+            QString source = cfg.soundSpec;
+            if (NotificationManager::isBuiltinSpec(source)) source = QStringLiteral("built-in");
+            else if (NotificationManager::isCustomSpec(source)) source = NotificationManager::customPath(source);
+            lines << QStringLiteral("%1 [%2] — %3")
+                         .arg(NotificationManager::key(event), cfg.enabled ? QStringLiteral("on") : QStringLiteral("off"), source);
+        }
+        lines << QStringLiteral("");
+        lines << QStringLiteral("/notify on|off");
+        lines << QStringLiteral("/sound EVENT builtin|off|PATH");
+        lines << QStringLiteral("/soundtest EVENT");
+        messageBox(QStringLiteral("Notification Sounds"), lines);
+        return;
+    }
+    if (command == QStringLiteral("notify")) {
+        const QString mode = rest.trimmed().toCaseFolded();
+        if (mode != QStringLiteral("on") && mode != QStringLiteral("off")) {
+            status(QStringLiteral("usage: /notify on|off"));
+            return;
+        }
+        NotificationManager::setGlobalEnabled(mode == QStringLiteral("on"));
+        status(QStringLiteral("Notification sounds %1.").arg(mode.toUpper()));
+        return;
+    }
+    if (command == QStringLiteral("sound") || command == QStringLiteral("soundtest")) {
+        QString args = rest;
+        const QString eventName = takeArgument(args);
+        const auto event = NotificationManager::eventFromKey(eventName);
+        if (!event) {
+            status(QStringLiteral("Unknown event. Use: irc-mention, irc-pm, aim-im, aim-chat"));
+            return;
+        }
+        if (command == QStringLiteral("soundtest")) {
+            NotificationManager::playSpec(NotificationManager::setting(*event).soundSpec, true);
+            status(QStringLiteral("Tested %1 sound.").arg(NotificationManager::displayName(*event)));
+            return;
+        }
+        QString value = args.trimmed();
+        if (value.isEmpty()) {
+            status(QStringLiteral("usage: /sound EVENT builtin|off|PATH"));
+            return;
+        }
+        NotificationManager::Setting cfg = NotificationManager::setting(*event);
+        if (value.compare(QStringLiteral("builtin"), Qt::CaseInsensitive) == 0) {
+            cfg.enabled = true;
+            cfg.soundSpec = NotificationManager::builtinSpec(*event);
+        } else if (value.compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0
+                   || value.compare(QStringLiteral("none"), Qt::CaseInsensitive) == 0) {
+            cfg.enabled = false;
+            cfg.soundSpec = QStringLiteral("none");
+        } else {
+            if ((value.startsWith(QLatin1Char('"')) && value.endsWith(QLatin1Char('"')))
+                || (value.startsWith(QLatin1Char('\'')) && value.endsWith(QLatin1Char('\'')))) {
+                value = value.mid(1, value.size() - 2);
+            }
+            if (!QFileInfo::exists(value)) {
+                status(QStringLiteral("Sound file does not exist: %1").arg(value));
+                return;
+            }
+            cfg.enabled = true;
+            cfg.soundSpec = NotificationManager::customSpec(QFileInfo(value).absoluteFilePath());
+        }
+        NotificationManager::setSetting(*event, cfg);
+        status(QStringLiteral("%1 sound updated. Use /soundtest %2 to preview it.")
+                   .arg(NotificationManager::displayName(*event), NotificationManager::key(*event)));
         return;
     }
     if (command == QStringLiteral("themes")) {
@@ -4029,12 +4610,74 @@ void TerminalUi::handleCommand(const QString &line)
 
     ConnectionEntry *entry = selectedConnection();
 
+    if (command == QStringLiteral("away") || command == QStringLiteral("afk")
+        || command == QStringLiteral("idle") || command == QStringLiteral("back")
+        || command == QStringLiteral("status")) {
+        if (!entry || !entry->connected
+            || entry->settings.protocol != ConnectionSettings::Protocol::Oscar) {
+            status(QStringLiteral("This command requires an online AIM/OSCAR connection."));
+            return;
+        }
+        auto *oscar = qobject_cast<OscarBackend *>(entry->backend);
+        if (!oscar) {
+            status(QStringLiteral("The selected AIM backend does not expose presence controls."));
+            return;
+        }
+        if (command != QStringLiteral("status")) entry->autoPresenceState.clear();
+        if (command == QStringLiteral("away")) {
+            oscar->setAwayMessage(rest.trimmed());
+            return;
+        }
+        if (command == QStringLiteral("afk")) {
+            oscar->setAfkMessage(rest.trimmed());
+            return;
+        }
+        if (command == QStringLiteral("back")) {
+            oscar->setBack();
+            return;
+        }
+        if (command == QStringLiteral("idle")) {
+            const QString value = rest.trimmed().toCaseFolded();
+            if (value == QStringLiteral("off") || value == QStringLiteral("0")) {
+                oscar->setIdleSeconds(0);
+                return;
+            }
+            quint32 seconds = 1;
+            if (!value.isEmpty()) {
+                bool ok = false;
+                const quint64 parsed = value.toULongLong(&ok);
+                if (!ok || parsed > 0xffffffffULL) {
+                    status(QStringLiteral("Usage: /idle [SECONDS|off]"));
+                    return;
+                }
+                seconds = static_cast<quint32>(parsed);
+            }
+            oscar->setIdleSeconds(seconds);
+            return;
+        }
+        QString summary = entry->presenceState.isEmpty() ? QStringLiteral("ONLINE") : entry->presenceState;
+        if (entry->idleSeconds > 0) summary += QStringLiteral(" + IDLE %1s").arg(entry->idleSeconds);
+        if (!entry->presenceMessage.isEmpty()) summary += QStringLiteral(" — %1").arg(entry->presenceMessage);
+        status(QStringLiteral("AIM presence: %1").arg(summary));
+        return;
+    }
+
     if (command == QStringLiteral("secure")) {
-        secureTarget(entry, rest.trimmed(), true);
+        Buffer *buffer = activeBuffer();
+        if (buffer && buffer->kind == QStringLiteral("chat") && rest.trimmed().isEmpty()) {
+            startSecureRoom(entry, buffer);
+        } else {
+            secureTarget(entry, rest.trimmed(), true);
+        }
         return;
     }
 
     if (command == QStringLiteral("securestatus")) {
+        Buffer *active = activeBuffer();
+        if (active && active->kind == QStringLiteral("chat") && rest.trimmed().isEmpty()) {
+            showSecureRoomStatus(entry, active);
+            return;
+        }
         if (!entry) {
             status(QStringLiteral("Select a connection first."));
             return;
@@ -4065,6 +4708,11 @@ void TerminalUi::handleCommand(const QString &line)
     }
 
     if (command == QStringLiteral("secureoff")) {
+        Buffer *active = activeBuffer();
+        if (active && active->kind == QStringLiteral("chat") && rest.trimmed().isEmpty()) {
+            closeSecureRoom(entry, active);
+            return;
+        }
         if (!entry) {
             status(QStringLiteral("Select a connection first."));
             return;
@@ -4120,75 +4768,91 @@ void TerminalUi::handleCommand(const QString &line)
     }
 
     if (command == QStringLiteral("sendfile")) {
-        if (!entry || !entry->connected || !m_secureReady) {
-            status(QStringLiteral("Select an online secure-capable connection first."));
+        if (!entry || !entry->connected || !entry->backend) {
+            status(QStringLiteral("Select an online AIM or IRC connection first."));
             return;
         }
-        if (entry->settings.protocol == ConnectionSettings::Protocol::Telnet) {
-            status(QStringLiteral("Secure file transfer is not available for Telnet."));
+        if (entry->settings.protocol != ConnectionSettings::Protocol::Oscar
+            && entry->settings.protocol != ConnectionSettings::Protocol::Irc) {
+            status(QStringLiteral("/sendfile is available on AIM and IRC private-message connections."));
             return;
         }
-        QString args = rest;
+
         QString target = activeImTarget(entry);
         QString path;
-        if (target.isEmpty()) {
-            target = takeArgument(args);
-            path = takeArgument(args);
-        } else {
-            path = takeArgument(args);
+        bool secureTransfer = true;
+        // Legacy arguments are accepted only as initial values; 3.0r1 always
+        // opens the guided transfer form so mode and path are visible before send.
+        QString legacy = rest;
+        if (!legacy.trimmed().isEmpty()) {
+            if (target.isEmpty()) target = takeArgument(legacy);
+            path = takeArgument(legacy);
         }
-        if (target.isEmpty() || path.isEmpty()) {
-            status(QStringLiteral("usage: /sendfile USER \"PATH\" (or /sendfile \"PATH\" inside a PM)"));
-            return;
+        if (!promptFileTransfer(entry, target, path, secureTransfer)) return;
+
+        Buffer *buffer = ensureBuffer(QStringLiteral("im"), entry->id, target, target, true);
+        if (secureTransfer) {
+            if (!m_secureReady || !m_secure.hasSession(entry->id, target)) {
+                messageBox(QStringLiteral("Secure File Transfer — Setup Required"), {
+                    QStringLiteral("Secure transfer needs a CPX secure DM with %1.").arg(target),
+                    QStringLiteral("1. Open the PM: /query %1").arg(target),
+                    QStringLiteral("2. Start CPX: /secure %1").arg(target),
+                    QStringLiteral("3. Compare /fingerprint and /secure-status fingerprints."),
+                    QStringLiteral("4. Trust the verified peer, then run /sendfile again."),
+                    QStringLiteral("Nothing was sent.")});
+                return;
+            }
+            if (!m_secure.peerSupports(entry->id, target, QStringLiteral("file-transfer"))) {
+                status(QStringLiteral("Peer %1 does not advertise CPX file-transfer support.").arg(target));
+                return;
+            }
         }
-        if (!m_secure.hasSession(entry->id, target)) {
-            status(QStringLiteral("No secure session with %1; use /secure first.").arg(target));
-            return;
-        }
-        if (!m_secure.peerSupports(entry->id, target, QStringLiteral("file-transfer"))) {
-            status(QStringLiteral("Peer %1 does not advertise CPX file-transfer support.").arg(target));
-            return;
-        }
+
         QString transferId, offer, error;
-        const bool reliableTransfer = m_secure.peerSupports(
-            entry->id, target, QStringLiteral("file-ack"));
-        const bool directPreferred = reliableTransfer && m_secure.peerSupports(
+        const bool reliableTransfer = secureTransfer
+            ? m_secure.peerSupports(entry->id, target, QStringLiteral("file-ack"))
+            : true;
+        const bool directPreferred = secureTransfer && reliableTransfer && m_secure.peerSupports(
             entry->id, target, QStringLiteral("file-direct-v1"));
         if (!m_fileTransfers.createOffer(target, path, transferId, offer, &error,
                                          reliableTransfer)) {
             status(QStringLiteral("[file] %1").arg(error));
             return;
         }
-        Buffer *buffer = ensureBuffer(QStringLiteral("im"), entry->id, target, target, true);
         m_fileTransferProfiles.insert(transferId, entry->id);
+        m_fileTransferSecure.insert(transferId, secureTransfer);
         if (!sendSecureControlPayload(entry, target, offer, buffer)) {
-            m_fileTransfers.cancel(transferId, QStringLiteral("secure transport failed"));
+            m_fileTransfers.cancel(transferId, QStringLiteral("file transport failed"));
             return;
         }
         const auto info = m_fileTransfers.transfer(transferId);
         append(buffer, QStringLiteral("[file] offered %1 (%2 bytes) to %3 [%4] %5")
                            .arg(info.fileName).arg(info.total).arg(target).arg(transferId)
-                           .arg(directPreferred ? QStringLiteral("[direct encrypted transport preferred]")
-                                : (reliableTransfer ? QStringLiteral("[reliable ACK relay mode]")
-                                                    : QStringLiteral("[legacy relay mode]"))), false);
+                           .arg(secureTransfer
+                                ? (directPreferred ? QStringLiteral("[SECURE CPX / direct preferred]")
+                                                   : QStringLiteral("[SECURE CPX relay]"))
+                                : QStringLiteral("[UNSECURED AIM/IRC relay / SHA-256 verified]")), false);
         return;
     }
 
     if (command == QStringLiteral("transfers")) {
         const auto transfers = m_fileTransfers.transfers();
         if (transfers.isEmpty()) {
-            status(QStringLiteral("No CPX file transfers in this session."));
+            status(QStringLiteral("No file transfers in this session."));
             return;
         }
         Buffer *buffer = activeBuffer();
         if (!buffer) buffer = ensureBuffer(QStringLiteral("global"));
         append(buffer, QStringLiteral("[file] transfers:"), false);
         for (const auto &info : transfers) {
+            const QString mode = m_fileTransferSecure.value(info.id, true)
+                ? QStringLiteral("secure") : QStringLiteral("unsecured");
             append(buffer,
-                   QStringLiteral("  %1 %2 %3 %4/%5 bytes — %6")
+                   QStringLiteral("  %1 %2 %3 [%4] %5/%6 bytes — %7")
                        .arg(info.id,
                             info.outgoing ? QStringLiteral("->") : QStringLiteral("<-"),
-                            info.fileName)
+                            info.fileName,
+                            mode)
                        .arg(info.transferred).arg(info.total).arg(info.status), false);
         }
         return;
@@ -4226,7 +4890,9 @@ void TerminalUi::handleCommand(const QString &line)
         }
         const QString relayPayload = payload;
         bool directReady = false;
-        if (m_secure.peerSupports(owner->id, info.target, QStringLiteral("file-direct-v1"))
+        const bool secureTransfer = m_fileTransferSecure.value(id, true);
+        if (secureTransfer
+            && m_secure.peerSupports(owner->id, info.target, QStringLiteral("file-direct-v1"))
             && m_secure.peerSupports(owner->id, info.target, QStringLiteral("file-ack"))) {
             QString keyError;
             const QByteArray transferKey = m_secure.fileTransferKey(owner->id, info.target, id, &keyError);
@@ -4262,8 +4928,10 @@ void TerminalUi::handleCommand(const QString &line)
                    directReady
                        ? QStringLiteral("[file] accepting %1 -> %2 [%3] [encrypted direct transport]")
                              .arg(info.fileName, path, id)
-                       : QStringLiteral("[file] accepting %1 -> %2 [%3] [secure relay]")
-                             .arg(info.fileName, path, id),
+                       : QStringLiteral("[file] accepting %1 -> %2 [%3] %4")
+                             .arg(info.fileName, path, id,
+                                  secureTransfer ? QStringLiteral("[secure relay]")
+                                                 : QStringLiteral("[UNSECURED relay]")),
                    false);
         }
         return;
@@ -4315,7 +4983,8 @@ void TerminalUi::handleCommand(const QString &line)
             resumeIncomingFileTransfer(id, owner, buffer);
             return;
         }
-        if (!m_secure.hasSession(owner->id, info.target)) {
+        const bool secureTransfer = m_fileTransferSecure.value(id, true);
+        if (secureTransfer && !m_secure.hasSession(owner->id, info.target)) {
             append(buffer, QStringLiteral("[file] re-establish the secure session before resuming %1").arg(id), false);
             return;
         }
@@ -4344,6 +5013,7 @@ void TerminalUi::handleCommand(const QString &line)
             return;
         }
         m_fileTransferProfiles.remove(id);
+        m_fileTransferSecure.remove(id);
         m_fileTransferProgressShown.remove(id);
         status(QStringLiteral("Cleared transfer %1.").arg(id));
         return;
@@ -4448,7 +5118,16 @@ void TerminalUi::handleCommand(const QString &line)
             status(QStringLiteral("That connection is offline."));
             return;
         }
-        roomEntry->backend->sendRoomMessage(buffer->target, rest);
+        if (m_secureRooms.hasRoom(roomEntry->id, buffer->target)) {
+            QString error;
+            const QString frame = m_secureRooms.encrypt(roomEntry->id, buffer->target, rest, &error);
+            if (frame.isEmpty()) append(buffer, QStringLiteral("[error] [secure-room] %1").arg(error), false);
+            else if (roomEntry->settings.protocol == ConnectionSettings::Protocol::Irc && frame.toUtf8().size() > 400)
+                append(buffer, QStringLiteral("[error] [secure-room] encrypted IRC room message is too long"), false);
+            else roomEntry->backend->sendRoomMessage(buffer->target, frame);
+        } else {
+            roomEntry->backend->sendRoomMessage(buffer->target, rest);
+        }
         return;
     }
 
@@ -4658,11 +5337,20 @@ void TerminalUi::showHelp()
         QStringLiteral("OPTIONS / APPEARANCE"),
         QStringLiteral("  Tab                          complete/cycle matching slash commands"),
         QStringLiteral("  /options                     open check-box options/theme dialog"),
+        QStringLiteral("  /notifications               show notification sound settings"),
+        QStringLiteral("  /notify on|off               globally enable/disable notification sounds"),
+        QStringLiteral("  /sound EVENT builtin|off|PATH set a built-in/custom sound (quote paths with spaces)"),
+        QStringLiteral("  /soundtest EVENT             preview irc-mention, irc-pm, aim-im, or aim-chat"),
         QStringLiteral("      Themes: System/Classic plus the full WaffleHouse + S.I.P.H.E.R. palette,"),
         QStringLiteral("              Cyberpunk, Synthwave, Dracula, Vaporwave, Blood Moon, C64, DOS,"),
         QStringLiteral("              Solarized Dark, Waffle Iron, Ghostline, Hot Dog Stand, Neon Miami"),
         QStringLiteral("  /env                         show OS / GUI-session / terminal environment"),
         QStringLiteral("  /fingerprint                 show selected connection profile's secure fingerprint"),
+        QStringLiteral("  /version [USER]              query an AIM/IRC peer's client/WaffleHouse version"),
+        QStringLiteral("  /autopresence                show automatic AIM Idle/Away settings"),
+        QStringLiteral("  /autopresence on|off         enable/disable automatic OSCAR presence"),
+        QStringLiteral("  /autopresence idle MINUTES   set automatic Idle threshold"),
+        QStringLiteral("  /autopresence away MINUTES   set automatic Away threshold"),
         QStringLiteral(""),
         QStringLiteral("CONNECTIONS"),
         QStringLiteral("  /add                         add AIM/IRC/Telnet/SIP connection; saves only"),
@@ -4699,10 +5387,14 @@ void TerminalUi::showHelp()
         QStringLiteral("  Multiple SIP accounts may be registered at once; /select chooses the outbound identity."),
         QStringLiteral("  Incoming calls identify/select the account they arrived on and appear in the Softphone buffer."),
         QStringLiteral(""),
-        QStringLiteral("ENCRYPTED DIRECT MESSAGES"),
+        QStringLiteral("ENCRYPTED DIRECT MESSAGES + SECURE ROOMS"),
         QStringLiteral("  WaffleHouse can encrypt private messages when both users run a CPX3-compatible WaffleHouse client."),
         QStringLiteral("  Each saved connection profile has its own stable secure identity/fingerprint."),
-        QStringLiteral("  Supported: AIM IMs and IRC PMs. Rooms/channels/Telnet stay plaintext."),
+        QStringLiteral("  Supported: AIM IMs, IRC PMs, AIM chat rooms, and IRC channels. Telnet stays plaintext."),
+        QStringLiteral("  In a room/channel, /secure creates a shared XChaCha20-Poly1305 room key."),
+        QStringLiteral("  Room keys are sent only to members who already have an established CPX secure PM."),
+        QStringLiteral("  Public room traffic carries CPXROOM ciphertext; WaffleHouse peers show decrypted text as [secure-room]."),
+        QStringLiteral("  Ordinary room traffic received while secure-room mode is active is visibly marked [plaintext]."),
         QStringLiteral(""),
         QStringLiteral("  QUICK START"),
         QStringLiteral("    1. Open a PM with the other WaffleHouse/CPX3-compatible user: /query USER"),
@@ -4715,21 +5407,23 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral("  SECURITY COMMANDS"),
         QStringLiteral("  /fingerprint                 show selected connection profile's fingerprint"),
-        QStringLiteral("  /secure [USER]               negotiate a WaffleHouse/CPX3 secure DM"),
-        QStringLiteral("  /securestatus [USER]         show secure state + peer fingerprint/trust status"),
+        QStringLiteral("  /secure [USER]               secure a DM; with no USER in a room, start/rotate secure-room mode"),
+        QStringLiteral("  /securestatus [USER]         DM status; with no USER in a room, show secure-room key/status"),
         QStringLiteral("  /trust [USER]                trust the current peer fingerprint after comparing it"),
         QStringLiteral("  /untrust [USER]              forget the saved trusted fingerprint"),
-        QStringLiteral("  /secureoff [USER]            close secure session; return to plaintext"),
+        QStringLiteral("  /secureoff [USER]            close DM; with no USER in a room, disable secure-room mode locally"),
         QStringLiteral(""),
-        QStringLiteral("SECURE FILE TRANSFER"),
-        QStringLiteral("  /sendfile USER \"PATH\"       offer a file; inside a PM use /sendfile \"PATH\""),
-        QStringLiteral("  /transfers                   list transfer IDs and status"),
+        QStringLiteral("FILE TRANSFER"),
+        QStringLiteral("  /sendfile                    open guided recipient/file/security dialog (F2 browses files)"),
+        QStringLiteral("  /transfers                   list transfer IDs, security mode, and status"),
         QStringLiteral("  /accept ID [PATH]            accept/resume incoming transfer (Downloads by default)"),
         QStringLiteral("  /decline ID [reason]         decline an offered transfer"),
         QStringLiteral("  /canceltransfer ID [reason]  cancel either direction"),
         QStringLiteral("  /resume ID                   resume a cancelled/interrupted transfer"),
         QStringLiteral("  /cleartransfer ID            clear a finished/cancelled transfer"),
-        QStringLiteral("  Files are encrypted inside the CPX secure DM, chunked, resumable, and SHA-256 verified."),
+        QStringLiteral("  Secure mode uses CPX encryption/authentication and requires an established verified secure DM."),
+        QStringLiteral("  Unsecured mode uses ordinary AIM/IRC PM transport; it is NOT CPX encrypted/authenticated."),
+        QStringLiteral("  Both modes remain chunked/resumable and SHA-256 verified before finalizing."),
         QStringLiteral(""),
         QStringLiteral("  IMPORTANT"),
         QStringLiteral("  A secure session is NOT verified until you compare fingerprints and /trust the peer."),
@@ -4740,6 +5434,13 @@ void TerminalUi::showHelp()
         QStringLiteral("CONVERSATIONS"),
         QStringLiteral("  /msg USER MESSAGE            private message (encrypted automatically if secure)"),
         QStringLiteral("  /query USER                  open a PM buffer"),
+        QStringLiteral("AIM / OSCAR PRESENCE"),
+        QStringLiteral("  /away [MESSAGE]              set classic AIM Away + optional message"),
+        QStringLiteral("  /afk [MESSAGE]               custom AFK state carried as an AIM away message"),
+        QStringLiteral("  /idle [SECONDS|off]          advertise OSCAR idle duration (default: 1 second)"),
+        QStringLiteral("  /back                        clear Away/AFK and Idle; return Online"),
+        QStringLiteral("  /status                      show your current AIM presence"),
+        QStringLiteral(""),
         QStringLiteral("  /join ROOM                   IRC channel; AIM private chatroom"),
         QStringLiteral("  /j ROOM                      alias of /join"),
         QStringLiteral("  /joinprivate ROOM            AIM private exchange room"),
@@ -5222,6 +5923,202 @@ void TerminalUi::scrollablePopup(const QString &title, const QStringList &source
     clearok(stdscr, TRUE);
 }
 
+
+
+QString TerminalUi::browseFile(const QString &initialPath)
+{
+    QFileInfo initialInfo(initialPath);
+    QDir dir(initialInfo.exists() && initialInfo.isDir()
+                 ? initialInfo.absoluteFilePath()
+                 : (initialInfo.exists() ? initialInfo.absolutePath() : QDir::homePath()));
+    int selected = 0;
+    int firstVisible = 0;
+    wtimeout(stdscr, 50);
+    curs_set(0);
+
+    while (true) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        const QFileInfoList entries = dir.entryInfoList(
+            QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot,
+            QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
+        const int count = entries.size() + 1; // synthetic parent entry
+        selected = std::clamp(selected, 0, std::max(0, count - 1));
+
+        const int boxWidth = std::clamp(COLS - 8, 52, 96);
+        const int boxHeight = std::clamp(LINES - 6, 12, 28);
+        const int startY = std::max(0, (LINES - boxHeight) / 2);
+        const int startX = std::max(0, (COLS - boxWidth) / 2);
+        const int visible = std::max(4, boxHeight - 5);
+        if (selected < firstVisible) firstVisible = selected;
+        if (selected >= firstVisible + visible) firstVisible = selected - visible + 1;
+        firstVisible = std::clamp(firstVisible, 0, std::max(0, count - visible));
+
+        WINDOW *box = newwin(boxHeight, boxWidth, startY, startX);
+        if (!box) break;
+        keypad(box, TRUE); meta(box, TRUE); wtimeout(box, 50);
+        wborder(box, 0, 0, 0, 0, 0, 0, 0, 0);
+        mvwaddnstr(box, 0, 2, " File Browser ", boxWidth - 4);
+        const QByteArray where = QStringLiteral(" %1").arg(dir.absolutePath()).toUtf8();
+        mvwaddnstr(box, 1, 2, where.constData(), boxWidth - 4);
+
+        for (int row = 0; row < visible; ++row) {
+            const int index = firstVisible + row;
+            if (index >= count) break;
+            QString label;
+            if (index == 0) {
+                label = QStringLiteral("[..]  Parent directory");
+            } else {
+                const QFileInfo &info = entries.at(index - 1);
+                label = info.isDir()
+                    ? QStringLiteral("[DIR] %1/").arg(info.fileName())
+                    : QStringLiteral("      %1  (%2 bytes)").arg(info.fileName()).arg(info.size());
+            }
+            if (index == selected) wattron(box, A_REVERSE);
+            const QByteArray bytes = label.toUtf8();
+            mvwaddnstr(box, 2 + row, 2, bytes.constData(), boxWidth - 4);
+            if (index == selected) wattroff(box, A_REVERSE);
+        }
+        const QByteArray hint("Enter=open/select | Backspace=up | Esc=cancel");
+        mvwaddnstr(box, boxHeight - 2, 2, hint.constData(), boxWidth - 4);
+        wrefresh(box);
+
+        wint_t ch = 0;
+        const int result = wget_wch(box, &ch);
+        delwin(box);
+        if (result == ERR) continue;
+        const int key = static_cast<int>(ch);
+        if (result == KEY_CODE_YES) {
+            if (key == KEY_UP) { selected = std::max(0, selected - 1); continue; }
+            if (key == KEY_DOWN) { selected = std::min(count - 1, selected + 1); continue; }
+            if (key == KEY_PPAGE) { selected = std::max(0, selected - visible); continue; }
+            if (key == KEY_NPAGE) { selected = std::min(count - 1, selected + visible); continue; }
+            if (key == KEY_HOME) { selected = 0; continue; }
+            if (key == KEY_END) { selected = count - 1; continue; }
+            if (key == KEY_BACKSPACE) { dir.cdUp(); selected = firstVisible = 0; continue; }
+            if (key == KEY_EXIT) break;
+            if (key != KEY_ENTER) continue;
+        } else {
+            const uint cp = static_cast<uint>(ch);
+            if (cp == 27) break;
+            if (isTerminalBackspace(cp)) { dir.cdUp(); selected = firstVisible = 0; continue; }
+            if (cp != 10 && cp != 13) continue;
+        }
+        if (selected == 0) {
+            dir.cdUp(); selected = firstVisible = 0; continue;
+        }
+        const QFileInfo choice = entries.at(selected - 1);
+        if (choice.isDir()) {
+            dir.setPath(choice.absoluteFilePath()); selected = firstVisible = 0; continue;
+        }
+        wtimeout(stdscr, 0); curs_set(1); clearok(stdscr, TRUE);
+        return choice.absoluteFilePath();
+    }
+
+    wtimeout(stdscr, 0); curs_set(1); clearok(stdscr, TRUE);
+    return {};
+}
+
+bool TerminalUi::promptFileTransfer(ConnectionEntry *entry,
+                                    QString &target,
+                                    QString &path,
+                                    bool &secureTransfer)
+{
+    if (!entry) return false;
+    int active = 0; // 0 recipient, 1 file, 2 secure toggle
+    int cursor = target.size();
+    wtimeout(stdscr, 50);
+    curs_set(1);
+
+    while (true) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        const int boxWidth = std::clamp(COLS - 8, 58, 92);
+        const int boxHeight = 13;
+        const int startY = std::max(0, (LINES - boxHeight) / 2);
+        const int startX = std::max(0, (COLS - boxWidth) / 2);
+        WINDOW *box = newwin(boxHeight, boxWidth, startY, startX);
+        if (!box) { wtimeout(stdscr, 0); return false; }
+        keypad(box, TRUE); meta(box, TRUE); wtimeout(box, 50);
+        wborder(box, 0, 0, 0, 0, 0, 0, 0, 0);
+        mvwaddnstr(box, 0, 2, " Send File ", boxWidth - 4);
+        const QByteArray subtitle("AIM / IRC guided transfer — F2 opens file browser");
+        mvwaddnstr(box, 1, 2, subtitle.constData(), boxWidth - 4);
+
+        const QString labels[] = {QStringLiteral("Recipient"), QStringLiteral("File"), QStringLiteral("Secure transfer")};
+        QString values[] = {target, path, secureTransfer ? QStringLiteral("[x] yes") : QStringLiteral("[ ] no")};
+        for (int i = 0; i < 3; ++i) {
+            const int y = 3 + i;
+            const bool selected = i == active;
+            QString label = (selected ? QStringLiteral("> ") : QStringLiteral("  ")) + labels[i];
+            const QByteArray lb = label.leftJustified(19).toUtf8();
+            if (selected) wattron(box, A_BOLD);
+            mvwaddnstr(box, y, 2, lb.constData(), 19);
+            if (selected) wattroff(box, A_BOLD);
+            const int valueX = 22;
+            const int valueWidth = std::max(12, boxWidth - valueX - 3);
+            QString shown = values[i];
+            int localCursor = (i == 0 ? target.size() : i == 1 ? path.size() : 0);
+            if (selected && i < 2) localCursor = cursor;
+            const int viewStart = i < 2 ? std::max(0, localCursor - valueWidth + 1) : 0;
+            shown = shown.mid(viewStart, valueWidth).leftJustified(valueWidth);
+            if (selected) wattron(box, A_REVERSE);
+            const QByteArray vb = shown.toUtf8();
+            mvwaddnstr(box, y, valueX, vb.constData(), valueWidth);
+            if (selected) wattroff(box, A_REVERSE);
+            if (selected && i < 2) wmove(box, y, std::clamp(valueX + cursor - viewStart, valueX, valueX + valueWidth - 1));
+        }
+
+        const QString securityNote = secureTransfer
+            ? QStringLiteral("SECURE: requires /secure with the peer + fingerprint verification; CPX encrypts/authenticates the transfer.")
+            : QStringLiteral("UNSECURED: sends via ordinary AIM/IRC PM traffic; no CPX encryption/authentication. SHA-256 verification remains.");
+        const QByteArray note = securityNote.toUtf8();
+        mvwaddnstr(box, 7, 2, note.constData(), boxWidth - 4);
+        const QByteArray hint("Tab/Up/Down move | Space toggles secure | F2 browse | F10/Ctrl-S send | Esc cancel");
+        mvwaddnstr(box, boxHeight - 2, 2, hint.constData(), boxWidth - 4);
+        wrefresh(box);
+
+        wint_t ch = 0;
+        const int result = wget_wch(box, &ch);
+        delwin(box);
+        if (result == ERR) continue;
+        int key = static_cast<int>(ch);
+        if (result == KEY_CODE_YES) {
+            if (key == KEY_EXIT) { wtimeout(stdscr, 0); clearok(stdscr, TRUE); return false; }
+            if (key == KEY_UP || key == KEY_BTAB) { active = (active + 2) % 3; cursor = active == 0 ? target.size() : active == 1 ? path.size() : 0; continue; }
+            if (key == KEY_DOWN || key == KEY_ENTER) { active = (active + 1) % 3; cursor = active == 0 ? target.size() : active == 1 ? path.size() : 0; continue; }
+            if (key == KEY_F(2)) {
+                const QString chosen = browseFile(path);
+                if (!chosen.isEmpty()) path = chosen;
+                active = 1; cursor = path.size(); continue;
+            }
+            if (key == KEY_LEFT && active < 2) { cursor = std::max(0, cursor - 1); continue; }
+            if (key == KEY_RIGHT && active < 2) { const int n = active == 0 ? target.size() : path.size(); cursor = std::min(n, cursor + 1); continue; }
+            if (key == KEY_HOME && active < 2) { cursor = 0; continue; }
+            if (key == KEY_END && active < 2) { cursor = active == 0 ? target.size() : path.size(); continue; }
+            if (key == KEY_BACKSPACE && active < 2 && cursor > 0) { QString &v = active == 0 ? target : path; v.remove(cursor - 1, 1); --cursor; continue; }
+            if (key == KEY_DC && active < 2) { QString &v = active == 0 ? target : path; if (cursor < v.size()) v.remove(cursor, 1); continue; }
+            if (key != KEY_F(10)) continue;
+        } else {
+            const uint cp = static_cast<uint>(ch);
+            if (cp == 27) { wtimeout(stdscr, 0); clearok(stdscr, TRUE); return false; }
+            if (cp == 19) key = KEY_F(10); // Ctrl-S
+            else if (cp == 9 || cp == 10 || cp == 13) { active = (active + 1) % 3; cursor = active == 0 ? target.size() : active == 1 ? path.size() : 0; continue; }
+            else if (cp == ' ' && active == 2) { secureTransfer = !secureTransfer; continue; }
+            else if (isTerminalBackspace(cp) && active < 2) { if (cursor > 0) { QString &v = active == 0 ? target : path; v.remove(cursor - 1, 1); --cursor; } continue; }
+            else if (cp >= 32 && active < 2) { QString &v = active == 0 ? target : path; const char32_t cp32 = static_cast<char32_t>(cp); const QString piece = QString::fromUcs4(&cp32, 1); v.insert(cursor, piece); cursor += piece.size(); continue; }
+            else continue;
+        }
+
+        if (key == KEY_F(10)) {
+            target = target.trimmed();
+            path = path.trimmed();
+            if (target.isEmpty()) { messageBox(QStringLiteral("Send File"), {QStringLiteral("Enter the AIM screen name or IRC nickname to receive the file.")}); active = 0; cursor = target.size(); continue; }
+            const QFileInfo file(path);
+            if (path.isEmpty() || !file.exists() || !file.isFile()) { messageBox(QStringLiteral("Send File"), {QStringLiteral("Choose a readable file. Press F2 to browse.")}); active = 1; cursor = path.size(); continue; }
+            wtimeout(stdscr, 0); clearok(stdscr, TRUE); curs_set(1);
+            return true;
+        }
+    }
+}
 
 bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
                                           bool &secretRequired,

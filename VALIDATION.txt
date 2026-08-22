@@ -1,0 +1,62 @@
+WaffleHouse-Client 3.1 — regression validation
+================================================
+
+===== bbs_253_theme_regression_test.sh =====
+PASS: WaffleHouse 2.5.3 BBS visibility/input + S.I.P.H.E.R. theme regression checks
+===== bbs_terminal_source_test.sh =====
+PASS: WaffleHouse 2.5.2 BBS terminal / explicit-connect source regression checks
+===== build_lifecycle_r3_test.sh =====
+build lifecycle r3 regression: PASS
+===== cli_254_active_bbs_lifecycle_test.sh =====
+2.5.4 active/BBS lifecycle source regression: PASS
+===== cli_aim_join_private_r5_test.sh =====
+cli AIM /join private-room regression test passed
+===== cli_irssi_statusbar_test.sh =====
+PASS: CLI shortcut hint, Irssi-style status bar, and prompt are anchored at the bottom
+===== cli_join_alias_r4_test.sh =====
+cli /j join alias regression test passed
+===== cli_saved_profile_persistence_test.sh =====
+saved-profile persistence source regression: PASS
+===== cli_statusbar_context_r3_test.sh =====
+CLI r3 status-bar context regression: PASS
+===== core_300_preservation_test.sh =====
+WaffleHouse 3.1 secure-room rebuild preserved remaining protocol/file-transfer/SIP/BBS core: PASS (33 pinned, 12 documented exceptions)
+===== freebsd_audio_compat_test.sh =====
+freebsd audio compatibility detector tests passed
+===== gui_251_workflow_test.sh =====
+PASS: Buddy List no longer exposes Add SIP/Open Softphone buttons
+PASS: GUI menu layout matches 2.5.1 Accounts/Tools design
+PASS: per-account messaging and buddy/contact dialogs are present
+PASS: Add-SIP lifecycle is deferred until GUI state is fully attached
+PASS: SIP local contacts are preserved across GUI/CLI settings
+All WaffleHouse 2.5.1 GUI workflow regression checks passed.
+===== gui_account_context_menu_r1_test.sh =====
+WaffleHouse 3.0r1 account context-menu regression: PASS
+===== gui_compact_cleanup_r1_test.sh =====
+WaffleHouse 3.0r1 compact GUI + redundant-action cleanup: PASS
+===== logo_tray_300r2_test.sh =====
+WaffleHouse 3.1 application/logo/tray integration: PASS
+===== notification_sounds_300_test.sh =====
+notification sounds 3.0 regression passed
+===== oscar_presence_r6_test.sh =====
+OSCAR presence/AFK r6 source regression passed
+===== r1_300r1_features_test.sh =====
+WaffleHouse 3.1 secure/unsecured transfer + footer + softphone regression: PASS
+===== r2_presence_version_test.sh =====
+WaffleHouse 3.1 automatic OSCAR presence + peer version query regression: PASS
+===== secure_room_31_test.sh =====
+WaffleHouse 3.1 secure AIM/IRC rooms + main-GUI softphone removal regression: PASS
+===== sip_251_error_recovery_test.sh =====
+PASS: SIP 2.5.1 account-error recovery regression checks
+===== sip_cli_bootstrap_log_suppression_test.sh =====
+WaffleHouse CLI PJSIP bootstrap-console suppression: PASS
+===== sip_empty_stun_regression_test.sh =====
+PASS: empty-STUN abort and CLI SIP-account restore regression checks
+===== telnet_disconnect_curses_repaint_test.sh =====
+Telnet disconnect/curses repaint regression: PASS
+===== ui_300_modern_shell_test.sh =====
+WaffleHouse 3.1 modern GUI/TUI shell regression: PASS
+===== unsecured_frame_budget_r1_test.sh =====
+unsecured frame budget: DATA=264 bytes OFFER=353 bytes
+WaffleHouse 3.0r1 unsecured IRC frame-budget regression: PASS
+Regression summary: 26/26 passed

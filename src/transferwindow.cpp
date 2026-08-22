@@ -23,8 +23,8 @@ TransferWindow::TransferWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(QStringLiteral("File Transfers — %1").arg(appDisplayName()));
-    resize(760, 480);
-    setMinimumSize(560, 340);
+    resize(600, 380);
+    setMinimumSize(480, 300);
     setAttribute(Qt::WA_QuitOnClose, false);
 
     auto *central = new QWidget(this);

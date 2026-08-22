@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Production/src/sipcore/SipTrace.cpp \
+ /home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipTrace.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Production/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

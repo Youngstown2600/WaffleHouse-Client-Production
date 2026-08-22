@@ -31,6 +31,7 @@ public:
     void changeNickname(const QString &newNick) override;
     void addBuddy(const QString &name) override;
     void removeBuddy(const QString &name) override;
+    void requestClientVersion(const QString &target);
 
 private:
     enum class CommandType {

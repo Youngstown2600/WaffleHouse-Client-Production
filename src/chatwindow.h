@@ -34,6 +34,7 @@ public:
     QString kind() const { return m_kind; }
     QString target() const { return m_target; }
     QString displayName() const { return m_displayName; }
+    QStringList members() const { return m_memberSet.values(); }
 
     void appendMessage(const QString &text);
     void updateMembers(const QString &action, const QStringList &names);

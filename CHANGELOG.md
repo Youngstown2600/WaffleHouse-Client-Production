@@ -1,8 +1,89 @@
+# WaffleHouse-Client 3.1 — Secure AIM/IRC rooms + Communications Hub cleanup — 2026-08-20
+
+- Added CPX secure-room mode to AIM/OSCAR chat rooms and IRC channels. Room traffic is encrypted with XChaCha20-Poly1305 and appears on the public room transport as `[[CPXROOM1:...]]` ciphertext.
+- Added `secure-room-v1` capability negotiation. Shared room keys are never posted in the room; they are distributed individually inside already-established CPX encrypted private-message sessions.
+- Added GUI room security controls and CLI `/secure`, `/securestatus`, and `/secureoff` room behavior. Secure-room plaintext is tagged `[secure-room]`; ordinary traffic received while a room key is active is tagged `[plaintext]` for easy verification.
+- Added automatic room-key rotation by the key owner when membership changes, with redistribution to current secure peers.
+- Renamed the main sidebar **Messages** item to **Communications**.
+- Removed Softphone navigation, quick-dial controls, SIP contacts/calls, and Softphone actions from the main GUI/Buddy List. Full SIP/VoIP functionality remains available through **Tools → Open Softphone**, the tray menu, Accounts/Connections, and the CLI phone commands.
+- Added `src/secureroom.*` and `tests/secure_room_31_test.sh`; complete source regression gate passes 26/26 tests.
+
+# WaffleHouse-Client 3.0r2 — Branded application + tray artwork — 2026-08-20
+
+- Embedded the WaffleHouse-Client badge artwork as the GUI application/window icon and splash logo.
+- Replaced the generic `internet-chat` tray icon with the bundled multi-resolution WaffleHouse-Client icon, retaining safe Qt/theme fallbacks.
+- Installed hicolor desktop icons from 16x16 through 512x512 on Linux/FreeBSD and updated the desktop entry to `Icon=wafflehouse-client`.
+- Kept the CLI terminal-native ASCII branding unchanged; the unified executable and all existing 3.0r2 protocol/SIP/file-transfer behavior remain intact.
+
+# WaffleHouse-Client 3.0r2 — Automatic OSCAR presence + peer version discovery — 2026-08-20
+
+- Added automatic AIM/OSCAR presence management with default Idle-after-5-minutes and Away-after-15-minutes thresholds, automatic return to Online on resumed activity, and protection for manually selected Away/AFK/Idle states.
+- Added shared GUI/CLI persistence for automatic-presence enable/disable and Idle/Away thresholds.
+- Added optional X11 workstation-idle detection through `xprintidle`, with a portable WaffleHouse-input fallback when global idle time is unavailable.
+- Added `/version [USER]` peer discovery: standard CTCP VERSION on IRC and an invisible WaffleHouse control exchange on AIM.
+- Added exact 3.0r2 reporting, legacy CPX3-compatible AIM detection, and explicit timeout messaging when an older/non-WaffleHouse peer cannot report an exact version.
+- Added dedicated 3.0r2 regression coverage while preserving all unaffected CPX, file-transfer, Telnet/BBS, SIP/PJSIP, notification, and modern GUI/CLI behavior.
+
+# WaffleHouse-Client 3.0r1 — Guided transfers + softphone/CLI polish — 2026-08-20
+
+- Tightened default GUI window dimensions and shared spacing so Main, Softphone, Connections, chat/IM, and Transfers use substantially less desktop space while remaining resizable.
+- Removed the redundant Main-screen Quick Actions card and Options button; account actions now live in the right-click account menu and Settings remains in the left rail.
+
+- Added right-click account context menus on the Main Accounts & Buddies tree and Connections list for protocol-aware connect/disconnect, IM/chat, buddy/contact, Softphone, and edit actions.
+
+- Refined the Softphone Phone page with a centered real telephone-style keypad: equal 72x72 keys, phone letter legends, circular theme-aware styling, Caller ID above routing, and Prefix before Destination.
+- Reduced default/minimum sizes across the main window, Connections/Buddy List, Softphone, chat/IM, transfer monitor, and large utility dialogs while keeping all windows resizable.
+
+- Added a guided **Secure / Unsecured** file-transfer choice to the existing GUI Send File action. Secure mode retains CPX encryption/authentication and explains session setup when needed; unsecured mode uses ordinary AIM/IRC PM transport while preserving chunking/resume and SHA-256 completion verification.
+- Reworked CLI `/sendfile` into a curses transfer form with recipient, file path, **Secure transfer** toggle, and an **F2 file browser**.
+- Added mode-aware transfer routing/accept/resume/cancel handling so replies remain on the transfer's original secure or unsecured transport.
+- Moved the CLI keyboard shortcut rail below the main-screen separator and gave it a theme-derived secondary accent on every theme.
+- Modernized the Softphone window with a WaffleHouse-style left navigation rail and a phone-like Main page with Prefix, Destination, Caller ID, a 12-key dial pad, Call/Hang Up, and live call status.
+- Rebranded current release/version surfaces to **3.0r1** and replaced the stale GUI splash version literal with the live application version string.
+- Preserved the 2.5.4-r6 AIM/IRC/Telnet/BBS/CPX/SIP/file-transfer engines; 3.0r1 changes are limited to presentation/controllers plus the new unsecured wire wrapper.
+
+
+## WaffleHouse-Client 3.0 — shared notification sounds
+
+- Adds shared GUI/CLI notification audio for IRC channel mentions, IRC private messages, AIM instant messages, and AIM chat messages.
+- Ships original WaffleHouse notification WAVs and lets each event use Built-in, Custom file, or None.
+- GUI Options includes per-event enable/source/browse/test controls.
+- CLI adds `/notifications`, `/notify on|off`, `/sound EVENT builtin|off|PATH`, and `/soundtest EVENT`.
+- Notification settings live in the existing WaffleHouseClient QSettings store, so GUI and CLI automatically share them.
+- Incoming-message classification suppresses local outgoing echoes and only rings IRC channels when the current nickname is mentioned.
+# WaffleHouse-Client 3.0 — GUI sidebar polish — 2026-08-20
+
+- CLI startup polish: suppresses PJSIP/pjlib bootstrap console chatter emitted before `EpConfig::logConfig` takes effect, eliminating raw `sip_endpoint`/`pjlib` lines between the splash screen and Main. PJSIP file logging and SIP diagnostics remain enabled.
+
+- Moved **+ New Connection** out of the Communications Hub top bar and into the lower left sidebar directly above Settings.
+- Restyled **Settings** as a normal application button instead of a transparent navigation item.
+- Removed the **UNIFIED CLIENT** status pill from the dashboard header.
+- No protocol, SIP, security, file-transfer, BBS, or CLI behavior changed.
+
+# WaffleHouse-Client 3.0 — 2026-08-20
+
+- Rebuilt the main Qt interface as a modern communications dashboard with persistent navigation and card-based Accounts/Buddies, Softphone, and Quick Actions areas.
+- Rebuilt the Connections window with modern card-based profile/activity sections.
+- Added a shared `ModernStyle` Qt design system so all GUI windows inherit consistent modern controls, spacing, rounded surfaces, status treatments, and the existing theme family.
+- Modernized the ncurses CLI chrome, active-session strip, status indicator, and command prompt while preserving the established shortcut/status/input footer contract.
+- Kept the 2.5.4-r6 protocol/security/transfer/SIP/BBS core unchanged during the 3.0 interface rebuild.
+- Retained all 15 pre-3.0 regression tests and added 3.0 modern-shell/core-preservation checks.
+
+# WaffleHouse-Client 2.5.4-r6 — 2026-08-20
+
+- Added native AIM/OSCAR Away and Idle presence transmission.
+- Added custom AFK status/message, carried over classic OSCAR as an Away message prefixed with `[AFK]` for compatibility.
+- Added CLI `/away`, `/afk`, `/idle`, `/back`, and `/status`.
+- Added GUI Accounts -> AIM account -> Set AIM Status / AFK.
+- AIM status bars/account rows now show Away/AFK/Idle state.
+
 # WaffleHouse-Client 2.5.4-r5 — 2026-08-20
 
 - AIM/OSCAR `/join ROOM` and `/j ROOM` now invoke the private-room exchange path used by `/joinprivate`.
 - IRC `/join` and `/j` retain normal public-channel behavior.
 - `/j` remains a single-dispatch alias of `/join`; help text now documents protocol-aware behavior.
+
+# WaffleHouse-Client 2.5.4-r4 — 2026-08-20
 
 - Fixed CLI `/j` shorthand so it is actually registered in slash-command dispatch, tab completion, and help.
 - `/j ROOM` now executes the exact same AIM chatroom / IRC channel join path as `/join ROOM`.
