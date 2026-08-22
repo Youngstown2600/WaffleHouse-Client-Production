@@ -2,6 +2,7 @@
 #include "appicon.h"
 #include "backend.h"
 #include "mainwindow.h"
+#include "mediawindow.h"
 #include "platforminfo.h"
 #include "terminalui.h"
 
@@ -14,6 +15,8 @@
 #include <QFont>
 #include <QHash>
 #include <QList>
+#include <QMenu>
+#include <QMenuBar>
 #include <QPair>
 #include <QPixmap>
 #include <QSet>
@@ -168,7 +171,7 @@ int runCli(int argc, char *argv[], const RuntimeEnvironment &runtime)
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("WaffleHouse-CLI %1 — AIM/OSCAR, IRC, Telnet/BBS, and multi-account SIP/VoIP terminal client")
+        QStringLiteral("WaffleHouse-Client %1 — CLI communications, secure rooms, media, radio, and streaming")
             .arg(appVersionString()));
     parser.addHelpOption();
     parser.addVersionOption();
@@ -180,7 +183,7 @@ int runCli(int argc, char *argv[], const RuntimeEnvironment &runtime)
     TerminalUi ui;
     QObject::connect(&ui, &TerminalUi::finished, &app, &QCoreApplication::quit);
     if (!ui.start()) {
-        fprintf(stderr, "WaffleHouse-CLI %s: terminal frontend could not start.\nDetected: %s\n",
+        fprintf(stderr, "WaffleHouse-Client CLI %s: terminal frontend could not start.\nDetected: %s\n",
                 appVersionString().toUtf8().constData(),
                 runtime.summary().toUtf8().constData());
         return 1;
@@ -198,7 +201,7 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("%1 %2 — combined AIM/OSCAR, IRC, Telnet/BBS, and multi-account SIP/VoIP client (GUI mode)")
+        QStringLiteral("%1 %2 — AIM/OSCAR, IRC, Telnet/BBS, SIP/VoIP, secure rooms, media, radio, and streaming client")
             .arg(appDisplayName(), appVersionString()));
     parser.addHelpOption();
     parser.addVersionOption();
@@ -314,13 +317,25 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     auto *mode = new QLabel(QStringLiteral("AUTO FRONTEND — GUI MODE"), &splash);
     mode->setAlignment(Qt::AlignCenter);
     layout->addWidget(mode);
-    auto *protocols = new QLabel(QStringLiteral("AIM/OSCAR  |  IRC  |  TELNET/BBS  |  SIP/VOIP  |  CPX SECURE FILE TRANSFER"), &splash);
+    auto *protocols = new QLabel(QStringLiteral("AIM/OSCAR  |  IRC  |  TELNET/BBS  |  SIP/VOIP  |  SECURE ROOMS  |  MEDIA/RADIO"), &splash);
     protocols->setAlignment(Qt::AlignCenter);
     layout->addWidget(protocols);
     QTimer::singleShot(900, &splash, &QDialog::accept);
     splash.exec();
 
     MainWindow window(defaults);
+
+    auto *mediaWindow = new MediaWindow(&window);
+    window.setMediaWindow(mediaWindow);
+    auto *mediaMenu = window.menuBar()->addMenu(QStringLiteral("&Media"));
+    mediaMenu->addAction(QStringLiteral("Open Media Center"), mediaWindow, &MediaWindow::showAndRaise);
+    mediaMenu->addSeparator();
+    mediaMenu->addAction(QStringLiteral("Open Media Files…"), mediaWindow, &MediaWindow::openMediaFiles);
+    mediaMenu->addAction(QStringLiteral("Open Stream / Radio URL…"), mediaWindow, &MediaWindow::openStreamDialog);
+    mediaMenu->addAction(QStringLiteral("Search SHOUTcast Directory…"), mediaWindow, &MediaWindow::searchShoutcastDirectory);
+    mediaMenu->addAction(QStringLiteral("Open Internet Playlist URL…"), mediaWindow, &MediaWindow::openInternetPlaylistDialog);
+    mediaMenu->addAction(QStringLiteral("Load Local Playlist…"), mediaWindow, &MediaWindow::openPlaylistDialog);
+
     window.show();
     window.statusBar()->showMessage(
         QStringLiteral("Auto frontend selected GUI | Runtime: %1").arg(runtime.summary()), 12000);
@@ -357,7 +372,7 @@ int main(int argc, char *argv[])
     if (mode == FrontendMode::Gui) {
         if (!runtime.graphicalSession && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             fprintf(stderr,
-                    "WaffleHouse-Client 3.1: GUI mode requested but no X11/Wayland session was detected.\n"
+                    "WaffleHouse-Client 3.3r1: GUI mode requested but no X11/Wayland session was detected.\n"
                     "Detected: %s\nUse --cli from an interactive terminal.\n",
                     runtime.summary().toUtf8().constData());
             return 2;
@@ -367,7 +382,7 @@ int main(int argc, char *argv[])
 
     if (!runtime.ttyAttached) {
         fprintf(stderr,
-                "WaffleHouse-CLI 3.1: CLI mode requires an interactive terminal.\n"
+                "WaffleHouse-Client 3.3r1 CLI: CLI mode requires an interactive terminal.\n"
                 "Detected: %s\nUse --gui inside a graphical session.\n",
                 runtime.summary().toUtf8().constData());
         return 2;

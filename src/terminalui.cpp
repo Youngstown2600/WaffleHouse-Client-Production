@@ -1,6 +1,7 @@
 #include "terminalui.h"
 #include "appbranding.h"
 #include "platforminfo.h"
+#include "mediacontroller.h"
 
 #include "ircbackend.h"
 #include "oscarbackend.h"
@@ -16,6 +17,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QEventLoop>
@@ -23,6 +25,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUuid>
+#include <QUrl>
 
 #include <algorithm>
 #include <cstdio>
@@ -85,6 +88,15 @@ TerminalUi::TerminalUi(QObject *parent)
     : QObject(parent)
 {
     m_sipController = new SipController(this);
+    m_mediaController = new MediaController(this);
+    connect(m_mediaController, &MediaController::statusMessage, this,
+            [this](const QString &message) { status(QStringLiteral("[media] %1").arg(message)); });
+    connect(m_mediaController, &MediaController::errorMessage, this,
+            [this](const QString &message) { status(QStringLiteral("[media] [error] %1").arg(message)); });
+    connect(m_mediaController, &MediaController::nowPlayingChanged, this,
+            [this](const QString &title) {
+                if (!title.isEmpty()) status(QStringLiteral("[media] Now playing: %1").arg(title));
+            });
     connect(&m_tickTimer, &QTimer::timeout, this, &TerminalUi::tick);
     connect(&m_directTransfers, &CpxDirectTransferManager::progress,
             this, &TerminalUi::handleDirectProgress);
@@ -146,10 +158,16 @@ bool TerminalUi::start()
     Buffer *global = ensureBuffer(QStringLiteral("global"), {}, {},
                                   QStringLiteral("Status"), true);
     append(global,
-           QStringLiteral("WaffleHouse-CLI started. /help shows commands. /options configures the TUI."),
+           QStringLiteral("WaffleHouse-CLI 3.3r1 \"WaffleHouse-Client\" started. /help shows commands. /options configures the TUI."),
            false);
     append(global,
            QStringLiteral("Runtime: %1").arg(RuntimeEnvironment::detect().summary()),
+           false);
+    append(global,
+           QStringLiteral("WaffleHouse-Client media engine: %1. Use /media for status; /mstream plays internet radio/streams.")
+               .arg(m_mediaController->backendAvailable()
+                        ? QStringLiteral("mpv ready")
+                        : QStringLiteral("mpv not found")),
            false);
 
     connect(m_sipController, &SipController::activityLine, this, [this](const QString &line) {
@@ -175,7 +193,7 @@ bool TerminalUi::start()
     });
     if (m_secureReady) {
         append(global,
-               QStringLiteral("WaffleHouse-CLI secure-DM profile identities ready. Select a connection and use /fingerprint."),
+               QStringLiteral("WaffleHouse-Client secure-DM profile identities ready. Select a connection and use /fingerprint."),
                false);
     } else {
         append(global,
@@ -511,7 +529,7 @@ void TerminalUi::showSplash()
         int attr = A_BOLD | (has_colors() ? COLOR_PAIR(PairHeader) : 0);
         safeAdd(startY + i, x, line, attr);
     }
-    const QString edition = QStringLiteral("WAFFLEHOUSE-CLI — VERSION %1").arg(appVersionString().toUpper());
+    const QString edition = QStringLiteral("WAFFLEHOUSE-CLIENT — VERSION %1 — CLI").arg(appVersionString().toUpper());
     const QString subtitle = QStringLiteral("MODERN MULTI-PROTOCOL COMMUNICATIONS TERMINAL");
     const QString protocols = QStringLiteral("AIM/OSCAR  |  IRC  |  TELNET/BBS  |  SIP/VOIP");
     safeAdd(startY + logoHeight + 1, std::max(0, (COLS - static_cast<int>(edition.size())) / 2), edition, A_BOLD);
@@ -627,7 +645,7 @@ void TerminalUi::requestClientVersion(ConnectionEntry *entry, QString target)
     QTimer::singleShot(3500, this, [this, key, target, protocol] {
         if (!m_pendingVersionQueries.remove(key)) return;
         status(protocol == ConnectionSettings::Protocol::Oscar
-            ? QStringLiteral("[version] %1: no 3.1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(target)
+            ? QStringLiteral("[version] %1: no 3.3r1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(target)
             : QStringLiteral("[version] %1: no CTCP VERSION reply received").arg(target));
     });
     if (auto *irc = qobject_cast<IrcBackend *>(entry->backend)) {
@@ -1045,7 +1063,7 @@ void TerminalUi::drawHeader(int width)
         }
     }
 
-    const QString label = QStringLiteral("╭─ WAFFLEHOUSE-CLI %1%2 ").arg(appVersionString().toUpper(), context);
+    const QString label = QStringLiteral("╭─ WAFFLEHOUSE-CLIENT %1 CLI%2 ").arg(appVersionString().toUpper(), context);
     QString line = label;
     const int fill = std::max(0, width - static_cast<int>(line.size()) - 1);
     line += QString(fill, QChar(0x2500)); // ─
@@ -1454,7 +1472,7 @@ void TerminalUi::draw()
     const int width = COLS;
 
     if (height < 8 || width < 42) {
-        safeAdd(0, 0, QStringLiteral("WaffleHouse-CLI %1: terminal too small").arg(appVersionString()), A_BOLD, width);
+        safeAdd(0, 0, QStringLiteral("WaffleHouse-Client %1 CLI: terminal too small").arg(appVersionString()), A_BOLD, width);
         safeAdd(1, 0,
                 QStringLiteral("Current size %1x%2; need at least 42x8.").arg(width).arg(height),
                 0, width);
@@ -1720,7 +1738,17 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/help"), QStringLiteral("/j"), QStringLiteral("/join"),
         QStringLiteral("/joinprivate"), QStringLiteral("/members"),
         QStringLiteral("/msg"), QStringLiteral("/names"),
-        QStringLiteral("/nick"), QStringLiteral("/options"),
+        QStringLiteral("/nick"), QStringLiteral("/notice"),
+        QStringLiteral("/op"), QStringLiteral("/deop"),
+        QStringLiteral("/voice"), QStringLiteral("/devoice"),
+        QStringLiteral("/kick"), QStringLiteral("/ban"),
+        QStringLiteral("/unban"), QStringLiteral("/topic"),
+        QStringLiteral("/mode"), QStringLiteral("/me"),
+        QStringLiteral("/invite"), QStringLiteral("/who"),
+        QStringLiteral("/whois"), QStringLiteral("/whowas"),
+        QStringLiteral("/ison"), QStringLiteral("/list"),
+        QStringLiteral("/motd"), QStringLiteral("/quote"),
+        QStringLiteral("/options"),
         QStringLiteral("/notifications"), QStringLiteral("/notify"),
         QStringLiteral("/sound"), QStringLiteral("/soundtest"),
         QStringLiteral("/theme"), QStringLiteral("/themes"),
@@ -1745,6 +1773,15 @@ QStringList TerminalUi::slashCommands()
         QStringLiteral("/siplog"), QStringLiteral("/ladder"),
         QStringLiteral("/audio-devices"), QStringLiteral("/audio-use"),
         QStringLiteral("/audio-auto"),
+        QStringLiteral("/media"), QStringLiteral("/mstatus"),
+        QStringLiteral("/mplay"), QStringLiteral("/mstream"), QStringLiteral("/mshoutcast"),
+        QStringLiteral("/menqueue"),
+        QStringLiteral("/mplaylist"), QStringLiteral("/mpause"),
+        QStringLiteral("/mresume"), QStringLiteral("/mstop"),
+        QStringLiteral("/mnext"), QStringLiteral("/mprev"),
+        QStringLiteral("/mseek"), QStringLiteral("/mvolume"),
+        QStringLiteral("/mmute"), QStringLiteral("/mshuffle"),
+        QStringLiteral("/mrepeat"), QStringLiteral("/meq"),
         QStringLiteral("/server"), QStringLiteral("/servers"),
         QStringLiteral("/trust"), QStringLiteral("/untrust"),
         QStringLiteral("/use"), QStringLiteral("/window")
@@ -2516,7 +2553,7 @@ void TerminalUi::loadConnections()
         loaded = loadFrom(legacyCli);
         if (loaded > 0) {
             saveConnections();
-            status(QStringLiteral("Imported %1 WaffleHouse-CLI profile(s) into WaffleHouse-Client.").arg(loaded));
+            status(QStringLiteral("Imported %1 legacy CLI profile(s) into WaffleHouse-Client.").arg(loaded));
         }
     }
     if (loaded == 0) {
@@ -2708,7 +2745,7 @@ void TerminalUi::showOptions()
         meta(box, TRUE);
         wtimeout(box, 50);
         wborder(box, 0, 0, 0, 0, 0, 0, 0, 0);
-        const QByteArray title = QByteArray(" WaffleHouse-CLI Options ");
+        const QByteArray title = QByteArray(" WaffleHouse-Client Options ");
         mvwaddnstr(box, 0, 2, title.constData(), boxWidth - 4);
 
         struct Item { QString label; bool *value; };
@@ -2887,7 +2924,7 @@ bool TerminalUi::secureTarget(ConnectionEntry *entry, QString target, bool switc
         return false;
     }
     if (entry->settings.protocol == ConnectionSettings::Protocol::Telnet) {
-        status(QStringLiteral("WaffleHouse-CLI encrypted DMs are for AIM and IRC private messages."));
+        status(QStringLiteral("WaffleHouse-Client encrypted DMs are for AIM and IRC private messages."));
         return false;
     }
     if (!m_options.encryptedDmEnabled || !m_secureReady) {
@@ -3556,7 +3593,7 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
             Buffer *buffer = ensureBuffer(QStringLiteral("im"), entry->id, target, displayName);
 
             if (!m_options.encryptedDmEnabled) {
-                append(buffer, QStringLiteral("[secure] WaffleHouse-CLI encrypted DM frame ignored because encryption is disabled."));
+                append(buffer, QStringLiteral("[secure] WaffleHouse-Client encrypted DM frame ignored because encryption is disabled."));
                 return;
             }
 
@@ -3622,8 +3659,8 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
                         append(buffer, QStringLiteral("[secure] %1").arg(notice));
                     } else {
                         append(buffer, result.peerFingerprint.isEmpty()
-                            ? QStringLiteral("[secure] WaffleHouse-CLI secure session established.")
-                            : QStringLiteral("[secure] WaffleHouse-CLI secure session established [UNVERIFIED — use /securestatus, compare, then /trust]."));
+                            ? QStringLiteral("[secure] WaffleHouse-Client secure session established.")
+                            : QStringLiteral("[secure] WaffleHouse-Client secure session established [UNVERIFIED — use /securestatus, compare, then /trust]."));
                     }
                 }
                 flushPendingSecureRoomKeys(entry, target);
@@ -3680,7 +3717,7 @@ void TerminalUi::onBackendEvent(ConnectionEntry *entry,
             if (!candidate.isEmpty()) { promptLine = candidate; break; }
         }
         static const QRegularExpression sensitivePrompt(
-            QStringLiteral("(?i)(?:password|passphrase|passwd|pin|access\\s*code|login\\s*key|secret)\\s*[:>?\]]?\\s*$"));
+            QStringLiteral("(?i)(?:password|passphrase|passwd|pin|access\\s*code|login\\s*key|secret)\\s*[:>?\\]]?\\s*$"));
         buffer->sensitiveInput = sensitivePrompt.match(promptLine).hasMatch();
 
         buffer->unread += (buffer != activeBuffer());
@@ -3974,7 +4011,7 @@ void TerminalUi::showPhoneMain(bool switchTo)
 {
     Buffer *buffer = phoneBuffer(switchTo);
     buffer->lines.clear();
-    append(buffer, QStringLiteral("WAFFLEHOUSE INTEGRATED SIP SOFTPHONE"), false);
+    append(buffer, QStringLiteral("WAFFLEHOUSE-CLIENT INTEGRATED SIP SOFTPHONE"), false);
     append(buffer, m_sipController->audioSummary(), false);
     append(buffer, QString(), false);
     append(buffer, QStringLiteral("SIP ACCOUNTS"), false);
@@ -4075,7 +4112,7 @@ void TerminalUi::showPhoneProfile(bool switchTo)
                  p.enableSrtp ? QStringLiteral("on") : QStringLiteral("off"),
                  entry->settings.savePassword ? QStringLiteral("yes") : QStringLiteral("no")),
         QString(),
-        QStringLiteral("Use /phoneconfig (or /edit) to edit this same saved WaffleHouse SIP connection."),
+        QStringLiteral("Use /phoneconfig (or /edit) to edit this same saved WaffleHouse-Client SIP connection."),
     };
     for (const QString &line : lines) append(buffer, line, false);
 }
@@ -4290,6 +4327,105 @@ void TerminalUi::handleCommand(const QString &line)
         });
         return;
     }
+    if (command == QStringLiteral("media") || command == QStringLiteral("mstatus")) {
+        messageBox(QStringLiteral("Media Center"), m_mediaController->statusLines());
+        return;
+    }
+    if (command == QStringLiteral("mplay") || command == QStringLiteral("mstream")) {
+        const QString source = takeArgument(rest);
+        if (source.isEmpty()) {
+            status(command == QStringLiteral("mstream")
+                ? QStringLiteral("Usage: /mstream URL (SHOUTcast/Icecast/HTTP/HLS)")
+                : QStringLiteral("Usage: /mplay FILE|URL"));
+            return;
+        }
+        m_mediaController->play(source);
+        return;
+    }
+    if (command == QStringLiteral("mshoutcast")) {
+        const QString query = takeArgument(rest);
+        if (query.isEmpty()) { status(QStringLiteral("Usage: /mshoutcast SEARCH-TERMS")); return; }
+        const QByteArray encoded = QByteArrayLiteral("https://directory.shoutcast.com/Search?query=")
+            + QUrl::toPercentEncoding(query);
+        const QUrl url = QUrl::fromEncoded(encoded);
+        if (QDesktopServices::openUrl(url)) {
+            status(QStringLiteral("Opened SHOUTcast directory search: %1").arg(query));
+        } else {
+            status(QStringLiteral("SHOUTcast search URL: %1").arg(url.toString()));
+        }
+        return;
+    }
+    if (command == QStringLiteral("menqueue")) {
+        const QString source = takeArgument(rest);
+        if (source.isEmpty()) { status(QStringLiteral("Usage: /menqueue FILE|URL")); return; }
+        m_mediaController->enqueue(source);
+        return;
+    }
+    if (command == QStringLiteral("mplaylist")) {
+        const QString source = takeArgument(rest);
+        if (source.isEmpty()) {
+            status(QStringLiteral("Usage: /mplaylist PLAYLIST-PATH-OR-URL (use /mstream for HLS .m3u8)"));
+            return;
+        }
+        m_mediaController->loadPlaylist(source, true);
+        return;
+    }
+    if (command == QStringLiteral("mpause")) { m_mediaController->pause(); return; }
+    if (command == QStringLiteral("mresume")) { m_mediaController->resume(); return; }
+    if (command == QStringLiteral("mstop")) { m_mediaController->stop(); return; }
+    if (command == QStringLiteral("mnext")) { m_mediaController->next(); return; }
+    if (command == QStringLiteral("mprev")) { m_mediaController->previous(); return; }
+    if (command == QStringLiteral("mseek")) {
+        bool ok = false;
+        const double seconds = takeArgument(rest).toDouble(&ok);
+        if (!ok) { status(QStringLiteral("Usage: /mseek SECONDS (negative seeks backward)")); return; }
+        m_mediaController->seekRelative(seconds);
+        return;
+    }
+    if (command == QStringLiteral("mvolume")) {
+        bool ok = false;
+        const int volume = takeArgument(rest).toInt(&ok);
+        if (!ok || volume < 0 || volume > 150) { status(QStringLiteral("Usage: /mvolume 0..150")); return; }
+        m_mediaController->setVolume(volume);
+        return;
+    }
+    if (command == QStringLiteral("mmute")) {
+        const QString value = takeArgument(rest).toCaseFolded();
+        if (value == QStringLiteral("on")) m_mediaController->setMuted(true);
+        else if (value == QStringLiteral("off")) m_mediaController->setMuted(false);
+        else if (value == QStringLiteral("toggle") || value.isEmpty()) m_mediaController->toggleMuted();
+        else status(QStringLiteral("Usage: /mmute on|off|toggle"));
+        return;
+    }
+    if (command == QStringLiteral("mshuffle")) {
+        const QString value = takeArgument(rest).toCaseFolded();
+        if (value != QStringLiteral("on") && value != QStringLiteral("off")) { status(QStringLiteral("Usage: /mshuffle on|off")); return; }
+        m_mediaController->setShuffle(value == QStringLiteral("on"));
+        return;
+    }
+    if (command == QStringLiteral("mrepeat")) {
+        const QString value = takeArgument(rest).toCaseFolded();
+        if (value != QStringLiteral("off") && value != QStringLiteral("one") && value != QStringLiteral("all")) {
+            status(QStringLiteral("Usage: /mrepeat off|one|all")); return;
+        }
+        m_mediaController->setRepeatMode(value);
+        return;
+    }
+    if (command == QStringLiteral("meq")) {
+        const QString bandText = takeArgument(rest).toCaseFolded();
+        if (bandText == QStringLiteral("flat") || bandText == QStringLiteral("reset")) {
+            m_mediaController->resetEqualizer(); return;
+        }
+        bool bandOk = false, gainOk = false;
+        const int band = bandText.toInt(&bandOk);
+        const double gain = takeArgument(rest).toDouble(&gainOk);
+        if (!bandOk || !gainOk || band < 0 || band > 9 || gain < -12.0 || gain > 12.0) {
+            status(QStringLiteral("Usage: /meq BAND(0..9) GAIN(-12..12) or /meq flat")); return;
+        }
+        m_mediaController->setEqualizerBand(band, gain);
+        return;
+    }
+
     if (command == QStringLiteral("phone")) {
         showPhoneMain(true);
         return;
@@ -5326,13 +5462,49 @@ void TerminalUi::handleCommand(const QString &line)
         return;
     }
 
+    if (entry && entry->backend && entry->connected
+        && entry->settings.protocol == ConnectionSettings::Protocol::Irc) {
+        if (auto *irc = qobject_cast<IrcBackend *>(entry->backend)) {
+            Buffer *buffer = activeBuffer();
+            const QString roomContext = (buffer && buffer->connectionId == entry->id
+                                         && buffer->kind == QStringLiteral("chat"))
+                ? buffer->target : QString();
+            if (irc->handleSlashCommand(roomContext, line)) return;
+
+            // Unknown slash-prefixed input remains ordinary IRC conversation
+            // text. Preserve both CPX secure-DM and secure-room behavior.
+            if (buffer && buffer->connectionId == entry->id) {
+                if (buffer->kind == QStringLiteral("im")) {
+                    sendPrivateText(entry, buffer->target, line, buffer);
+                    return;
+                }
+                if (buffer->kind == QStringLiteral("chat")) {
+                    if (m_secureRooms.hasRoom(entry->id, buffer->target)) {
+                        QString error;
+                        const QString frame = m_secureRooms.encrypt(entry->id, buffer->target, line, &error);
+                        if (frame.isEmpty()) {
+                            append(buffer, QStringLiteral("[error] [secure-room] %1").arg(error), false);
+                        } else if (frame.toUtf8().size() > 400) {
+                            append(buffer, QStringLiteral("[error] [secure-room] encrypted IRC room message is too long; split it into shorter messages"), false);
+                        } else {
+                            entry->backend->sendRoomMessage(buffer->target, frame);
+                        }
+                    } else {
+                        entry->backend->sendRoomMessage(buffer->target, line);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
     status(QStringLiteral("Unknown command /%1. Use /help.").arg(command));
 }
 
 void TerminalUi::showHelp()
 {
     const QStringList lines = {
-        QStringLiteral("WAFFLEHOUSE-CLI COMMAND REFERENCE"),
+        QStringLiteral("WAFFLEHOUSE-CLIENT CLI COMMAND REFERENCE"),
         QStringLiteral(""),
         QStringLiteral("OPTIONS / APPEARANCE"),
         QStringLiteral("  Tab                          complete/cycle matching slash commands"),
@@ -5341,7 +5513,7 @@ void TerminalUi::showHelp()
         QStringLiteral("  /notify on|off               globally enable/disable notification sounds"),
         QStringLiteral("  /sound EVENT builtin|off|PATH set a built-in/custom sound (quote paths with spaces)"),
         QStringLiteral("  /soundtest EVENT             preview irc-mention, irc-pm, aim-im, or aim-chat"),
-        QStringLiteral("      Themes: System/Classic plus the full WaffleHouse + S.I.P.H.E.R. palette,"),
+        QStringLiteral("      Themes: System/Classic plus the full WaffleHouse-Client + S.I.P.H.E.R. palette,"),
         QStringLiteral("              Cyberpunk, Synthwave, Dracula, Vaporwave, Blood Moon, C64, DOS,"),
         QStringLiteral("              Solarized Dark, Waffle Iron, Ghostline, Hot Dog Stand, Neon Miami"),
         QStringLiteral("  /env                         show OS / GUI-session / terminal environment"),
@@ -5363,9 +5535,25 @@ void TerminalUi::showHelp()
         QStringLiteral("  /edit [N]                    edit an offline saved profile"),
         QStringLiteral("  /delete [N]                  delete a saved profile"),
         QStringLiteral(""),
+        QStringLiteral("MEDIA / INTERNET RADIO"),
+        QStringLiteral("  /media | /mstatus            show media backend and now-playing state"),
+        QStringLiteral("  /mplay FILE|URL              play local audio/video or a direct URL"),
+        QStringLiteral("  /mstream URL                 play SHOUTcast/Icecast/HTTP(S)/HLS stream"),
+        QStringLiteral("  /mshoutcast TERMS            search directory.shoutcast.com in your browser"),
+        QStringLiteral("  /menqueue FILE|URL           append media to the playback queue"),
+        QStringLiteral("  /mplaylist PATH|URL          load M3U/M3U8/PLS; use /mstream for HLS .m3u8"),
+        QStringLiteral("  /mpause | /mresume | /mstop  playback controls"),
+        QStringLiteral("  /mnext | /mprev              move through the real mpv playlist"),
+        QStringLiteral("  /mseek SECONDS               relative seek; negative values seek backward"),
+        QStringLiteral("  /mvolume 0..150              set media volume"),
+        QStringLiteral("  /mmute on|off|toggle         media mute"),
+        QStringLiteral("  /mshuffle on|off             queue shuffle"),
+        QStringLiteral("  /mrepeat off|one|all         repeat mode"),
+        QStringLiteral("  /meq BAND GAIN | /meq flat  10-band EQ; bands 0..9, gain -12..12 dB"),
+        QStringLiteral(""),
         QStringLiteral("SIP / VOIP SOFTPHONE"),
         QStringLiteral("  /phone                       open softphone Main view/status"),
-        QStringLiteral("  /phoneprofile                show selected WaffleHouse SIP account profile"),
+        QStringLiteral("  /phoneprofile                show selected WaffleHouse-Client SIP account profile"),
         QStringLiteral("  /phoneconfig                 edit selected SIP connection (same data as /edit)"),
         QStringLiteral("  /phonestart | /phonestop     register/disconnect selected SIP account"),
         QStringLiteral("  /prefix [VALUE|off]          show/change selected account's current PBX dial prefix"),
@@ -5393,7 +5581,7 @@ void TerminalUi::showHelp()
         QStringLiteral("  Supported: AIM IMs, IRC PMs, AIM chat rooms, and IRC channels. Telnet stays plaintext."),
         QStringLiteral("  In a room/channel, /secure creates a shared XChaCha20-Poly1305 room key."),
         QStringLiteral("  Room keys are sent only to members who already have an established CPX secure PM."),
-        QStringLiteral("  Public room traffic carries CPXROOM ciphertext; WaffleHouse peers show decrypted text as [secure-room]."),
+        QStringLiteral("  Public room traffic carries CPXROOM ciphertext; WaffleHouse-Client peers show decrypted text as [secure-room]."),
         QStringLiteral("  Ordinary room traffic received while secure-room mode is active is visibly marked [plaintext]."),
         QStringLiteral(""),
         QStringLiteral("  QUICK START"),
@@ -5427,7 +5615,7 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral("  IMPORTANT"),
         QStringLiteral("  A secure session is NOT verified until you compare fingerprints and /trust the peer."),
-        QStringLiteral("  If a trusted peer's key changes, WaffleHouse-CLI rejects that secure session."),
+        QStringLiteral("  If a trusted peer's key changes, WaffleHouse-Client rejects that secure session."),
         QStringLiteral("  Non-CPX3 clients may display encoded [[CPX3:...]] control/ciphertext frames."),
         QStringLiteral("  Encryption protects DM contents, not routing metadata, timing, or message length."),
         QStringLiteral(""),
@@ -5460,8 +5648,19 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral("IRC"),
         QStringLiteral("  /nick NEWNICK                change nickname"),
-        QStringLiteral("  /part [#channel]             leave current/specified IRC channel"),
-        QStringLiteral("  /raw COMMAND...              raw IRC line; optional leading / is accepted"),
+        QStringLiteral("  /part [#channel] [reason]    leave current/specified IRC channel"),
+        QStringLiteral("  /op NICK... | /deop NICK...  grant/remove channel operator"),
+        QStringLiteral("  /voice NICK... | /devoice   grant/remove voice"),
+        QStringLiteral("  /kick [#chan] NICK [reason]  kick a channel member"),
+        QStringLiteral("  /ban NICK|MASK | /unban ... set/remove +b (nick becomes NICK!*@*)"),
+        QStringLiteral("  /topic [#chan] [topic]       query/set topic"),
+        QStringLiteral("  /mode [#chan] [modes args]   query/set channel modes"),
+        QStringLiteral("  /me ACTION                   send IRC ACTION to active channel"),
+        QStringLiteral("  /notice TARGET MESSAGE       send NOTICE"),
+        QStringLiteral("  /invite NICK [#channel]      invite a user"),
+        QStringLiteral("  /who, /whois, /whowas, /ison, /list, /motd supported"),
+        QStringLiteral("  /raw or /quote COMMAND...    raw IRC line; optional leading / is accepted"),
+        QStringLiteral("  Unknown /text in IRC chat is sent literally as a normal message."),
         QStringLiteral(""),
         QStringLiteral(""),
         QStringLiteral("TELNET / MUD / BBS"),
@@ -5482,7 +5681,7 @@ void TerminalUi::showHelp()
         QStringLiteral(""),
         QStringLiteral("Help popup: Up/Down, PgUp/PgDn, Home/End scroll; Esc/q closes."),
     };
-    scrollablePopup(QStringLiteral("WaffleHouse-CLI Help"), lines);
+    scrollablePopup(QStringLiteral("WaffleHouse-Client Help"), lines);
 }
 
 
@@ -6210,7 +6409,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         for (FormField &item : fields) {
             if (item.key == key) return item;
         }
-        throw std::runtime_error("WaffleHouse-CLI form field missing");
+        throw std::runtime_error("WaffleHouse-Client CLI form field missing");
     };
 
     ConnectionSettings::Protocol currentProtocol = parseProtocol(field(QStringLiteral("protocol")).value);

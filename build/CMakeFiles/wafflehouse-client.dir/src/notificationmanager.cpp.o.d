@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/notificationmanager.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/notificationmanager.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/notificationmanager.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \

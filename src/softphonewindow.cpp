@@ -60,7 +60,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     side->setSpacing(8);
     auto *brand = new QLabel(QStringLiteral("SOFTPHONE"), sidebar);
     brand->setObjectName(QStringLiteral("BrandTitle"));
-    auto *edition = new QLabel(QStringLiteral("WAFFLEHOUSE %1").arg(appVersionString().toUpper()), sidebar);
+    auto *edition = new QLabel(QStringLiteral("WAFFLEHOUSE-CLIENT %1").arg(appVersionString().toUpper()), sidebar);
     edition->setObjectName(QStringLiteral("BrandVersion"));
     side->addWidget(brand); side->addWidget(edition); side->addSpacing(11);
     auto makeNav = [sidebar](const QString &text, bool checked = false) {
@@ -448,7 +448,7 @@ void SoftphoneWindow::saveProfile(bool reregister)
     }
     SipProfile p;p.name=s(m_profileName->text().trimmed());p.sipDomain=s(m_domain->text().trimmed());p.registrar=s(m_registrar->text().trimmed());p.username=s(m_username->text().trimmed());p.authUsername=s(m_authUsername->text().trimmed());p.password=s(m_password->text());p.displayName=s(m_displayName->text().trimmed());p.outboundProxy=s(m_outboundProxy->text().trimmed());p.callerIdDomain=s(m_callerIdDomain->text().trimmed());p.dialPrefix=s(m_dialPrefix->text().trimmed());p.stunServer=s(m_stunServer->text().trimmed());
     try{p.transport=trunkmonkey::transportFromString(s(m_transport->currentText()));p.identityMode=trunkmonkey::identityModeFromString(s(m_identityMode->currentText()));p.localSipPort=static_cast<std::uint16_t>(m_localPort->value());p.registrationExpires=static_cast<unsigned>(m_regExpires->value());p.useIce=m_useIce->isChecked();p.enableSrtp=m_enableSrtp->isChecked();trunkmonkey::ProfileStore::validate(p);}catch(const std::exception&e){showError(QStringLiteral("Invalid SIP Account"),QString::fromLocal8Bit(e.what()));return;}
-    const bool wasEnabled=m_controller->accountRegistrationEnabled(accountId);QString error;emit profileSaveRequested(accountId,p,m_savePassword->isChecked());bool ok=false;(void)m_controller->accountProfile(accountId,&ok);if(!ok){showError(QStringLiteral("SIP Account Save Failed"),QStringLiteral("The selected WaffleHouse SIP account could not be updated."));return;}if(reregister&&wasEnabled){m_controller->disconnectAccount(accountId,nullptr);if(!m_controller->connectAccount(accountId,&error))showError(QStringLiteral("SIP Re-registration Failed"),error);}refreshAccounts();refreshState();
+    const bool wasEnabled=m_controller->accountRegistrationEnabled(accountId);QString error;emit profileSaveRequested(accountId,p,m_savePassword->isChecked());bool ok=false;(void)m_controller->accountProfile(accountId,&ok);if(!ok){showError(QStringLiteral("SIP Account Save Failed"),QStringLiteral("The selected WaffleHouse-Client SIP account could not be updated."));return;}if(reregister&&wasEnabled){m_controller->disconnectAccount(accountId,nullptr);if(!m_controller->connectAccount(accountId,&error))showError(QStringLiteral("SIP Re-registration Failed"),error);}refreshAccounts();refreshState();
 }
 
 void SoftphoneWindow::dial(){const QString id=selectedAccountId();if(id.isEmpty()||m_destination->text().trimmed().isEmpty())return;QString error;if(m_controller->dial(id,m_destination->text(),m_callerId->text(),&error)<0){showError(QStringLiteral("Call Failed"),error);return;}refreshCalls();}

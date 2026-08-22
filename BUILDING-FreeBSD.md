@@ -1,6 +1,6 @@
-# WaffleHouse-Client 3.1 — FreeBSD build notes
+# WaffleHouse-Client 3.3r1 — FreeBSD build notes
 
-WaffleHouse-Client 3.1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
+WaffleHouse-Client 3.3r1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 
@@ -56,3 +56,10 @@ That mode is read-only. To run a normal build while explicitly disabling recogni
 ## Notification sounds
 
 WaffleHouse-Client uses `paplay` for built-in and user-selected notification audio on FreeBSD. The builder installs the `pulseaudio` package so GUI and CLI can use the same notification sound settings. WAV files are the recommended custom format.
+
+
+## Media Center
+
+The media feature set additionally uses the packaged `mpv` and `ffmpeg` runtime tools. `build.sh` checks/installs them through `pkg` when automatic dependency handling is enabled. No libmpv development package is required because WaffleHouse controls mpv through local JSON IPC.
+
+A normal interactive `./build.sh` builds first and then asks whether to install the application to the configured prefix, defaulting to **No**. During testing, `./build.sh --no-install` guarantees the WaffleHouse executable is not installed. To avoid automatic package installation and the inherited guarded HDA repair as well, use `--no-install --no-auto-deps --no-audio-fix`.

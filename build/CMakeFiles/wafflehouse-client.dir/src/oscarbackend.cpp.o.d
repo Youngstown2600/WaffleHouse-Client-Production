@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -300,7 +300,7 @@ CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \

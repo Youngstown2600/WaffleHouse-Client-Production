@@ -20,11 +20,13 @@ hash_file() {
 # chat-window surface and CPX capability advertisement while adding a separate
 # secure-room crypto module. These documented deltas are covered by
 # tests/secure_room_31_test.sh; file-transfer, Telnet/BBS, ANSI terminal, SIP,
-# and all remaining protocol/service files stay byte-for-byte pinned to the
-# known-good 2.5.4-r6 baseline.
+# and all remaining protocol/service files stay byte-for-byte pinned. Version 3.3
+# intentionally changed only the SIP fallback display label in sipbackend.cpp.
+# Version 3.3r1 additionally extends oscarprotocol.h with documented LOCATE
+# profile/capability constants; the behavior is guarded by the dedicated 3.3r1 tests.
 is_r1_frontend_file() {
     case "$1" in
-        src/mainwindow.h|src/softphonewindow.cpp|src/softphonewindow.h|src/terminalui.h|src/chatwindow.cpp|src/chatwindow.h|src/securechannel.cpp|src/transferwindow.cpp|src/ircbackend.cpp|src/ircbackend.h|src/oscarbackend.cpp|src/oscarbackend.h) return 0 ;;
+        src/mainwindow.h|src/softphonewindow.cpp|src/softphonewindow.h|src/terminalui.h|src/chatwindow.cpp|src/chatwindow.h|src/securechannel.cpp|src/transferwindow.cpp|src/ircbackend.cpp|src/ircbackend.h|src/oscarbackend.cpp|src/oscarbackend.h|src/oscarprotocol.h) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -46,6 +48,6 @@ while IFS='  ' read -r expected rel; do
     checked=$((checked + 1))
 done < "$MANIFEST"
 
-[ "$checked" -ge 33 ] || { echo "FAIL: preservation gate unexpectedly small ($checked files)" >&2; exit 1; }
-[ "$skipped" -eq 12 ] || { echo "FAIL: expected twelve documented 3.0r1/3.0r2/3.1 secure-room exceptions; got $skipped" >&2; exit 1; }
-echo "WaffleHouse 3.1 secure-room rebuild preserved remaining protocol/file-transfer/SIP/BBS core: PASS ($checked pinned, $skipped documented exceptions)"
+[ "$checked" -ge 32 ] || { echo "FAIL: preservation gate unexpectedly small ($checked files)" >&2; exit 1; }
+[ "$skipped" -eq 13 ] || { echo "FAIL: expected thirteen documented frontend/protocol exceptions through 3.3r1; got $skipped" >&2; exit 1; }
+echo "WaffleHouse-Client 3.3r1 preserved protocol/file-transfer/SIP/BBS core: PASS ($checked pinned, $skipped documented exceptions)"

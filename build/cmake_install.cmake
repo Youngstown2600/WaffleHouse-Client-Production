@@ -1,4 +1,4 @@
-# Install script for directory: /home/gitsc/WaffleHouse-Client-Testing
+# Install script for directory: /home/gitsc/Coding/WaffleHouse-Client-3.3r1
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -49,7 +49,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/wafflehouse-client"
          RPATH "\$ORIGIN:\$ORIGIN/../lib")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/wafflehouse-client" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/wafflehouse-client")
     file(RPATH_CHANGE
@@ -63,47 +63,47 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/data/wafflehouse-client.desktop")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/data/wafflehouse-client.desktop")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/16x16/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/16x16/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/16x16/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/16x16/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/22x22/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/22x22/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/22x22/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/22x22/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/24x24/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/24x24/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/24x24/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/24x24/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/32x32/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/32x32/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/32x32/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/32x32/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/48x48/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/48x48/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/64x64/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/64x64/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/64x64/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/64x64/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/128x128/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/128x128/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/256x256/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/256x256/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps" TYPE FILE FILES "/home/gitsc/WaffleHouse-Client-Testing/assets/icons/512x512/wafflehouse-client.png")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps" TYPE FILE FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/icons/512x512/wafflehouse-client.png")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/wafflehouse-client/sounds" TYPE DIRECTORY FILES "/home/gitsc/WaffleHouse-Client-Testing/sounds/" FILES_MATCHING REGEX "/[^/]*\\.wav$")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/wafflehouse-client/sounds" TYPE DIRECTORY FILES "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/sounds/" FILES_MATCHING REGEX "/[^/]*\\.wav$")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -114,5 +114,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/gitsc/WaffleHouse-Client-Testing/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

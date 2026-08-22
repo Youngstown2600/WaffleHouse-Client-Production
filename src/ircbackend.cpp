@@ -6,6 +6,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QMutexLocker>
+#include <QRegularExpression>
 #include <QSslSocket>
 #include <QTcpSocket>
 
@@ -94,6 +95,254 @@ void IrcBackend::requestClientVersion(const QString &target)
 void IrcBackend::joinRoom(const QString &room, bool)
 {
     enqueue({CommandType::Join, room, {}});
+}
+
+QStringList IrcBackend::slashCommands()
+{
+    return {
+        QStringLiteral("/ban"), QStringLiteral("/deop"), QStringLiteral("/devoice"),
+        QStringLiteral("/invite"), QStringLiteral("/ison"), QStringLiteral("/j"),
+        QStringLiteral("/join"), QStringLiteral("/kick"), QStringLiteral("/list"),
+        QStringLiteral("/me"), QStringLiteral("/mode"), QStringLiteral("/motd"),
+        QStringLiteral("/msg"), QStringLiteral("/names"), QStringLiteral("/nick"),
+        QStringLiteral("/notice"), QStringLiteral("/op"), QStringLiteral("/part"),
+        QStringLiteral("/query"), QStringLiteral("/quote"), QStringLiteral("/raw"),
+        QStringLiteral("/say"), QStringLiteral("/topic"), QStringLiteral("/unban"),
+        QStringLiteral("/voice"), QStringLiteral("/who"), QStringLiteral("/whois"),
+        QStringLiteral("/whowas")
+    };
+}
+
+bool IrcBackend::handleSlashCommand(const QString &contextTarget, const QString &input)
+{
+    QString line = input.trimmed();
+    if (!line.startsWith(QLatin1Char('/'))) return false;
+
+    line.remove(0, 1);
+    line = line.trimmed();
+    if (line.isEmpty()) return false;
+
+    QString rest = line;
+    auto takeArg = [](QString &value) {
+        value = value.trimmed();
+        if (value.isEmpty()) return QString();
+        const int split = value.indexOf(QRegularExpression(QStringLiteral("\\s")));
+        if (split < 0) {
+            const QString result = value;
+            value.clear();
+            return result;
+        }
+        const QString result = value.left(split);
+        value = value.mid(split + 1).trimmed();
+        return result;
+    };
+
+    const QString command = takeArg(rest).toCaseFolded();
+    const QString currentRoom = isChannel(contextTarget) ? contextTarget.trimmed() : QString();
+
+    auto usage = [this, &currentRoom](const QString &text) {
+        if (!currentRoom.isEmpty()) {
+            emit eventReceived(QStringLiteral("chat"), currentRoom,
+                               QStringLiteral("*** %1").arg(text));
+        } else {
+            emit eventReceived(QStringLiteral("status"), QString(), text);
+        }
+        return true;
+    };
+    auto requireRoom = [&]() {
+        if (!currentRoom.isEmpty()) return true;
+        emit eventReceived(QStringLiteral("status"), QString(),
+                           QStringLiteral("That IRC command requires an active channel."));
+        return false;
+    };
+    auto sendModeForTargets = [&](QChar sign, QChar mode) {
+        if (!requireRoom()) return true;
+        const QStringList targets = rest.split(QRegularExpression(QStringLiteral("\\s+")),
+                                               Qt::SkipEmptyParts);
+        if (targets.isEmpty()) {
+            return usage(QStringLiteral("Usage: /%1 NICK [NICK ...]").arg(command));
+        }
+        for (const QString &target : targets) {
+            sendRaw(QStringLiteral("MODE %1 %2%3 %4")
+                        .arg(currentRoom, QString(sign), QString(mode), target));
+        }
+        return true;
+    };
+
+    if (command == QStringLiteral("nick")) {
+        const QString nick = takeArg(rest);
+        if (nick.isEmpty()) return usage(QStringLiteral("Usage: /nick NEWNICK"));
+        changeNickname(nick);
+        return true;
+    }
+
+    if (command == QStringLiteral("join") || command == QStringLiteral("j")) {
+        QString room = takeArg(rest);
+        if (room.isEmpty()) return usage(QStringLiteral("Usage: /join #channel [key]"));
+        room = canonicalChannel(room);
+        const QString key = takeArg(rest);
+        if (key.isEmpty()) joinRoom(room);
+        else sendRaw(QStringLiteral("JOIN %1 %2").arg(room, key));
+        return true;
+    }
+
+    if (command == QStringLiteral("part")) {
+        QString room = currentRoom;
+        QString reason = rest;
+        QString probe = rest;
+        const QString first = takeArg(probe);
+        if (isChannel(first)) {
+            room = first;
+            reason = probe;
+        }
+        if (room.isEmpty()) return usage(QStringLiteral("Usage: /part [#channel] [reason]"));
+        if (reason.isEmpty()) leaveRoom(room);
+        else sendRaw(QStringLiteral("PART %1 :%2").arg(room, reason));
+        return true;
+    }
+
+    if (command == QStringLiteral("me")) {
+        if (!requireRoom()) return true;
+        if (rest.isEmpty()) return usage(QStringLiteral("Usage: /me ACTION"));
+        const QString payload = QString(QChar(0x01)) + QStringLiteral("ACTION ")
+            + rest + QChar(0x01);
+        sendRaw(QStringLiteral("PRIVMSG %1 :%2").arg(currentRoom, payload));
+        emit eventReceived(QStringLiteral("chat"), currentRoom,
+                           QStringLiteral("* %1 %2").arg(m_nickname, rest));
+        return true;
+    }
+
+    if (command == QStringLiteral("notice")) {
+        QString args = rest;
+        const QString target = takeArg(args);
+        if (target.isEmpty() || args.isEmpty()) {
+            return usage(QStringLiteral("Usage: /notice TARGET MESSAGE"));
+        }
+        sendRaw(QStringLiteral("NOTICE %1 :%2").arg(target, args));
+        return true;
+    }
+
+    if (command == QStringLiteral("op")) return sendModeForTargets(QLatin1Char('+'), QLatin1Char('o'));
+    if (command == QStringLiteral("deop")) return sendModeForTargets(QLatin1Char('-'), QLatin1Char('o'));
+    if (command == QStringLiteral("voice")) return sendModeForTargets(QLatin1Char('+'), QLatin1Char('v'));
+    if (command == QStringLiteral("devoice")) return sendModeForTargets(QLatin1Char('-'), QLatin1Char('v'));
+
+    if (command == QStringLiteral("ban") || command == QStringLiteral("unban")) {
+        if (!requireRoom()) return true;
+        QString mask = takeArg(rest);
+        if (mask.isEmpty()) return usage(QStringLiteral("Usage: /%1 NICK|MASK").arg(command));
+        if (!mask.contains(QLatin1Char('!')) && !mask.contains(QLatin1Char('@'))) {
+            mask += QStringLiteral("!*@*");
+        }
+        sendRaw(QStringLiteral("MODE %1 %2b %3")
+                    .arg(currentRoom,
+                         command == QStringLiteral("ban") ? QStringLiteral("+") : QStringLiteral("-"),
+                         mask));
+        return true;
+    }
+
+    if (command == QStringLiteral("kick")) {
+        QString args = rest;
+        QString room = currentRoom;
+        QString nick = takeArg(args);
+        if (isChannel(nick)) {
+            room = nick;
+            nick = takeArg(args);
+        }
+        if (room.isEmpty() || nick.isEmpty()) {
+            return usage(QStringLiteral("Usage: /kick [#channel] NICK [reason]"));
+        }
+        sendRaw(args.isEmpty()
+                    ? QStringLiteral("KICK %1 %2").arg(room, nick)
+                    : QStringLiteral("KICK %1 %2 :%3").arg(room, nick, args));
+        return true;
+    }
+
+    if (command == QStringLiteral("topic")) {
+        QString args = rest;
+        QString room = currentRoom;
+        QString first = takeArg(args);
+        if (isChannel(first)) room = first;
+        else args = rest;
+        if (room.isEmpty()) return usage(QStringLiteral("Usage: /topic [#channel] [topic]"));
+        sendRaw(args.isEmpty()
+                    ? QStringLiteral("TOPIC %1").arg(room)
+                    : QStringLiteral("TOPIC %1 :%2").arg(room, args));
+        return true;
+    }
+
+    if (command == QStringLiteral("mode")) {
+        QString args = rest;
+        QString room = currentRoom;
+        QString first = takeArg(args);
+        if (isChannel(first)) room = first;
+        else args = rest;
+        if (room.isEmpty()) return usage(QStringLiteral("Usage: /mode [#channel] [modes [args]]"));
+        sendRaw(args.isEmpty()
+                    ? QStringLiteral("MODE %1").arg(room)
+                    : QStringLiteral("MODE %1 %2").arg(room, args));
+        return true;
+    }
+
+    if (command == QStringLiteral("names")) {
+        QString room = takeArg(rest);
+        if (room.isEmpty()) room = currentRoom;
+        if (room.isEmpty()) return usage(QStringLiteral("Usage: /names [#channel]"));
+        sendRaw(QStringLiteral("NAMES %1").arg(room));
+        return true;
+    }
+
+    if (command == QStringLiteral("invite")) {
+        QString args = rest;
+        const QString nick = takeArg(args);
+        QString room = takeArg(args);
+        if (room.isEmpty()) room = currentRoom;
+        if (nick.isEmpty() || room.isEmpty()) {
+            return usage(QStringLiteral("Usage: /invite NICK [#channel]"));
+        }
+        sendRaw(QStringLiteral("INVITE %1 %2").arg(nick, room));
+        return true;
+    }
+
+    if (command == QStringLiteral("whois") || command == QStringLiteral("whowas")) {
+        const QString nick = takeArg(rest);
+        if (nick.isEmpty()) return usage(QStringLiteral("Usage: /%1 NICK").arg(command));
+        sendRaw(QStringLiteral("%1 %2").arg(command.toUpper(), nick));
+        return true;
+    }
+
+    if (command == QStringLiteral("who")) {
+        QString target = takeArg(rest);
+        if (target.isEmpty()) target = currentRoom;
+        if (target.isEmpty()) return usage(QStringLiteral("Usage: /who TARGET"));
+        sendRaw(QStringLiteral("WHO %1").arg(target));
+        return true;
+    }
+
+    if (command == QStringLiteral("ison")) {
+        const QString targets = rest.trimmed();
+        if (targets.isEmpty()) return usage(QStringLiteral("Usage: /ison NICK [NICK ...]"));
+        sendRaw(QStringLiteral("ISON %1").arg(targets));
+        return true;
+    }
+
+    if (command == QStringLiteral("list")) {
+        sendRaw(rest.isEmpty() ? QStringLiteral("LIST") : QStringLiteral("LIST %1").arg(rest));
+        return true;
+    }
+
+    if (command == QStringLiteral("motd")) {
+        sendRaw(rest.isEmpty() ? QStringLiteral("MOTD") : QStringLiteral("MOTD %1").arg(rest));
+        return true;
+    }
+
+    if (command == QStringLiteral("raw") || command == QStringLiteral("quote")) {
+        if (rest.isEmpty()) return usage(QStringLiteral("Usage: /%1 IRC-COMMAND").arg(command));
+        sendRaw(rest);
+        return true;
+    }
+
+    return false;
 }
 
 void IrcBackend::sendRoomMessage(const QString &room, const QString &message)
@@ -389,6 +638,21 @@ void IrcBackend::replaceMembers(const QString &room, const QStringList &names)
     emit membersChanged(room, QStringLiteral("replace"), names);
 }
 
+void IrcBackend::emitServerCapabilities()
+{
+    QStringList caps = m_ircv3Capabilities.values();
+    caps.sort(Qt::CaseInsensitive);
+
+    QStringList isupport;
+    QStringList keys = m_isupportTokens.keys();
+    keys.sort(Qt::CaseInsensitive);
+    for (const QString &key : keys) {
+        const QString value = m_isupportTokens.value(key);
+        isupport.append(value.isEmpty() ? key : QStringLiteral("%1=%2").arg(key, value));
+    }
+    emit serverCapabilitiesChanged(caps, isupport);
+}
+
 void IrcBackend::processLine(const QString &line)
 {
     if (m_settings.debug) {
@@ -398,6 +662,59 @@ void IrcBackend::processLine(const QString &line)
 
     const ParsedLine parsed = parseLine(line);
     const QString nick = nickFromPrefix(parsed.prefix);
+
+    if (parsed.command == QStringLiteral("CAP") && parsed.params.size() >= 2) {
+        const QString subcommand = parsed.params.at(1).toUpper();
+        if (subcommand == QStringLiteral("LS") && !parsed.params.isEmpty()) {
+            const QString capabilityText = parsed.params.back();
+            for (const QString &raw : capabilityText.split(QLatin1Char(' '), Qt::SkipEmptyParts)) {
+                const QString capability = raw.trimmed();
+                if (!capability.isEmpty()) m_ircv3Capabilities.insert(capability);
+            }
+            emitServerCapabilities();
+        } else if ((subcommand == QStringLiteral("NEW") || subcommand == QStringLiteral("DEL"))
+                   && !parsed.params.isEmpty()) {
+            const bool add = subcommand == QStringLiteral("NEW");
+            for (const QString &raw : parsed.params.back().split(QLatin1Char(' '), Qt::SkipEmptyParts)) {
+                const QString capability = raw.trimmed();
+                const QString capabilityName = capability.section(QLatin1Char('='), 0, 0);
+                if (capabilityName.isEmpty()) continue;
+                if (add) {
+                    for (auto it = m_ircv3Capabilities.begin(); it != m_ircv3Capabilities.end(); ) {
+                        if (it->section(QLatin1Char('='), 0, 0) == capabilityName) it = m_ircv3Capabilities.erase(it);
+                        else ++it;
+                    }
+                    m_ircv3Capabilities.insert(capability);
+                } else {
+                    for (auto it = m_ircv3Capabilities.begin(); it != m_ircv3Capabilities.end(); ) {
+                        if (it->section(QLatin1Char('='), 0, 0) == capabilityName) it = m_ircv3Capabilities.erase(it);
+                        else ++it;
+                    }
+                }
+            }
+            emitServerCapabilities();
+        }
+        return;
+    }
+
+    if (parsed.command == QStringLiteral("005") && parsed.params.size() >= 2) {
+        // RPL_ISUPPORT: first parameter is our nick; the final trailing parameter
+        // is descriptive prose. Everything in between is a server feature token.
+        for (int i = 1; i < parsed.params.size(); ++i) {
+            const QString token = parsed.params.at(i).trimmed();
+            if (token.isEmpty() || token.contains(QLatin1Char(' '))) continue;
+            if (token.startsWith(QLatin1Char('-'))) {
+                m_isupportTokens.remove(token.mid(1).section(QLatin1Char('='), 0, 0).toUpper());
+                continue;
+            }
+            const QString key = token.section(QLatin1Char('='), 0, 0).toUpper();
+            const QString value = token.contains(QLatin1Char('='))
+                ? token.section(QLatin1Char('='), 1) : QString();
+            if (!key.isEmpty()) m_isupportTokens.insert(key, value);
+        }
+        emitServerCapabilities();
+        return;
+    }
 
     if (parsed.command == QStringLiteral("PRIVMSG") && parsed.params.size() >= 2) {
         const QString target = parsed.params[0];
@@ -550,6 +867,20 @@ void IrcBackend::processLine(const QString &line)
         return;
     }
 
+    if (parsed.command == QStringLiteral("MODE") && parsed.params.size() >= 2) {
+        const QString target = parsed.params[0];
+        const QString details = parsed.params.mid(1).join(QLatin1Char(' '));
+        if (isChannel(target)) {
+            emit eventReceived(QStringLiteral("chat"), target,
+                               QStringLiteral("*** %1 sets mode %2")
+                                   .arg(nick.isEmpty() ? QStringLiteral("server") : nick, details));
+        } else {
+            emit eventReceived(QStringLiteral("status"), QString(),
+                               QStringLiteral("*** MODE %1 %2").arg(target, details));
+        }
+        return;
+    }
+
     if (parsed.command == QStringLiteral("TOPIC") && parsed.params.size() >= 2) {
         emit eventReceived(QStringLiteral("chat"), parsed.params[0],
                            QStringLiteral("*** topic set by %1: %2")
@@ -596,14 +927,40 @@ void IrcBackend::processLine(const QString &line)
 
     static const QSet<QString> interestingErrors = {
         QStringLiteral("401"), QStringLiteral("403"), QStringLiteral("404"),
-        QStringLiteral("405"), QStringLiteral("442"), QStringLiteral("443"),
-        QStringLiteral("471"), QStringLiteral("473"), QStringLiteral("474"),
-        QStringLiteral("475")
+        QStringLiteral("405"), QStringLiteral("441"), QStringLiteral("442"),
+        QStringLiteral("443"), QStringLiteral("461"), QStringLiteral("467"),
+        QStringLiteral("471"), QStringLiteral("472"), QStringLiteral("473"),
+        QStringLiteral("474"), QStringLiteral("475"), QStringLiteral("478"),
+        QStringLiteral("482"), QStringLiteral("501"), QStringLiteral("502")
     };
     if (interestingErrors.contains(parsed.command)) {
         emit eventReceived(QStringLiteral("status"), QString(),
                            QStringLiteral("[IRC %1] %2")
                                .arg(parsed.command, parsed.params.join(QLatin1Char(' '))));
+        return;
+    }
+
+    // Surface the standard numeric replies produced by interactive IRC
+    // commands such as WHO/WHOIS/LIST/MODE/INVITE/MOTD and ban-list queries.
+    // Without this, the command can succeed on the wire while appearing to do
+    // nothing in both frontends.
+    static const QSet<QString> commandReplies = {
+        QStringLiteral("301"), QStringLiteral("311"), QStringLiteral("312"),
+        QStringLiteral("313"), QStringLiteral("315"), QStringLiteral("317"),
+        QStringLiteral("318"), QStringLiteral("319"), QStringLiteral("321"),
+        QStringLiteral("322"), QStringLiteral("323"), QStringLiteral("324"),
+        QStringLiteral("329"), QStringLiteral("330"), QStringLiteral("338"),
+        QStringLiteral("341"), QStringLiteral("346"), QStringLiteral("347"),
+        QStringLiteral("348"), QStringLiteral("349"), QStringLiteral("352"),
+        QStringLiteral("354"), QStringLiteral("367"), QStringLiteral("368"),
+        QStringLiteral("372"), QStringLiteral("375"), QStringLiteral("376"),
+        QStringLiteral("671")
+    };
+    if (commandReplies.contains(parsed.command)) {
+        emit eventReceived(QStringLiteral("status"), QString(),
+                           QStringLiteral("[IRC %1] %2")
+                               .arg(parsed.command, parsed.params.join(QLatin1Char(' '))));
+        return;
     }
 }
 
@@ -733,9 +1090,17 @@ void IrcBackend::run()
         emit eventReceived(QStringLiteral("status"), QString(),
                            QStringLiteral("[IRC] Registering nickname %1…").arg(m_nickname));
 
+        m_ircv3Capabilities.clear();
+        m_isupportTokens.clear();
+
         if (!m_settings.password.isEmpty()) {
             sendLine(*socket, QStringLiteral("PASS %1").arg(m_settings.password));
         }
+        // IRCv3 capability discovery is intentionally non-invasive: list what
+        // the server offers, request nothing, then end negotiation so classic
+        // registration proceeds normally. Servers without CAP simply ignore or
+        // reject these lines; classic 005/ISUPPORT is collected separately.
+        sendLine(*socket, QStringLiteral("CAP LS 302"));
         sendLine(*socket, QStringLiteral("NICK %1").arg(m_nickname));
         sendLine(*socket,
                  QStringLiteral("USER %1 0 * :%2")
@@ -743,6 +1108,7 @@ void IrcBackend::run()
                           m_settings.realName.isEmpty()
                               ? appDefaultRealName()
                               : m_settings.realName));
+        sendLine(*socket, QStringLiteral("CAP END"));
 
         bool registered = false;
         while (!registered && !m_stopRequested) {
@@ -920,8 +1286,15 @@ void IrcBackend::run()
             sendLine(*socket, QStringLiteral("QUIT :%1 signing off").arg(appDisplayName()));
         } catch (...) {
         }
-        socket->disconnectFromHost();
-        socket->waitForDisconnected(500);
+        // disconnectFromHost() can complete synchronously. Avoid calling
+        // waitForDisconnected() once Qt has already transitioned the socket
+        // to UnconnectedState, which otherwise prints a warning to stderr.
+        if (socket->state() != QAbstractSocket::UnconnectedState) {
+            socket->disconnectFromHost();
+            if (socket->state() != QAbstractSocket::UnconnectedState) {
+                socket->waitForDisconnected(500);
+            }
+        }
     } catch (const std::exception &e) {
         disconnectReason = QString::fromUtf8(e.what());
         emit backendError(QStringLiteral("IRC connection"), disconnectReason);

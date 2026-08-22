@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \
@@ -280,7 +280,7 @@ CMakeFiles/wafflehouse-client.dir/src/securechannel.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QDir \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qdir.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qfile.h \

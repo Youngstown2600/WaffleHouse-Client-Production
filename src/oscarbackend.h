@@ -40,9 +40,16 @@ public:
     void setIdleSeconds(quint32 seconds);
     void setBack();
     void requestClientVersion(const QString &target);
+    void setProfile(const QString &profile);
+    void refreshServerCapabilities();
 
 signals:
     void presenceChanged(const QString &state, const QString &message, quint32 idleSeconds);
+    void serverCapabilitiesChanged(const QStringList &features,
+                                   const QStringList &familyIds,
+                                   bool profileSupported,
+                                   int maxProfileLength);
+    void profileChanged(const QString &profile);
 
 private:
     enum class CommandType {
@@ -58,6 +65,8 @@ private:
         SetAfk,
         SetIdle,
         SetBack,
+        SetProfile,
+        RefreshCapabilities,
     };
 
     struct Command {
@@ -128,6 +137,9 @@ private:
     void doSetAway(const QString &message, bool afk);
     void doSetIdle(quint32 seconds);
     void doSetBack();
+    void doSetProfile(const QString &profile);
+    void discoverBosCapabilities();
+    QString fetchOwnProfile();
     void emitPresence();
     void loadBuddyList();
     QList<FeedbagItem> parseFeedbagItems(const QByteArray &body) const;
@@ -161,4 +173,5 @@ private:
     QString m_presenceMessage;
     quint32 m_idleSeconds = 0;
     QHash<QString, QString> m_peerClientHints;
+    int m_maxProfileLength = 0;
 };

@@ -17,6 +17,7 @@
 
 class ChatBackend;
 class SipController;
+class MediaController;
 
 class TerminalUi : public QObject {
     Q_OBJECT
@@ -309,6 +310,7 @@ private:
     CpxFileTransferManager m_fileTransfers;
     CpxDirectTransferManager m_directTransfers;
     SipController *m_sipController = nullptr;
+    MediaController *m_mediaController = nullptr;
     QHash<QString, QString> m_fileTransferProfiles;
     QHash<QString, bool> m_fileTransferSecure;
     QHash<QString, int> m_fileTransferProgressShown;

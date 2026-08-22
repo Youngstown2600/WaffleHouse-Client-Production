@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/chatwindow.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtwidgetsglobal.h \
@@ -355,14 +355,32 @@ CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminalwidget.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qmutex.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qtsan_impl.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QQueue \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qqueue.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QThread \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qthread.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qdeadlinetimer.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qelapsedtimer.h \
+ /usr/include/c++/13/future /usr/include/c++/13/mutex \
+ /usr/include/c++/13/bits/std_mutex.h \
+ /usr/include/c++/13/bits/unique_lock.h \
+ /usr/include/c++/13/condition_variable \
+ /usr/include/c++/13/bits/atomic_futex.h \
+ /usr/include/c++/13/bits/std_thread.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QColor \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcolor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \

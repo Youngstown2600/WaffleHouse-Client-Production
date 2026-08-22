@@ -28,10 +28,14 @@ nohas "$MAIN" 'bar->addMenu(QStringLiteral("&Phone"))' 'Phone top-level menu sti
 nohas "$MAIN" 'bar->addMenu(QStringLiteral("&Buddies"))' 'Buddies top-level menu still exists'
 nohas "$MAIN" 'bar->addMenu(QStringLiteral("&Conversation"))' 'Conversation top-level menu still exists'
 has "$MAIN" 'toolsMenu->addAction(QStringLiteral("Open &Softphone…"))' 'Softphone is not under Tools'
-has "$MAIN" 'toolsMenu->addAction(QStringLiteral("Show &Connections Window"))' 'Connections Window is not under Tools'
+nohas "$MAIN" 'toolsMenu->addAction(m_showConnectionsAction)' 'Connections/Accounts Window must not remain under Tools'
+has "$MAIN" 'QMenu *management = m_accountsMenu->addMenu(QStringLiteral("Account Management"));' 'Account Management submenu missing'
+has "$MAIN" 'management->addAction(m_showConnectionsAction);' 'Connections/Accounts Window is not under Account Management'
+has "$MAIN" 'toolsMenu->addAction(m_importBbsAction);' 'Import BBS List is not under Tools'
+has "$MAIN" 'toolsMenu->addAction(QStringLiteral("File Transfer &Log / Activity…"))' 'File Transfer Log / Activity is not under Tools'
 has "$MAIN" 'toolsMenu->addAction(QStringLiteral("Change AIM &Password…"))' 'Change AIM Password is not under Tools'
 has "$MAIN" 'toolsMenu->addAction(QStringLiteral("Secure Identity &Fingerprint…"))' 'Fingerprint is not under Tools'
-pass 'GUI menu layout matches 2.5.1 Accounts/Tools design'
+pass 'GUI menu layout matches 3.3 Accounts/Account Management/Tools design'
 
 # Dynamic per-account workflow.
 has "$MAIN" 'void MainWindow::rebuildAccountsMenu()' 'dynamic Accounts menu builder missing'
@@ -69,4 +73,4 @@ has "$MAIN" 'sipContacts' 'GUI SIP contact persistence missing'
 has "$TERM" 'sipContacts' 'CLI SIP contact persistence missing'
 pass 'SIP local contacts are preserved across GUI/CLI settings'
 
-echo 'All WaffleHouse 2.5.1 GUI workflow regression checks passed.'
+echo 'All WaffleHouse-Client 3.3r1 GUI workflow regression checks passed.'

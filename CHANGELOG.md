@@ -1,11 +1,119 @@
+# WaffleHouse-Client 3.3r1 — media keys, server capability discovery, AIM profiles — 2026-08-22
+
+- Added application-wide multimedia keyboard controls for Play, Pause, Play/Pause, Stop, Previous, Next, Volume Up, Volume Down, and Mute while WaffleHouse-Client is active.
+- AIM/OSCAR now records the BOS Host Online SNAC family list and exposes it as a per-account **Server Capabilities…** view.
+- Locate/profile support is detected from OSCAR family 0x0002; Locate rights are queried for the server-advertised maximum profile/signature length when available.
+- Added **Edit AIM Profile…** to the right-click menu for connected OSCAR accounts. The editor loads the current server profile when supported and updates it with LOCATE_SET_INFO.
+- IRC now performs non-invasive `CAP LS 302` discovery and records classic numeric 005/ISUPPORT tokens.
+- Added **Server Capabilities…** to AIM/OSCAR and IRC account right-click menus.
+- Version advanced to **3.3r1** for this feature build.
+
+# WaffleHouse-Client 3.3 — IRC disconnect-state hotfix — 2026-08-22
+
+- Fixed the GUI IRC disconnect path calling `QAbstractSocket::waitForDisconnected()` after the socket had already entered `UnconnectedState`, which caused Qt to print `QAbstractSocket::waitForDisconnected() is not allowed in UnconnectedState` when the GUI was launched from a terminal.
+- IRC now mirrors the existing guarded Telnet cleanup: it checks socket state before `disconnectFromHost()` and rechecks immediately afterward before waiting.
+- AIM/OSCAR disconnect handling was audited and already contains a post-disconnect `UnconnectedState` guard, so no unnecessary protocol changes were made there.
+- Added `irc_disconnect_state_guard_test.sh` to prevent an unconditional IRC `waitForDisconnected()` call from returning.
+- Full regression suite passes 35/35 tests.
+
+# WaffleHouse-Client 3.3 — Qt6 GUI compile hotfix — 2026-08-22
+
+- Fixed the Qt6 compile failure in `MainWindow::buildMenus()` caused by connecting `QAction::triggered` directly to the overloaded `MainWindow::importBbsList` member. The menu action now uses an explicit zero-argument lambda.
+- Fixed the malformed C++ escape in the CLI sensitive-prompt regular expression (`\]`), removing the `unknown escape sequence` compiler warning while preserving the intended closing-bracket match.
+- Added a regression guard for both compile issues.
+
+# WaffleHouse-Client 3.3 — compact GUI/account-management refresh — 2026-08-22
+
+- Removed the redundant main-window navigation rail and replaced the old hub heading with a compact **WaffleHouse-Client 3.3** identity header above the Accounts tree.
+- Renamed the secondary Connections window to **Connections/Accounts**.
+- Removed the top-level **Connection** menu. Its account lifecycle actions now live in **Accounts → Account Management**, which is always the first submenu under Accounts; **Show Connections/Accounts Window** moved there as well.
+- Moved **Import BBS List** and **File Transfer Log / Activity** into **Tools**.
+- Added protocol-aware account context actions: AIM/OSCAR accounts can change their password, and IRC accounts can change nick/nickname.
+- Added AIM/IRC buddy context actions for **Send IM** and **Send File**.
+- Added **Show Media Center** to the system-tray menu.
+- Added a main-window `/command` input that dispatches CLI-style commands into GUI actions, including `/add`, `/joinprivate ROOM`, `/nick`, messaging, IRC slash commands, SIP/softphone commands, file-transfer commands, settings, and Media Center commands.
+- Regression suite updated to guard the new layout and passes 33/33 tests.
+
+# WaffleHouse-Client 3.3 — YouTube feature removal — 2026-08-22
+
+- Removed the dedicated YouTube Audio button from the Media Center Center GUI.
+- Removed the YouTube Audio action from the main Media menu.
+- Removed the `/myoutube` command from CLI parsing, help, and command completion.
+- Removed the media subsystem's yt-dlp resolver, QProcess resolver state, YouTube URL normalization, Deno/Node runtime integration, and yt-dlp dependency checks/install steps.
+- The media subsystem now launches mpv with `--ytdl=no`, preventing mpv's internal ytdl hook from silently restoring YouTube page extraction.
+- Kept local audio/video, direct HTTP/HTTPS/HLS streams, SHOUTcast/Icecast, playlists, queue controls, EQ, SIP/AIM/IRC/Telnet, Secure Rooms, and file-transfer features.
+- Kept the Stop → Play behavior: Stop preserves the queue and Play/Resume restarts the first queued item when playback is idle.
+
+# WaffleHouse-Client 3.1r7 — YouTube runtime/headers + Stop→Play queue hotfix — 2026-08-22
+
+- Fixed the `QIODevice::read (QProcess): device not open` warnings by removing stdout/stderr reads before the asynchronous yt-dlp `QProcess` is started.
+- Updated the builder for current YouTube extraction requirements: refresh the official yt-dlp Unix executable, install/use Deno 2.3+ where possible, and explicitly hand the JS runtime path to yt-dlp.
+- Added yt-dlp `http_headers` handling so mpv receives the resolved stream's User-Agent/Referer as per-file options, including the pre-0.38 and 0.38+ `loadfile` argument layouts.
+- Added mpv `end-file` error reporting so HTTP/media failures are visible instead of appearing as a no-op.
+- Changed stopped-queue Play behavior: when mpv is idle and the queue is non-empty, Play always starts queue index 0 without requiring the user to reselect an item.
+- Preserved single-video normalization for YouTube radio/mix URLs, native AF_UNIX mpv IPC, HLS/SHOUTcast support, SIP/IRC/AIM/Telnet features, and existing CPX/Secure Room/file-transfer wire compatibility.
+- Source regression suite passes 33/33 tests.
+
+# WaffleHouse-Client 3.1r6 — portable direct YouTube resolver — 2026-08-21
+
+- Replaced mpv's internal `ytdl://` hook as the primary YouTube path. The media subsystem now invokes `yt-dlp` directly with `QProcess`, parses the selected best-audio JSON, and hands the resolved direct media URL to mpv.
+- Added a resolver fallback to `python3 -m yt_dlp` for Slackware, user/virtualenv installs, and other systems where the Python module exists without a wrapper executable.
+- Added explicit Debian-family, Fedora/dnf, Slackware, and FreeBSD dependency/build coverage while keeping one distro-neutral runtime media path.
+- Preserved the 3.1r4 Stop/queue behavior, HLS and SHOUTcast playback, SHOUTcast directory search, native AF_UNIX mpv IPC, and all existing CPX/Secure Room/file-transfer encryption wire implementations.
+
+# WaffleHouse-Client 3.1r4 — SHOUTcast compile hotfix — 2026-08-21
+
+- Fixed a compile-breaking raw newline inside the SHOUTcast directory fallback `QStringLiteral` in `src/mediawindow.cpp`; the message now uses an escaped `\n`.
+- Added a source regression guard for accidental newline-spanning ordinary string literals and the exact SHOUTcast fallback text.
+- Preserved all 3.1r3 playback, YouTube, HLS, SHOUTcast, queue, IPC, IRC slash-command, Secure Room, SIP, and encryption compatibility behavior.
+
+# WaffleHouse-Client 3.1r3 — playback queue + YouTube + SHOUTcast search — 2026-08-21
+
+- Changed Stop to mpv `stop keep-playlist`, preserving local files, HLS streams, and SHOUTcast entries in Playlist/Queue.
+- Resume now restarts the current stopped playlist entry when mpv is idle.
+- Hardened YouTube audio-only playback: The media subsystem explicitly locates `yt-dlp`/`youtube-dl`, tells mpv exactly which resolver to use, enables try-first resolution, and forces YouTube URLs through mpv's documented `ytdl://` hook.
+- Added SHOUTcast Directory search to the Media Center, Media menu, and CLI `/mshoutcast TERMS`; search opens `directory.shoutcast.com` in the user's browser.
+- Preserved all WaffleHouse CPX/Secure Room/file-transfer encryption implementations and the 3.1r2 native AF_UNIX mpv control transport.
+
+# WaffleHouse-Client 3.1r2 — native mpv IPC hotfix 2 — 2026-08-21
+
+- Fixed Qt6 compilation of the native mpv IPC notifier by connecting `QSocketNotifier::activated` directly instead of using an invalid two-argument `QOverload` selector (Qt6 carries an internal `QPrivateSignal` parameter).
+- Fixed the reproduced `QLocalSocket::connectToServer: Invalid name` failure that prevented both local files and internet media from reaching mpv on affected Linux/FreeBSD Qt builds.
+- Removed QLocalSocket from the mpv control path entirely. The media subsystem now connects directly to mpv's filesystem Unix-domain socket with `AF_UNIX`/`SOCK_STREAM` and integrates readable IPC data into Qt with `QSocketNotifier`.
+- Uses the platform-native sockaddr length rather than a Qt-translated server name; includes Linux `MSG_NOSIGNAL` and FreeBSD `SO_NOSIGPIPE` handling for safe IPC writes.
+- Retains the unique owner-only runtime directory, short socket path, five-second startup allowance, compatibility-mode mpv retry, and detailed mpv/socket diagnostics.
+- Added a regression assertion that fails if QLocalSocket is reintroduced into the Media Center mpv controller.
+- Existing CPX encryption, file-transfer encryption, and Secure Room wire implementations remain unchanged.
+
+# WaffleHouse-Client 3.1r2 — media/streams + testing-safe install — 2026-08-21
+
+- Rebuilt Media Center from the latest uploaded WaffleHouse-Client 3.1 IRC-slash-command source rather than from the older 3.0r2 media branch.
+- Added mpv-backed local audio/video playback, SHOUTcast/Icecast/HTTP/HLS streams, M3U/M3U8/PLS playlists, YouTube audio-only via yt-dlp, queue controls, shuffle/repeat, seek, volume/mute, and a 10-band EQ in both GUI and CLI workflows.
+- Added a WaffleHouse-styled Media Center and top-level **Media** menu while preserving the 3.1 Communications Hub, left-rail Softphone, SIP accounts, Secure Rooms, and the latest IRC slash-command behavior.
+- Changed normal `./build.sh` behavior so application installation is offered **only after a successful build**, with `[y/N]` defaulting to No. `--no-install` suppresses the offer; explicit `--install`/`--upgrade` still install.
+- Kept dependency auto-install and the guarded FreeBSD audio compatibility workflow separate and documented the `--no-auto-deps --no-audio-fix` testing path.
+- Hardened media IPC with a unique owner-only runtime directory, `--no-config`, explicit safe-playlist policy, drained process output, request/error tracking, and cleanup of failed mpv startup/IPC attempts.
+- Fixed queued YouTube audio-only items so they cannot disable video on the currently playing item; mpv 0.38+ uses per-file `loadfile` options, with a compatibility fallback for older mpv.
+- Synchronized the GUI queue from mpv's actual playlist state so double-click, removal, playlist load, and Next/Previous no longer drift from the backend.
+- Preserved encrypted-DM, file-transfer, direct-transfer, and Secure Room source files byte-for-byte from the uploaded 3.1 baseline; added a hard checksum regression gate for backwards-compatible CPX wire behavior.
+- Detailed source regression suite passes 29/29 tests.
+
 # WaffleHouse-Client 3.1 — Secure AIM/IRC rooms + Communications Hub cleanup — 2026-08-20
+
+## 3.1 IRC slash-command parity update — 2026-08-21
+- Added a shared IRC slash-command parser used by both the Qt GUI and ncurses CLI conversation inputs.
+- Added common IRC/channel commands including `/op`, `/deop`, `/voice`, `/devoice`, `/kick`, `/ban`, `/unban`, `/topic`, `/mode`, `/me`, `/notice`, `/invite`, `/who`, `/whois`, `/whowas`, `/ison`, `/list`, `/motd`, and `/quote`.
+- Recognized IRC commands bypass CPX room encryption and are sent as IRC protocol operations; unknown slash-prefixed text is treated as ordinary chat text.
+- Unknown slash-prefixed text continues to use CPX secure-DM or secure-room encryption when that conversation is secured.
+- GUI and CLI slash-command completion now expose the IRC command set.
+
 
 - Added CPX secure-room mode to AIM/OSCAR chat rooms and IRC channels. Room traffic is encrypted with XChaCha20-Poly1305 and appears on the public room transport as `[[CPXROOM1:...]]` ciphertext.
 - Added `secure-room-v1` capability negotiation. Shared room keys are never posted in the room; they are distributed individually inside already-established CPX encrypted private-message sessions.
 - Added GUI room security controls and CLI `/secure`, `/securestatus`, and `/secureoff` room behavior. Secure-room plaintext is tagged `[secure-room]`; ordinary traffic received while a room key is active is tagged `[plaintext]` for easy verification.
 - Added automatic room-key rotation by the key owner when membership changes, with redistribution to current secure peers.
 - Renamed the main sidebar **Messages** item to **Communications**.
-- Removed Softphone navigation, quick-dial controls, SIP contacts/calls, and Softphone actions from the main GUI/Buddy List. Full SIP/VoIP functionality remains available through **Tools → Open Softphone**, the tray menu, Accounts/Connections, and the CLI phone commands.
+- Removed only the old right-side Softphone quick-dial panel from the Communications Hub. SIP accounts remain visible in Accounts & Buddies, and the **Softphone** launcher remains on the left navigation rail as well as Tools, the tray menu, and CLI phone commands.
 - Added `src/secureroom.*` and `tests/secure_room_31_test.sh`; complete source regression gate passes 26/26 tests.
 
 # WaffleHouse-Client 3.0r2 — Branded application + tray artwork — 2026-08-20

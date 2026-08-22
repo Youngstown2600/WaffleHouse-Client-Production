@@ -26,13 +26,20 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 namespace {
 struct qt_meta_stringdata_OscarBackend_t {
-    uint offsetsAndSizes[12];
+    uint offsetsAndSizes[26];
     char stringdata0[13];
     char stringdata1[16];
     char stringdata2[1];
     char stringdata3[6];
     char stringdata4[8];
     char stringdata5[12];
+    char stringdata6[26];
+    char stringdata7[9];
+    char stringdata8[10];
+    char stringdata9[17];
+    char stringdata10[17];
+    char stringdata11[15];
+    char stringdata12[8];
 };
 #define QT_MOC_LITERAL(ofs, len) \
     uint(sizeof(qt_meta_stringdata_OscarBackend_t::offsetsAndSizes) + ofs), len 
@@ -43,14 +50,28 @@ Q_CONSTINIT static const qt_meta_stringdata_OscarBackend_t qt_meta_stringdata_Os
         QT_MOC_LITERAL(29, 0),  // ""
         QT_MOC_LITERAL(30, 5),  // "state"
         QT_MOC_LITERAL(36, 7),  // "message"
-        QT_MOC_LITERAL(44, 11)   // "idleSeconds"
+        QT_MOC_LITERAL(44, 11),  // "idleSeconds"
+        QT_MOC_LITERAL(56, 25),  // "serverCapabilitiesChanged"
+        QT_MOC_LITERAL(82, 8),  // "features"
+        QT_MOC_LITERAL(91, 9),  // "familyIds"
+        QT_MOC_LITERAL(101, 16),  // "profileSupported"
+        QT_MOC_LITERAL(118, 16),  // "maxProfileLength"
+        QT_MOC_LITERAL(135, 14),  // "profileChanged"
+        QT_MOC_LITERAL(150, 7)   // "profile"
     },
     "OscarBackend",
     "presenceChanged",
     "",
     "state",
     "message",
-    "idleSeconds"
+    "idleSeconds",
+    "serverCapabilitiesChanged",
+    "features",
+    "familyIds",
+    "profileSupported",
+    "maxProfileLength",
+    "profileChanged",
+    "profile"
 };
 #undef QT_MOC_LITERAL
 } // unnamed namespace
@@ -61,18 +82,22 @@ Q_CONSTINIT static const uint qt_meta_data_OscarBackend[] = {
       10,       // revision
        0,       // classname
        0,    0, // classinfo
-       1,   14, // methods
+       3,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       1,       // signalCount
+       3,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    3,   20,    2, 0x06,    1 /* Public */,
+       1,    3,   32,    2, 0x06,    1 /* Public */,
+       6,    4,   39,    2, 0x06,    5 /* Public */,
+      11,    1,   48,    2, 0x06,   10 /* Public */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::QString, QMetaType::QString, QMetaType::UInt,    3,    4,    5,
+    QMetaType::Void, QMetaType::QStringList, QMetaType::QStringList, QMetaType::Bool, QMetaType::Int,    7,    8,    9,   10,
+    QMetaType::Void, QMetaType::QString,   12,
 
        0        // eod
 };
@@ -90,7 +115,16 @@ Q_CONSTINIT const QMetaObject OscarBackend::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
-        QtPrivate::TypeAndForceComplete<quint32, std::false_type>
+        QtPrivate::TypeAndForceComplete<quint32, std::false_type>,
+        // method 'serverCapabilitiesChanged'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QStringList &, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QStringList &, std::false_type>,
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
+        QtPrivate::TypeAndForceComplete<int, std::false_type>,
+        // method 'profileChanged'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QString &, std::false_type>
     >,
     nullptr
 } };
@@ -102,6 +136,8 @@ void OscarBackend::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         (void)_t;
         switch (_id) {
         case 0: _t->presenceChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<quint32>>(_a[3]))); break;
+        case 1: _t->serverCapabilitiesChanged((*reinterpret_cast< std::add_pointer_t<QStringList>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QStringList>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[4]))); break;
+        case 2: _t->profileChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -110,6 +146,20 @@ void OscarBackend::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
             using _t = void (OscarBackend::*)(const QString & , const QString & , quint32 );
             if (_t _q_method = &OscarBackend::presenceChanged; *reinterpret_cast<_t *>(_a[1]) == _q_method) {
                 *result = 0;
+                return;
+            }
+        }
+        {
+            using _t = void (OscarBackend::*)(const QStringList & , const QStringList & , bool , int );
+            if (_t _q_method = &OscarBackend::serverCapabilitiesChanged; *reinterpret_cast<_t *>(_a[1]) == _q_method) {
+                *result = 1;
+                return;
+            }
+        }
+        {
+            using _t = void (OscarBackend::*)(const QString & );
+            if (_t _q_method = &OscarBackend::profileChanged; *reinterpret_cast<_t *>(_a[1]) == _q_method) {
+                *result = 2;
                 return;
             }
         }
@@ -135,13 +185,13 @@ int OscarBackend::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 3;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 3)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 1;
+        _id -= 3;
     }
     return _id;
 }
@@ -151,6 +201,20 @@ void OscarBackend::presenceChanged(const QString & _t1, const QString & _t2, qui
 {
     void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t3))) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
+}
+
+// SIGNAL 1
+void OscarBackend::serverCapabilitiesChanged(const QStringList & _t1, const QStringList & _t2, bool _t3, int _t4)
+{
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t3))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t4))) };
+    QMetaObject::activate(this, &staticMetaObject, 1, _a);
+}
+
+// SIGNAL 2
+void OscarBackend::profileChanged(const QString & _t1)
+{
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
+    QMetaObject::activate(this, &staticMetaObject, 2, _a);
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

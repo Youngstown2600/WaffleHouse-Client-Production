@@ -2,6 +2,7 @@
 
 #include "appbranding.h"
 #include "backend.h"
+#include "ircbackend.h"
 #include "ansiterminalwidget.h"
 
 #include <QAction>
@@ -254,6 +255,12 @@ QStringList ChatWindow::availableSlashCommands() const
         QStringLiteral("/options"),
         QStringLiteral("/version")
     };
+    if ((m_kind == QStringLiteral("im") || m_kind == QStringLiteral("chat"))
+        && m_backend
+        && m_backend->protocolName().compare(QStringLiteral("IRC"), Qt::CaseInsensitive) == 0) {
+        commands << IrcBackend::slashCommands();
+        commands.removeDuplicates();
+    }
     if (m_kind == QStringLiteral("im") || m_kind == QStringLiteral("chat")) {
         commands << QStringLiteral("/secure")
                  << QStringLiteral("/secureoff")
@@ -522,6 +529,11 @@ void ChatWindow::setShowSidePane(bool enabled)
     if (m_memberPane) {
         m_memberPane->setVisible(enabled);
     }
+}
+
+void ChatWindow::clearTranscript()
+{
+    if (m_transcript) m_transcript->clear();
 }
 
 void ChatWindow::setSecurityState(bool active,

@@ -11,6 +11,26 @@
 
 using namespace Oscar;
 
+namespace {
+QString oscarFamilyName(quint16 family)
+{
+    switch (family) {
+    case FAM_OSERVICE: return QStringLiteral("Generic Service / BOS");
+    case FAM_LOCATE: return QStringLiteral("Locate / Profiles / User Info");
+    case FAM_BUDDY: return QStringLiteral("Buddy Presence");
+    case FAM_ICBM: return QStringLiteral("Instant Messaging (ICBM)");
+    case FAM_ADMIN: return QStringLiteral("Account Administration");
+    case FAM_PERMIT_DENY: return QStringLiteral("Privacy / Permit-Deny");
+    case FAM_CHATNAV: return QStringLiteral("Chat Navigation");
+    case FAM_CHAT: return QStringLiteral("Chat Rooms");
+    case FAM_FEEDBAG: return QStringLiteral("SSI / Feedbag Buddy List");
+    case FAM_BUCP: return QStringLiteral("BUCP Authentication");
+    default:
+        return QStringLiteral("Unknown / server-specific family");
+    }
+}
+}
+
 OscarBackend::OscarBackend(ConnectionSettings settings, QObject *parent)
     : ChatBackend(std::move(settings), parent)
 {
@@ -129,6 +149,16 @@ void OscarBackend::requestClientVersion(const QString &target)
     const QString clean = target.trimmed();
     if (clean.isEmpty()) return;
     enqueue({CommandType::SendIm, clean, QStringLiteral("[[WHVER:Q]]"), {}, true, 0});
+}
+
+void OscarBackend::setProfile(const QString &profile)
+{
+    enqueue({CommandType::SetProfile, profile, {}, {}, false, 0});
+}
+
+void OscarBackend::refreshServerCapabilities()
+{
+    enqueue({CommandType::RefreshCapabilities, {}, {}, {}, false, 0});
 }
 
 void OscarBackend::protocolLog(const QString &text)
@@ -1123,6 +1153,106 @@ void OscarBackend::doSetBack()
     emitPresence();
 }
 
+void OscarBackend::discoverBosCapabilities()
+{
+    if (!m_bos) {
+        fail(QStringLiteral("not logged in"));
+    }
+
+    QStringList features;
+    QStringList familyIds;
+    const QList<quint16> families = m_bos->families;
+    for (const quint16 family : families) {
+        const QString name = oscarFamilyName(family);
+        familyIds.append(QStringLiteral("0x%1 — %2")
+                             .arg(family, 4, 16, QLatin1Char('0'))
+                             .arg(name));
+        features.append(name);
+    }
+
+    const bool profileSupported = families.contains(FAM_LOCATE);
+    m_maxProfileLength = 0;
+    if (profileSupported) {
+        try {
+            const Snac rights = request(*m_bos, FAM_LOCATE, LOCATE_RIGHTS_QUERY, QByteArray(), 5000);
+            if (rights.family == FAM_LOCATE && rights.subtype == LOCATE_RIGHTS_REPLY) {
+                qsizetype offset = 0;
+                const QList<Tlv> rightsTlvs = parseTlvs(rights.body, offset);
+                const QByteArray maxSig = firstTlv(rightsTlvs, 0x0001);
+                if (maxSig.size() >= 2) {
+                    m_maxProfileLength = readU16(maxSig, 0);
+                }
+            } else if (rights.family == FAM_LOCATE && rights.subtype == 0x0001) {
+                protocolLog(QStringLiteral("[OSCAR capabilities] Locate family advertised, but rights query returned an error."));
+            }
+        } catch (const std::exception &e) {
+            // Capability inspection must never tear down an otherwise healthy login.
+            protocolLog(QStringLiteral("[OSCAR capabilities] Locate rights query unavailable: %1")
+                            .arg(QString::fromUtf8(e.what())));
+        }
+    }
+
+    features.removeDuplicates();
+    emit serverCapabilitiesChanged(features, familyIds, profileSupported, m_maxProfileLength);
+
+    if (profileSupported) {
+        try {
+            emit profileChanged(fetchOwnProfile());
+        } catch (const std::exception &e) {
+            protocolLog(QStringLiteral("[OSCAR profile] Could not read current profile: %1")
+                            .arg(QString::fromUtf8(e.what())));
+        }
+    }
+}
+
+QString OscarBackend::fetchOwnProfile()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE)) {
+        return {};
+    }
+
+    QByteArray body;
+    appendU16(body, 0x0001); // classic LOCATE profile query
+    body += lp8(m_settings.username);
+    const Snac reply = request(*m_bos, FAM_LOCATE, LOCATE_USER_INFO_QUERY, body, 5000);
+    if (reply.family == FAM_LOCATE && reply.subtype == 0x0001) {
+        fail(QStringLiteral("server rejected AIM profile query"));
+    }
+    if (reply.family != FAM_LOCATE || reply.subtype != LOCATE_USER_INFO_REPLY) {
+        fail(QStringLiteral("unexpected AIM profile reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+    }
+
+    qsizetype offset = 0;
+    (void)parseUserInfo(reply.body, offset);
+    const QList<Tlv> profileTlvs = parseTlvs(reply.body, offset);
+    return stripAimHtml(QString::fromUtf8(firstTlv(profileTlvs, LOCATE_TLV_PROFILE_DATA)));
+}
+
+void OscarBackend::doSetProfile(const QString &profile)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE)) {
+        fail(QStringLiteral("this OSCAR server does not advertise Locate/profile support"));
+    }
+
+    const QByteArray profileBytes = profile.toUtf8();
+    if (m_maxProfileLength > 0 && profileBytes.size() > m_maxProfileLength) {
+        fail(QStringLiteral("AIM profile is %1 bytes; this server allows at most %2 bytes")
+                 .arg(profileBytes.size())
+                 .arg(m_maxProfileLength));
+    }
+
+    QByteArray body;
+    body += tlv(LOCATE_TLV_PROFILE_TYPE,
+                QByteArrayLiteral("text/x-aolrtf; charset=\"utf-8\""));
+    body += tlv(LOCATE_TLV_PROFILE_DATA, profileBytes);
+    m_bos->sendSnac(FAM_LOCATE, LOCATE_SET_INFO, body);
+    emit profileChanged(profile);
+    protocolLog(QStringLiteral("[AIM profile] Profile updated (%1 byte(s)).")
+                    .arg(profileBytes.size()));
+}
+
 void OscarBackend::processCommand(const Command &command)
 {
     try {
@@ -1166,6 +1296,12 @@ void OscarBackend::processCommand(const Command &command)
             break;
         case CommandType::SetBack:
             doSetBack();
+            break;
+        case CommandType::SetProfile:
+            doSetProfile(command.a);
+            break;
+        case CommandType::RefreshCapabilities:
+            discoverBosCapabilities();
             break;
         }
     } catch (const std::exception &e) {
@@ -1383,6 +1519,7 @@ void OscarBackend::run()
             m_settings.debug,
             [this](const QString &s) { protocolLog(s); });
         bootstrapService(*m_bos, authResult.second, true);
+        discoverBosCapabilities();
         loadBuddyList();
 
         m_presenceState = QStringLiteral("ONLINE");

@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/terminalui.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/terminalui.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/terminalui.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/terminalui.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -300,15 +300,15 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QSet \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/filetransfer.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/directtransfer.h \
  /usr/include/sodium.h /usr/include/sodium/version.h \
  /usr/include/sodium/export.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/limits.h \
@@ -392,7 +392,7 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/sodium/crypto_stream_salsa2012.h \
  /usr/include/sodium/crypto_stream_salsa208.h \
  /usr/include/sodium/crypto_stream_xchacha20.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/ansiterminal.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QColor \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcolor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qtguiglobal.h \
@@ -406,8 +406,9 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbasictimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/platforminfo.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/platforminfo.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediacontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qmutex.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtsan_impl.h \
@@ -423,8 +424,8 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/atomic_futex.h \
  /usr/include/c++/13/bits/std_thread.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \
@@ -447,22 +448,22 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvarlengtharray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvariant.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/telnetbackend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/telnetbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/bbsdirectory.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QtGlobal \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qglobal.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/sipbackend.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QPointer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qpointer.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/notificationmanager.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/filetransport.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/useractivity.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/notificationmanager.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/filetransport.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/useractivity.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QCoreApplication \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcoreapplication.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcoreevent.h \
@@ -476,6 +477,8 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qdatetime.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qcalendar.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlocale.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/QDesktopServices \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qdesktopservices.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QDir \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qdir.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qfile.h \
@@ -513,4 +516,6 @@ CMakeFiles/wafflehouse-client.dir/src/terminalui.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qregularexpression.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStandardPaths \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstandardpaths.h \
- /usr/include/curses.h /usr/include/ncurses_dll.h /usr/include/unctrl.h
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QUrl \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qurl.h /usr/include/curses.h \
+ /usr/include/ncurses_dll.h /usr/include/unctrl.h

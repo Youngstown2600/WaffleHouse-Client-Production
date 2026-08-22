@@ -1,0 +1,17 @@
+WaffleHouse-Client 3.3r1 test summary
+
+Regression suite: 39/39 PASS
+Shell syntax validation: PASS (44 shell scripts)
+Builder dry-run: PASS
+Branding audit: PASS — current product branding is WaffleHouse-Client
+Version audit: PASS — current application/build/test identifiers report 3.3r1
+YouTube removal regression: PASS
+Stop -> Play first queued item regression: PASS
+GUI account/menu regression: PASS
+Multimedia keyboard regression: PASS
+OSCAR Host Online/Locate/profile regression: PASS
+IRC CAP LS 302 + 005/ISUPPORT regression: PASS
+IRC disconnect-state regression: PASS
+Qt6 overloaded-slot/string guard: PASS
+Core preservation gate: PASS — 32 files pinned, 13 documented feature exceptions
+Native linked GUI build: not available in packaging environment; Qt6/libsodium/ncurses development dependencies are absent

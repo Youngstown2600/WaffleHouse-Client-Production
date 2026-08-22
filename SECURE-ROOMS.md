@@ -44,6 +44,6 @@ For a simple test with two WaffleHouse clients:
 5. Send a room message from Client A. A raw/non-WaffleHouse observer should see the `CPXROOM1` frame rather than the plaintext; Client B should display the recovered text as `[secure-room]`.
 6. Send a normal room message from a client without the room key. WaffleHouse clients with Secure Room active display it as `[plaintext]`.
 
-## Communications Hub / Softphone layout
+## Main window / Softphone layout
 
-This rebuild removes only the old right-side Softphone quick-dial card from the Communications Hub. SIP accounts remain visible as top-level Accounts & Buddies entries. The dedicated **Softphone** button remains in the left navigation rail, and Softphone is also available from **Tools -> Open Softphone** and the tray menu.
+WaffleHouse-Client 3.3r1 uses a compact main **Accounts** window without the old navigation rail. SIP accounts remain visible alongside AIM/IRC/Telnet accounts. The full Softphone workspace is available from **Tools -> Open Softphone**, the system tray, and supported `/phone` commands.

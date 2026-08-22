@@ -6,13 +6,13 @@ need(){ grep -F "$2" "$ROOT/$1" >/dev/null || fail "$1 missing: $2"; }
 forbid(){ if grep -F "$2" "$ROOT/$1" >/dev/null; then fail "$1 still contains forbidden text: $2"; fi; }
 
 # Release branding must be generated from the current version rather than a stale splash literal.
-need CMakeLists.txt 'project(WaffleHouseClient VERSION 3.1.0 LANGUAGES CXX)'
-need CMakeLists.txt 'APP_VERSION_STRING="3.1"'
-need src/appbranding.h '#define APP_VERSION_STRING "3.1"'
-need include/trunkmonkey/Version.h '#define WAFFLEHOUSE_SOFTPHONE_VERSION "3.1"'
+need CMakeLists.txt 'project(WaffleHouseClient VERSION 3.3.1 LANGUAGES CXX)'
+need CMakeLists.txt 'APP_VERSION_STRING="3.3r1"'
+need src/appbranding.h '#define APP_VERSION_STRING "3.3r1"'
+need include/trunkmonkey/Version.h '#define WAFFLEHOUSE_SOFTPHONE_VERSION "3.3r1"'
 need src/main.cpp 'QStringLiteral("WAFFLEHOUSE-CLIENT — VERSION %1").arg(appVersionString().toUpper())'
-need build.sh 'Build WaffleHouse-Client 3.1, the unified C++ GUI/CLI executable.'
-need build.sh 'WAFFLEHOUSE-CLIENT 3.1 + SIP SOFTPHONE'
+need build.sh 'Build WaffleHouse-Client 3.3r1, the unified C++ GUI/CLI executable.'
+need build.sh 'WAFFLEHOUSE-CLIENT 3.3r1'
 forbid src/main.cpp 'VERSION 2.3 ALPHA'
 
 # Secure / unsecured transfer selection and dedicated non-CPX wire framing.
@@ -72,7 +72,8 @@ need src/softphonewindow.cpp 'QStringLiteral("HANG UP")'
 need src/softphonewindow.cpp 'm_controller->sendDtmf(liveId, digit, &error)'
 need src/modernstyle.cpp 'QPushButton[dialKey="true"]'
 need src/softphonewindow.cpp 'resize(740, 550);'
-need src/mainwindow.cpp 'resize(860, 560);'
+need src/mainwindow.cpp 'resize(680, 520);'
+need src/mainwindow.cpp 'setMinimumSize(560, 420);'
 need src/mainwindow.cpp 'm_connectionsWindow->resize(620, 430);'
 need src/chatwindow.cpp 'QStringLiteral("chat") ? 560 : 480, 360'
 need src/transferwindow.cpp 'resize(600, 380);'

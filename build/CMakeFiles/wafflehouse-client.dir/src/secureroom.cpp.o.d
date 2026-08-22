@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/secureroom.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \

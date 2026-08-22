@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/useractivity.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/useractivity.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/useractivity.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/useractivity.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/useractivity.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QtGlobal \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qglobal.h \
  /usr/include/c++/13/type_traits \

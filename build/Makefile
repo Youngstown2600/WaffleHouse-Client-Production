@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Testing
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Testing/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -132,9 +132,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles /home/gitsc/WaffleHouse-Client-Testing/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -539,6 +539,54 @@ src/mainwindow.s: src/mainwindow.cpp.s
 src/mainwindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mainwindow.cpp.s
 .PHONY : src/mainwindow.cpp.s
+
+src/mediacontroller.o: src/mediacontroller.cpp.o
+.PHONY : src/mediacontroller.o
+
+# target to build an object file
+src/mediacontroller.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediacontroller.cpp.o
+.PHONY : src/mediacontroller.cpp.o
+
+src/mediacontroller.i: src/mediacontroller.cpp.i
+.PHONY : src/mediacontroller.i
+
+# target to preprocess a source file
+src/mediacontroller.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediacontroller.cpp.i
+.PHONY : src/mediacontroller.cpp.i
+
+src/mediacontroller.s: src/mediacontroller.cpp.s
+.PHONY : src/mediacontroller.s
+
+# target to generate assembly for a file
+src/mediacontroller.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediacontroller.cpp.s
+.PHONY : src/mediacontroller.cpp.s
+
+src/mediawindow.o: src/mediawindow.cpp.o
+.PHONY : src/mediawindow.o
+
+# target to build an object file
+src/mediawindow.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.o
+.PHONY : src/mediawindow.cpp.o
+
+src/mediawindow.i: src/mediawindow.cpp.i
+.PHONY : src/mediawindow.i
+
+# target to preprocess a source file
+src/mediawindow.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.i
+.PHONY : src/mediawindow.cpp.i
+
+src/mediawindow.s: src/mediawindow.cpp.s
+.PHONY : src/mediawindow.s
+
+# target to generate assembly for a file
+src/mediawindow.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.s
+.PHONY : src/mediawindow.cpp.s
 
 src/modernstyle.o: src/modernstyle.cpp.o
 .PHONY : src/modernstyle.o
@@ -1195,6 +1243,12 @@ help:
 	@echo "... src/mainwindow.o"
 	@echo "... src/mainwindow.i"
 	@echo "... src/mainwindow.s"
+	@echo "... src/mediacontroller.o"
+	@echo "... src/mediacontroller.i"
+	@echo "... src/mediacontroller.s"
+	@echo "... src/mediawindow.o"
+	@echo "... src/mediawindow.i"
+	@echo "... src/mediawindow.s"
 	@echo "... src/modernstyle.o"
 	@echo "... src/modernstyle.i"
 	@echo "... src/modernstyle.s"

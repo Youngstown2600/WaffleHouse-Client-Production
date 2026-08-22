@@ -1,3 +1,3 @@
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp \
  /usr/include/stdc-predef.h

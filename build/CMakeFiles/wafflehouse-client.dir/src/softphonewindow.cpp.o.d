@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/softphonewindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/softphonewindow.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/softphonewindow.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -349,12 +349,12 @@ CMakeFiles/wafflehouse-client.dir/src/softphonewindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qsizepolicy.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcursor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qbitmap.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \

@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/WaffleHouse-Client-Testing
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/WaffleHouse-Client-Testing/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
 
 # Utility rule file for wafflehouse-client_autogen_timestamp_deps.
 
@@ -69,8 +69,8 @@ include CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/progress.make
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/qt6/libexec/moc
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2
-CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Network.so.6.4.2
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps: libwafflehouse_sipcore.a
+CMakeFiles/wafflehouse-client_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Network.so.6.4.2
 
 wafflehouse-client_autogen_timestamp_deps: CMakeFiles/wafflehouse-client_autogen_timestamp_deps
 wafflehouse-client_autogen_timestamp_deps: CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/build.make
@@ -85,6 +85,6 @@ CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/clean:
 .PHONY : CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/clean
 
 CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/depend:
-	cd /home/gitsc/WaffleHouse-Client-Testing/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/WaffleHouse-Client-Testing /home/gitsc/WaffleHouse-Client-Testing /home/gitsc/WaffleHouse-Client-Testing/build /home/gitsc/WaffleHouse-Client-Testing/build /home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/wafflehouse-client_autogen_timestamp_deps.dir/depend
 

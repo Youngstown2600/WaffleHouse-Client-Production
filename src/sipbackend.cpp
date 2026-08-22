@@ -12,7 +12,7 @@ trunkmonkey::SipProfile sipProfileFromConnectionSettings(const ConnectionSetting
 {
     trunkmonkey::SipProfile p;
     p.name = s(v.sipProfileName.trimmed().isEmpty()
-                   ? (v.username.trimmed().isEmpty() ? QStringLiteral("WaffleHouse SIP") : v.username.trimmed())
+                   ? (v.username.trimmed().isEmpty() ? QStringLiteral("WaffleHouse-Client SIP") : v.username.trimmed())
                    : v.sipProfileName.trimmed());
     p.sipDomain = s(v.sipDomain.trimmed().isEmpty() ? v.server.trimmed() : v.sipDomain.trimmed());
     const auto ensureSipUri = [](QString value) {

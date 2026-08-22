@@ -46,7 +46,8 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 3.1, the unified C++ GUI/CLI executable.
+Build WaffleHouse-Client 3.3r1, the unified C++ GUI/CLI executable.
+The Media Center adds local media/video, SHOUTcast/Icecast/HTTP/HLS streams, internet radio, and playlists.
 
 The builder performs a full dependency preflight. Missing dependencies are
 installed automatically on supported Linux package managers or with FreeBSD pkg,
@@ -74,6 +75,14 @@ Options:
 Default install locations:
   executable: PREFIX/bin/wafflehouse-client
   desktop:    PREFIX/share/applications/wafflehouse-client.desktop
+
+Testing note:
+  A normal ./build.sh build does NOT install WaffleHouse into PREFIX/bin.
+  After a successful interactive build you are asked [y/N]; Enter means No.
+  --no-install suppresses the offer entirely.
+  Dependency auto-install and the existing guarded FreeBSD audio repair are
+  separate from application installation; use --no-auto-deps --no-audio-fix
+  when you want a build attempt that makes no such host compatibility changes.
 EOF2
 }
 
@@ -160,7 +169,7 @@ LEGACY_CLI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-cli.desktop"
 show_header() {
   cat <<EOF2
 ============================================================
-              WAFFLEHOUSE-CLIENT 3.1 + SIP SOFTPHONE
+                    WAFFLEHOUSE-CLIENT 3.3r1
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
@@ -183,6 +192,8 @@ The dependency preflight checks:
   - PJSIP/PJSUA2 2.17 (managed local build, 32-account / 64-call capable)
   - SIP audio/crypto prerequisites (ALSA on Linux; PortAudio/Opus/G.729 on FreeBSD)
   - S.I.P.H.E.R. r14 FreeBSD HDA compatibility preflight/guarded repair
+  - WaffleHouse-Client media playback backend
+  - FFmpeg tools for broad media/stream compatibility
 EOF2
   if [ "$OS_FAMILY" = freebsd ]; then
     echo "  - FreeBSD base Clang/libc++ for Qt ABI-compatible compilation"
@@ -467,7 +478,10 @@ scan_dependencies() {
   check_pkg_module xkbcommon  "xkbcommon development"    xkbcommon || true
 
   check_command_dep "Git" git git || true
+  check_command_dep "HTTP download helper" curl curl || true
   check_command_dep "Notification sound player" paplay paplay || true
+  check_command_dep "WaffleHouse-Client media backend" mpv mpv || true
+  check_command_dep "WaffleHouse-Client FFmpeg tools" ffmpeg ffmpeg || true
   if [ "$OS_FAMILY" = linux ]; then
     check_pkg_module alsa     "ALSA development"          alsa || true
     check_pkg_module openssl  "OpenSSL development"       openssl || true
@@ -1074,6 +1088,7 @@ detect_linux_package_manager() {
   elif command -v yum >/dev/null 2>&1; then LINUX_PKG_MANAGER=yum
   elif command -v pacman >/dev/null 2>&1; then LINUX_PKG_MANAGER=pacman
   elif command -v zypper >/dev/null 2>&1; then LINUX_PKG_MANAGER=zypper
+  elif [ -f /etc/slackware-version ] || command -v slackpkg >/dev/null 2>&1; then LINUX_PKG_MANAGER=slackware
   else LINUX_PKG_MANAGER=
   fi
 }
@@ -1087,38 +1102,56 @@ install_linux_dependencies() {
       run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y \
         build-essential gcc g++ make cmake pkg-config \
         qt6-base-dev qt6-base-dev-tools qt6-qpa-plugins \
-        libsodium-dev libncurses-dev libxkbcommon-dev ca-certificates git curl \
-        libasound2-dev libssl-dev uuid-dev pulseaudio-utils
+        libsodium-dev libncurses-dev libxkbcommon-dev ca-certificates git curl unzip \
+        libasound2-dev libssl-dev uuid-dev pulseaudio-utils mpv ffmpeg
       ;;
     dnf)
       echo "Installing complete dnf dependency set..."
       run_as_root dnf install -y \
         gcc gcc-c++ make cmake pkgconf-pkg-config qt6-qtbase-devel \
-        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl \
-        alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils
+        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip \
+        alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
       ;;
     yum)
       echo "Installing complete yum dependency set..."
       run_as_root yum install -y \
         gcc gcc-c++ make cmake pkgconfig qt6-qtbase-devel \
-        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils
+        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
       ;;
     pacman)
       echo "Installing complete pacman dependency set..."
       run_as_root pacman -S --needed --noconfirm \
         base-devel gcc make cmake pkgconf qt6-base libsodium ncurses libxkbcommon ca-certificates \
-        git curl alsa-lib openssl util-linux-libs libpulse
+        git curl unzip alsa-lib openssl util-linux-libs libpulse mpv ffmpeg
       ;;
     zypper)
       echo "Installing complete zypper dependency set..."
       run_as_root zypper --non-interactive install \
         gcc gcc-c++ make cmake pkgconf-pkg-config qt6-base-devel \
-        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl \
-        alsa-devel libopenssl-devel libuuid-devel pulseaudio-utils
+        libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip \
+        alsa-devel libopenssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
+      ;;
+    slackware)
+      echo "Slackware detected. Installing available base dependencies with slackpkg..."
+      if command -v slackpkg >/dev/null 2>&1; then
+        for pkg in gcc gcc-g++ make cmake pkg-config libsodium ncurses libxkbcommon ca-certificates git curl unzip alsa-lib openssl util-linux pulseaudio ffmpeg python3; do
+          run_as_root slackpkg -batch=on -default_answer=y install "$pkg" >/dev/null 2>&1 || true
+        done
+      fi
+      if command -v sbopkg >/dev/null 2>&1; then
+        echo "sbopkg detected; attempting SlackBuilds for Qt6/mpv where needed..."
+        for pkg in qt6 mpv; do
+          command -v "$pkg" >/dev/null 2>&1 || run_as_root sbopkg -B -i "$pkg" || true
+        done
+      else
+        echo "NOTE: Slackware third-party packages are repository-dependent." >&2
+        echo "      If Qt6 or mpv remain missing, install them from your configured" >&2
+        echo "      SlackBuilds/repository." >&2
+      fi
       ;;
     *)
       echo "No supported Linux package manager found." >&2
-      echo "Supported: apt-get, dnf, yum, pacman, zypper." >&2
+      echo "Supported: apt-get, dnf/yum, pacman, zypper, Slackware slackpkg/sbopkg." >&2
       exit 1
       ;;
   esac
@@ -1129,7 +1162,7 @@ install_freebsd_dependencies() {
   echo "Installing complete FreeBSD dependency set..."
   run_as_root env ASSUME_ALWAYS_YES=yes pkg install -y \
     cmake pkgconf qt6-base libsodium ncurses libxkbcommon gcc gmake ca_root_nss \
-    git curl portaudio opus bcg729 libuuid pulseaudio
+    git curl unzip portaudio opus bcg729 libuuid pulseaudio mpv ffmpeg
 
   # FreeBSD normally supplies Clang in the base system. If this installation
   # does not, install LLVM so an ABI-compatible Clang/libc++ compiler is present.
@@ -1138,6 +1171,7 @@ install_freebsd_dependencies() {
     run_as_root env ASSUME_ALWAYS_YES=yes pkg install -y llvm
   fi
 }
+
 
 ensure_dependencies() {
   echo "==> Checking ALL build dependencies"
@@ -1269,6 +1303,11 @@ check_toolchain_cache() {
 
 ask_install() {
   [ "$INSTALL_MODE" = ask ] || return 0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] System installation remains disabled unless --install is explicitly supplied."
+    INSTALL_MODE=no
+    return 0
+  fi
   if [ ! -t 0 ]; then INSTALL_MODE=no; return 0; fi
   echo "Build target: ./build/wafflehouse-client"
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
@@ -1408,11 +1447,16 @@ else
   check_toolchain_cache
 fi
 
-ask_install
-if [ "$INSTALL_MODE" = yes ]; then echo "Build will be installed after compilation succeeds."; else echo "Build only; no system installation will be performed."; fi
+if [ "$INSTALL_MODE" = yes ]; then
+  echo "Build will be installed after compilation succeeds (--install/--upgrade requested)."
+elif [ "$INSTALL_MODE" = ask ]; then
+  echo "Testing-safe mode: build first; system installation will be offered only after a successful build (default: No)."
+else
+  echo "Build only; no system installation will be performed."
+fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 3.1"
+echo "==> Configuring WaffleHouse-Client 3.3r1"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1423,12 +1467,16 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE"
 
 echo
-echo "==> Building WaffleHouse-Client 3.1"
+echo "==> Building WaffleHouse-Client 3.3r1"
 run_cmd cmake --build build --parallel "$JOBS"
+
+# A normal test build never writes the application into PREFIX/bin unless the
+# user explicitly approves this prompt. Enter/default is No.
+ask_install
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 3.1"
+  echo "==> Installing WaffleHouse-Client 3.3r1"
   prepare_privileges
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
     echo "Existing WaffleHouse-Client detected; performing in-place upgrade after successful build."
@@ -1453,4 +1501,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 3.1 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 3.3r1 build complete."; fi

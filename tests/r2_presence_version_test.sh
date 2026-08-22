@@ -6,11 +6,11 @@ fail(){ echo "WaffleHouse 3.1 presence/version regression failed: $*" >&2; exit 
 need(){ grep -Fq "$2" "$1" || fail "$1 missing: $2"; }
 
 # Release branding.
-need CMakeLists.txt 'project(WaffleHouseClient VERSION 3.1.0 LANGUAGES CXX)'
-need CMakeLists.txt 'APP_VERSION_STRING="3.1"'
-need src/appbranding.h '#define APP_VERSION_STRING "3.1"'
-need include/trunkmonkey/Version.h '#define WAFFLEHOUSE_SOFTPHONE_VERSION "3.1"'
-need include/trunkmonkey/Version.h 'WaffleHouse-Client/3.1'
+need CMakeLists.txt 'project(WaffleHouseClient VERSION 3.3.1 LANGUAGES CXX)'
+need CMakeLists.txt 'APP_VERSION_STRING="3.3r1"'
+need src/appbranding.h '#define APP_VERSION_STRING "3.3r1"'
+need include/trunkmonkey/Version.h '#define WAFFLEHOUSE_SOFTPHONE_VERSION "3.3r1"'
+need include/trunkmonkey/Version.h 'WaffleHouse-Client/3.3r1'
 
 # IRC uses standard CTCP VERSION and keeps the control traffic out of chat.
 need src/ircbackend.h 'void requestClientVersion(const QString &target);'
@@ -32,8 +32,8 @@ need src/chatwindow.cpp 'QStringLiteral("/version")'
 need src/mainwindow.cpp 'command.startsWith(QStringLiteral("/version "))'
 need src/terminalui.cpp 'QStringLiteral("/version")'
 need src/terminalui.cpp 'command == QStringLiteral("version")'
-need src/mainwindow.cpp 'no 3.1 reply; peer may be an older WaffleHouse/CPX client'
-need src/terminalui.cpp 'no 3.1 reply; peer may be an older WaffleHouse/CPX client'
+need src/mainwindow.cpp 'no 3.3r1 reply; peer may be an older WaffleHouse/CPX client'
+need src/terminalui.cpp 'no 3.3r1 reply; peer may be an older WaffleHouse/CPX client'
 
 # Automatic OSCAR Idle -> Away -> Online uses shared GUI/CLI settings.
 need src/mainwindow.h 'bool autoPresenceEnabled = true;'

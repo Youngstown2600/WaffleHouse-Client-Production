@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/ircbackend.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/ircbackend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -358,6 +358,8 @@ CMakeFiles/wafflehouse-client.dir/src/ircbackend.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostinfo.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutexLocker \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QRegularExpression \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qregularexpression.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QSslSocket \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qsslsocket.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qtcpsocket.h \

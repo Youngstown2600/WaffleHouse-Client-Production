@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/bbsdirectory.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/bbsdirectory.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/bbsdirectory.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/bbsdirectory.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \

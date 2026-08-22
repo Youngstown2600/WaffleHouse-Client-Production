@@ -42,6 +42,7 @@ public:
     void setBackendOnline(bool online);
     void setShowTimestamps(bool enabled) { m_showTimestamps = enabled; }
     void setShowSidePane(bool enabled);
+    void clearTranscript();
     void setSecurityState(bool active,
                           bool trusted,
                           const QString &peerFingerprint = QString(),

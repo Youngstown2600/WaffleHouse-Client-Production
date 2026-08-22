@@ -41,7 +41,14 @@ constexpr quint16 OS_CLIENT_VERSIONS = 0x0017;
 constexpr quint16 OS_HOST_VERSIONS = 0x0018;
 constexpr quint16 OS_IDLE_NOTIFICATION = 0x0011;
 
+constexpr quint16 LOCATE_RIGHTS_QUERY = 0x0002;
+constexpr quint16 LOCATE_RIGHTS_REPLY = 0x0003;
 constexpr quint16 LOCATE_SET_INFO = 0x0004;
+constexpr quint16 LOCATE_USER_INFO_QUERY = 0x0005;
+constexpr quint16 LOCATE_USER_INFO_REPLY = 0x0006;
+constexpr quint16 LOCATE_USER_INFO_QUERY2 = 0x0015;
+constexpr quint16 LOCATE_TLV_PROFILE_TYPE = 0x0001;
+constexpr quint16 LOCATE_TLV_PROFILE_DATA = 0x0002;
 constexpr quint16 LOCATE_TLV_UNAVAILABLE_TYPE = 0x0003;
 constexpr quint16 LOCATE_TLV_UNAVAILABLE_DATA = 0x0004;
 

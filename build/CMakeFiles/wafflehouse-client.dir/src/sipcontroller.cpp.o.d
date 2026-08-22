@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: \
- /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/WaffleHouse-Client-Testing/src/sipcontroller.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -128,8 +128,8 @@ CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator.h \
  /usr/include/c++/13/bits/uses_allocator_args.h /usr/include/c++/13/tuple \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Profile.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/ext/aligned_buffer.h \
  /usr/include/c++/13/bits/node_handle.h \
@@ -312,7 +312,7 @@ CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qtimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbasictimer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/Logger.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Logger.h \
  /usr/include/c++/13/fstream /usr/include/c++/13/istream \
  /usr/include/c++/13/ios /usr/include/c++/13/bits/basic_ios.h \
  /usr/include/c++/13/bits/locale_facets.h /usr/include/c++/13/cwctype \
@@ -328,7 +328,7 @@ CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: \
  /usr/include/c++/13/bits/fstream.tcc /usr/include/c++/13/mutex \
  /usr/include/c++/13/bits/std_mutex.h \
  /usr/include/c++/13/bits/unique_lock.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/RuntimePaths.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/RuntimePaths.h \
  /usr/include/c++/13/filesystem /usr/include/c++/13/bits/fs_fwd.h \
  /usr/include/c++/13/bits/fs_path.h /usr/include/c++/13/locale \
  /usr/include/c++/13/bits/locale_facets_nonio.h \
@@ -339,7 +339,7 @@ CMakeFiles/wafflehouse-client.dir/src/sipcontroller.cpp.o: \
  /usr/include/c++/13/bits/quoted_string.h /usr/include/c++/13/sstream \
  /usr/include/c++/13/bits/sstream.tcc /usr/include/c++/13/codecvt \
  /usr/include/c++/13/bits/fs_dir.h /usr/include/c++/13/bits/fs_ops.h \
- /home/gitsc/WaffleHouse-Client-Testing/include/trunkmonkey/SipEngine.h \
+ /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipEngine.h \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/endpoint.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/persistent.hpp \

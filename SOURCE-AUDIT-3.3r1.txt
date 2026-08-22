@@ -1,0 +1,26 @@
+WaffleHouse-Client 3.3r1 source audit
+
+Current release branding/version identifiers use WaffleHouse-Client 3.3r1.
+Legacy QSettings keys are intentionally retained only for migration compatibility.
+
+3.3r1 feature deltas:
+- Application-wide Qt multimedia-key shortcuts for integrated Media Center controls
+- OSCAR BOS Host Online SNAC-family capture and human-readable capability report
+- OSCAR Locate rights query and maximum AIM-profile length discovery
+- OSCAR current-profile query and LOCATE_SET_INFO profile update path
+- AIM account right-click Edit AIM Profile and Server Capabilities actions
+- IRCv3 CAP LS 302 discovery plus classic 005/ISUPPORT token capture
+- IRC account right-click Server Capabilities action
+
+Preserved behavior:
+- YouTube streaming remains removed and mpv starts with --ytdl=no
+- Stop preserves the media queue and Play/Resume restarts from the first queued item
+- Compact Accounts GUI and Account Management menu layout remain intact
+- AIM/IRC buddy Send IM / Send File actions remain intact
+- Prior IRC disconnect-state hotfix remains intact
+
+Validation:
+- Regression suite: 39/39 PASS
+- Shell syntax: 44/44 PASS
+- Builder dry-run: PASS
+- Core preservation: 32 pinned files + 13 documented feature exceptions

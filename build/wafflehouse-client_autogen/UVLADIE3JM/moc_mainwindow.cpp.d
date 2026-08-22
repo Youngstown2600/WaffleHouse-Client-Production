@@ -1,11 +1,11 @@
-/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_mainwindow.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/mainwindow.h \
-  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/directtransfer.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/filetransfer.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/securechannel.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/secureroom.h \
+/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/UVLADIE3JM/moc_mainwindow.cpp: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mainwindow.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/directtransfer.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/filetransfer.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -353,6 +353,7 @@
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QSet \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \

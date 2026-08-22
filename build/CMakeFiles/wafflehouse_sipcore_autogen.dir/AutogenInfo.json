@@ -1,15 +1,15 @@
 {
-	"BUILD_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen",
-	"CMAKE_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build",
-	"CMAKE_CURRENT_BINARY_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build",
-	"CMAKE_CURRENT_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing",
+	"BUILD_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen",
+	"CMAKE_BINARY_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1",
 	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
 	"CMAKE_LIST_FILES" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Testing/CMakeLists.txt",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/CMakeLists.txt",
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystem.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeSystem.cmake",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystemSpecificInitialize.cmake",
 		"/usr/share/cmake-3.28/Modules/Platform/Linux-Initialize.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake",
@@ -62,7 +62,7 @@
 		"/usr/share/cmake-3.28/Modules/CMakeFindBinUtils.cmake",
 		"/usr/share/cmake-3.28/Modules/Compiler/GNU-FindBinUtils.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompiler.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeSystemSpecificInformation.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeGenericSystem.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeInitializeConfigs.cmake",
@@ -87,7 +87,7 @@
 		"/usr/share/cmake-3.28/Modules/CMakeDetermineCompileFeatures.cmake",
 		"/usr/share/cmake-3.28/Modules/Internal/FeatureTesting.cmake",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompiler.cmake.in",
-		"/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake",
 		"/usr/share/cmake-3.28/Modules/FindThreads.cmake",
 		"/usr/share/cmake-3.28/Modules/CheckLibraryExists.cmake",
 		"/usr/share/cmake-3.28/Modules/CheckIncludeFileCXX.cmake",
@@ -246,13 +246,13 @@
 		"/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
 		"/usr/lib/x86_64-linux-gnu/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in"
 	],
-	"CMAKE_SOURCE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing",
-	"DEP_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/deps",
+	"CMAKE_SOURCE_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1",
+	"DEP_FILE" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/deps",
 	"DEP_FILE_RULE_NAME" : "wafflehouse_sipcore_autogen/timestamp",
 	"HEADERS" : [],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
-	"INCLUDE_DIR" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/include",
-	"MOC_COMPILATION_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp",
+	"INCLUDE_DIR" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp",
 	"MOC_DEFINITIONS" : [],
 	"MOC_DEPEND_FILTERS" : 
 	[
@@ -263,7 +263,7 @@
 	],
 	"MOC_INCLUDES" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Testing/include",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/include",
 		"/home/gitsc/.local/wafflehouse-pjsip/include",
 		"/usr/include/c++/13",
 		"/usr/include/x86_64-linux-gnu/c++/13",
@@ -292,65 +292,65 @@
 		"-c",
 		"/usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
 	],
-	"MOC_PREDEFS_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse_sipcore_autogen/moc_predefs.h",
+	"MOC_PREDEFS_FILE" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/moc_predefs.h",
 	"MOC_RELAXED_MODE" : false,
 	"MOC_SKIP" : 
 	[
-		"/home/gitsc/WaffleHouse-Client-Testing/build/.rcc/qrc_wafflehouse_branding.cpp",
-		"/home/gitsc/WaffleHouse-Client-Testing/build/.rcc/qrc_wafflehouse_icons.cpp"
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/.rcc/qrc_wafflehouse_branding.cpp",
+		"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/.rcc/qrc_wafflehouse_icons.cpp"
 	],
 	"MULTI_CONFIG" : false,
 	"PARALLEL" : 6,
-	"PARSE_CACHE_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse_sipcore_autogen.dir/ParseCache.txt",
+	"PARSE_CACHE_FILE" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse_sipcore_autogen.dir/ParseCache.txt",
 	"QT_MOC_EXECUTABLE" : "/usr/lib/qt6/libexec/moc",
 	"QT_UIC_EXECUTABLE" : "",
 	"QT_VERSION_MAJOR" : 6,
 	"QT_VERSION_MINOR" : 4,
-	"SETTINGS_FILE" : "/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/wafflehouse_sipcore_autogen.dir/AutogenUsed.txt",
+	"SETTINGS_FILE" : "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse_sipcore_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/CallSession.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/Logger.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/Profile.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/RuntimePaths.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipAccount.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipEngine.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipTrace.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipWireMonitor.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp",
 			"Mu",
 			null
 		],
 		[
-			"/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/TextPool.cpp",
+			"/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp",
 			"Mu",
 			null
 		]

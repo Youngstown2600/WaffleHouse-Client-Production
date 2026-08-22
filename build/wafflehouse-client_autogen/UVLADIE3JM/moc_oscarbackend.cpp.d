@@ -1,8 +1,8 @@
-/home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp: /home/gitsc/WaffleHouse-Client-Testing/src/oscarbackend.h \
-  /home/gitsc/WaffleHouse-Client-Testing/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/appbranding.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/backend.h \
-  /home/gitsc/WaffleHouse-Client-Testing/src/oscarprotocol.h \
+/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \

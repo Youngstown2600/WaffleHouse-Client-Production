@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "platforminfo.h"
+#include "mediawindow.h"
 
 #include "chatwindow.h"
 #include "appbranding.h"
@@ -50,6 +51,8 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QRadioButton>
+#include <QRegularExpression>
+#include <QShortcut>
 #include <QTextBrowser>
 #include <QTabWidget>
 #include <QPushButton>
@@ -71,6 +74,45 @@
 #include <algorithm>
 
 namespace {
+
+QString takeGuiArgument(QString &rest)
+{
+    rest = rest.trimmed();
+    if (rest.isEmpty()) return {};
+
+    if (rest.startsWith(QLatin1Char('\"')) || rest.startsWith(QLatin1Char('\''))) {
+        const QChar quote = rest.front();
+        QString value;
+        bool escaped = false;
+        int i = 1;
+        for (; i < rest.size(); ++i) {
+            const QChar ch = rest.at(i);
+            if (escaped) {
+                value += ch;
+                escaped = false;
+            } else if (ch == QLatin1Char('\\')) {
+                escaped = true;
+            } else if (ch == quote) {
+                ++i;
+                break;
+            } else {
+                value += ch;
+            }
+        }
+        rest = rest.mid(i).trimmed();
+        return value;
+    }
+
+    const int split = rest.indexOf(QRegularExpression(QStringLiteral("\\s")));
+    if (split < 0) {
+        const QString value = rest;
+        rest.clear();
+        return value;
+    }
+    const QString value = rest.left(split);
+    rest = rest.mid(split + 1).trimmed();
+    return value;
+}
 
 class ConnectionDialog final : public QDialog {
 public:
@@ -488,8 +530,8 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
     setWindowTitle(QStringLiteral("%1 %2").arg(appDisplayName(), appVersionString()));
     // Compact by default: keep the full communications workspace usable without
     // monopolizing the desktop. The window remains freely resizable.
-    resize(860, 560);
-    setMinimumSize(720, 480);
+    resize(680, 520);
+    setMinimumSize(560, 420);
 
     m_sipController = new SipController(this);
     m_softphoneWindow = new SoftphoneWindow(m_sipController, nullptr);
@@ -576,7 +618,7 @@ MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
 
     if (m_connectionList && m_connectionList->count() == 0) {
         statusBar()->showMessage(
-            QStringLiteral("No saved connections. Use Connection → Add to create one."));
+            QStringLiteral("No saved accounts. Use Accounts → Account Management → Add to create one."));
     } else if (m_connectionList) {
         statusBar()->showMessage(
             QStringLiteral("%1 saved connection(s) restored.")
@@ -709,7 +751,7 @@ void MainWindow::requestClientVersion(BackendState *state, const QString &target
     QTimer::singleShot(3500, this, [this, key, clean, protocol] {
         if (!m_pendingVersionQueries.remove(key)) return;
         const QString report = protocol == ConnectionSettings::Protocol::Oscar
-            ? QStringLiteral("[version] %1: no 3.1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(clean)
+            ? QStringLiteral("[version] %1: no 3.3r1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(clean)
             : QStringLiteral("[version] %1: no CTCP VERSION reply received").arg(clean);
         statusBar()->showMessage(report, 7000);
     });
@@ -739,7 +781,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
             m_trayHintShown = true;
             m_trayIcon->showMessage(
                 QStringLiteral("%1 is still running").arg(appDisplayName()),
-                QStringLiteral("Use the tray icon to reopen the Buddy List or quit %1.").arg(appDisplayName()),
+                QStringLiteral("Use the tray icon to reopen WaffleHouse-Client or quit %1.").arg(appDisplayName()),
                 QSystemTrayIcon::Information,
                 3500);
         }
@@ -758,110 +800,42 @@ void MainWindow::buildUi()
     auto *central = new QWidget(this);
     central->setObjectName(QStringLiteral("ModernRoot"));
 
-    auto *shell = new QHBoxLayout(central);
-    shell->setContentsMargins(0, 0, 0, 0);
-    shell->setSpacing(0);
+    auto *outer = new QVBoxLayout(central);
+    outer->setContentsMargins(16, 14, 16, 14);
+    outer->setSpacing(10);
 
-    // WaffleHouse 3.0: persistent application rail.  It exposes the most common
-    // workflows without taking any capability away from the traditional menus.
-    auto *sidebar = new QFrame(central);
-    sidebar->setObjectName(QStringLiteral("Sidebar"));
-    sidebar->setFixedWidth(184);
-    auto *side = new QVBoxLayout(sidebar);
-    side->setContentsMargins(14, 16, 14, 14);
-    side->setSpacing(8);
-
-    auto *brand = new QLabel(QStringLiteral("WAFFLEHOUSE"), sidebar);
-    brand->setObjectName(QStringLiteral("BrandTitle"));
-    auto *edition = new QLabel(QStringLiteral("CLIENT %1").arg(appVersionString().toUpper()), sidebar);
-    edition->setObjectName(QStringLiteral("BrandVersion"));
-    side->addWidget(brand);
-    side->addWidget(edition);
-    side->addSpacing(12);
-
-    auto makeNav = [sidebar](const QString &text, bool checked = false) {
-        auto *button = new QPushButton(text, sidebar);
-        button->setProperty("nav", true);
-        button->setCheckable(true);
-        button->setAutoExclusive(true);
-        button->setChecked(checked);
-        button->setCursor(Qt::PointingHandCursor);
-        return button;
-    };
-
-    auto *navDashboard = makeNav(QStringLiteral("  Dashboard"), true);
-    auto *navMessages = makeNav(QStringLiteral("  Communications"));
-    auto *navSoftphone = makeNav(QStringLiteral("  Softphone"));
-    auto *navConnections = makeNav(QStringLiteral("  Connections"));
-    auto *navTransfers = makeNav(QStringLiteral("  File Transfers"));
-    side->addWidget(navDashboard);
-    side->addWidget(navMessages);
-    side->addWidget(navSoftphone);
-    side->addWidget(navConnections);
-    side->addWidget(navTransfers);
-    side->addStretch(1);
-
-    // Primary creation action lives in the application rail so the top bar stays
-    // focused on page context.  Keep it directly above Settings for a predictable
-    // lower-sidebar action cluster.
-    auto *addConnection = new QPushButton(QStringLiteral("+ New Connection"), sidebar);
-    addConnection->setProperty("role", "primary");
-    addConnection->setCursor(Qt::PointingHandCursor);
-    side->addWidget(addConnection);
-
-    // Settings intentionally uses the normal application button treatment rather
-    // than the transparent/checkable navigation style.
-    auto *navSettings = new QPushButton(QStringLiteral("Settings"), sidebar);
-    navSettings->setCursor(Qt::PointingHandCursor);
-    side->addWidget(navSettings);
-
-    shell->addWidget(sidebar);
-
-    auto *content = new QWidget(central);
-    auto *outer = new QVBoxLayout(content);
-    outer->setContentsMargins(18, 16, 18, 16);
-    outer->setSpacing(12);
-
-    auto *topBar = new QFrame(content);
+    auto *topBar = new QFrame(central);
     topBar->setObjectName(QStringLiteral("TopBar"));
     auto *top = new QHBoxLayout(topBar);
     top->setContentsMargins(0, 0, 0, 0);
-    top->setSpacing(12);
+    top->setSpacing(10);
 
     auto *titleBlock = new QVBoxLayout;
-    titleBlock->setSpacing(2);
-    auto *title = new QLabel(QStringLiteral("Communications Hub"), topBar);
+    titleBlock->setSpacing(1);
+    auto *title = new QLabel(QStringLiteral("WAFFLEHOUSE-CLIENT"), topBar);
     title->setObjectName(QStringLiteral("PageTitle"));
+    auto *version = new QLabel(QStringLiteral("VERSION %1").arg(appVersionString().toUpper()), topBar);
+    version->setObjectName(QStringLiteral("BrandVersion"));
     auto *subtitle = new QLabel(
         QStringLiteral("AIM / OSCAR  •  IRC  •  Telnet / BBS  •  SIP / VoIP"), topBar);
     subtitle->setObjectName(QStringLiteral("PageSubtitle"));
     titleBlock->addWidget(title);
+    titleBlock->addWidget(version);
     titleBlock->addWidget(subtitle);
     top->addLayout(titleBlock, 1);
-
     outer->addWidget(topBar);
 
-    auto *workspace = new QHBoxLayout;
-    workspace->setSpacing(12);
+    auto *accountCard = new QFrame(central);
+    accountCard->setObjectName(QStringLiteral("Card"));
+    auto *accountLayout = new QVBoxLayout(accountCard);
+    accountLayout->setContentsMargins(12, 12, 12, 12);
+    accountLayout->setSpacing(9);
 
-    // Primary account/buddy card.
-    auto *buddyCard = new QFrame(content);
-    buddyCard->setObjectName(QStringLiteral("Card"));
-    auto *buddyLayout = new QVBoxLayout(buddyCard);
-    buddyLayout->setContentsMargins(12, 12, 12, 12);
-    buddyLayout->setSpacing(10);
+    auto *accountTitle = new QLabel(QStringLiteral("Accounts"), accountCard);
+    accountTitle->setObjectName(QStringLiteral("CardTitle"));
+    accountLayout->addWidget(accountTitle);
 
-    auto *buddyHeader = new QHBoxLayout;
-    auto *buddyTitle = new QLabel(QStringLiteral("Accounts & Buddies"), buddyCard);
-    buddyTitle->setObjectName(QStringLiteral("CardTitle"));
-    auto *buddyHint = new QLabel(QStringLiteral("Double-click a buddy to start communicating"), buddyCard);
-    buddyHint->setObjectName(QStringLiteral("Muted"));
-    buddyHeader->addWidget(buddyTitle);
-    buddyHeader->addStretch(1);
-    buddyHeader->addWidget(buddyHint);
-    buddyLayout->addLayout(buddyHeader);
-
-    m_buddyTree = new QTreeWidget(buddyCard);
+    m_buddyTree = new QTreeWidget(accountCard);
     m_buddyTree->setHeaderLabels({QStringLiteral("Buddy / Account"), QStringLiteral("Status")});
     m_buddyTree->setRootIsDecorated(true);
     m_buddyTree->setAlternatingRowColors(false);
@@ -869,33 +843,30 @@ void MainWindow::buildUi()
     m_buddyTree->setAnimated(true);
     m_buddyTree->setContextMenuPolicy(Qt::CustomContextMenu);
     m_buddyTree->setIndentation(18);
-    buddyLayout->addWidget(m_buddyTree, 1);
-    workspace->addWidget(buddyCard, 3);
+    accountLayout->addWidget(m_buddyTree, 1);
 
-    // The main Communications Hub intentionally stays focused on accounts and buddies.
-    // SIP accounts remain visible in this tree, but the embedded quick-dial/phone card
-    // is intentionally removed. The full Softphone stays available from the left rail,
-    // Tools > Open Softphone, and the tray menu.
+    auto *commandRow = new QHBoxLayout;
+    commandRow->setSpacing(8);
+    auto *commandLabel = new QLabel(QStringLiteral("Command:"), accountCard);
+    m_commandInput = new QLineEdit(accountCard);
+    m_commandInput->setPlaceholderText(
+        QStringLiteral("/add, /joinprivate woods, /nick Bob, /media, /help …"));
+    m_commandInput->setClearButtonEnabled(true);
+    m_commandRunButton = new QPushButton(QStringLiteral("Run"), accountCard);
+    m_commandRunButton->setProperty("role", "primary");
+    commandRow->addWidget(commandLabel);
+    commandRow->addWidget(m_commandInput, 1);
+    commandRow->addWidget(m_commandRunButton);
+    accountLayout->addLayout(commandRow);
 
-    outer->addLayout(workspace, 1);
-    shell->addWidget(content, 1);
-
+    outer->addWidget(accountCard, 1);
     setCentralWidget(central);
     statusBar()->showMessage(QStringLiteral("%1 %2 ready").arg(appDisplayName(), appVersionString()));
 
-    connect(addConnection, &QPushButton::clicked, this,
-            [this] { openConnectionDialog(m_defaults, nullptr); });
-    connect(navDashboard, &QPushButton::clicked, this, [this] {
-        showBuddyWindow();
-        if (m_buddyTree) m_buddyTree->setFocus();
-    });
-    connect(navMessages, &QPushButton::clicked, this, &MainWindow::newIm);
-    connect(navSoftphone, &QPushButton::clicked, this, [this] {
-        if (m_softphoneWindow) m_softphoneWindow->showAndRaise();
-    });
-    connect(navConnections, &QPushButton::clicked, this, &MainWindow::showConnectionsWindow);
-    connect(navTransfers, &QPushButton::clicked, this, &MainWindow::showTransferWindow);
-    connect(navSettings, &QPushButton::clicked, this, &MainWindow::showOptionsDialog);
+    connect(m_commandInput, &QLineEdit::returnPressed, this,
+            qOverload<>(&MainWindow::executeGuiCommand));
+    connect(m_commandRunButton, &QPushButton::clicked, this,
+            qOverload<>(&MainWindow::executeGuiCommand));
 
     connect(m_buddyTree, &QTreeWidget::currentItemChanged,
             this, [this](QTreeWidgetItem *current) {
@@ -911,11 +882,20 @@ void MainWindow::buildUi()
     connect(m_buddyTree, &QTreeWidget::customContextMenuRequested,
             this, [this](const QPoint &pos) {
                 QTreeWidgetItem *item = m_buddyTree->itemAt(pos);
-                if (!item || item->parent()) return; // account rows only
+                if (!item) return;
                 BackendState *state = stateFromBuddyItem(item);
                 if (!state) return;
                 m_buddyTree->setCurrentItem(item);
-                showAccountContextMenu(state, m_buddyTree->viewport()->mapToGlobal(pos));
+                const QPoint globalPos = m_buddyTree->viewport()->mapToGlobal(pos);
+                if (item->parent()) {
+                    const auto protocol = state->backend->settings().protocol;
+                    if (protocol != ConnectionSettings::Protocol::Oscar
+                        && protocol != ConnectionSettings::Protocol::Irc) return;
+                    const QString buddy = item->data(0, Qt::UserRole + 1).toString().trimmed();
+                    if (!buddy.isEmpty()) showBuddyContextMenu(state, buddy, globalPos);
+                    return;
+                }
+                showAccountContextMenu(state, globalPos);
             });
 
     connect(m_buddyTree, &QTreeWidget::itemDoubleClicked,
@@ -925,25 +905,7 @@ void MainWindow::buildUi()
                 selectState(state);
                 if (state->backend->settings().protocol == ConnectionSettings::Protocol::Sip) {
                     m_sipController->setSelectedAccountId(state->backend->id());
-                    if (item && item->parent()) {
-                        const QString contact = item->data(0, Qt::UserRole + 1).toString().trimmed();
-                        const QVariant callData = item->data(0, Qt::UserRole + 2);
-                        if (!contact.isEmpty()) {
-                            if (m_buddySipAccount) {
-                                const int idx = m_buddySipAccount->findData(state->backend->id());
-                                if (idx >= 0) m_buddySipAccount->setCurrentIndex(idx);
-                            }
-                            if (m_buddyDial) {
-                                m_buddyDial->setText(contact);
-                                m_buddyDial->setFocus();
-                            }
-                            return;
-                        }
-                        if (callData.isValid()) {
-                            m_softphoneWindow->showAndRaise();
-                            return;
-                        }
-                    }
+                    if (item && item->parent()) m_softphoneWindow->showAndRaise();
                     return;
                 }
                 if (item && item->parent() && state->connected) {
@@ -955,43 +917,33 @@ void MainWindow::buildUi()
 
 void MainWindow::buildMenus()
 {
-    // Keep the menu bar owned by the WaffleHouse window instead of allowing a
-    // desktop/global-menu integration to export it elsewhere. This also makes
-    // menu behavior consistent between X11, Wayland, Linux, and FreeBSD.
+    // Keep the menu bar owned by the WaffleHouse-Client window instead of
+    // exporting it to a desktop/global menu. This keeps Linux and FreeBSD
+    // behavior consistent.
     QMenuBar *bar = menuBar();
     bar->setNativeMenuBar(false);
     bar->setVisible(true);
 
-    QMenu *connectionMenu = bar->addMenu(QStringLiteral("&Connection"));
-    m_addConnectionAction = connectionMenu->addAction(QStringLiteral("&Add…"));
-    m_importBbsAction = connectionMenu->addAction(QStringLiteral("Import &BBS List…"));
-    m_editConnectionAction = connectionMenu->addAction(QStringLiteral("&Edit Selected…"));
-    m_deleteConnectionAction = connectionMenu->addAction(QStringLiteral("&Delete Selected"));
-    connectionMenu->addSeparator();
-    m_connectAction = connectionMenu->addAction(QStringLiteral("&Connect Selected"));
-    m_disconnectAction = connectionMenu->addAction(QStringLiteral("&Disconnect Selected"));
-    connectionMenu->addSeparator();
-    QAction *quitAction = connectionMenu->addAction(QStringLiteral("&Quit"));
+    // The old top-level Connection menu is intentionally gone. Its account
+    // lifecycle actions live under Accounts -> Account Management.
+    m_addConnectionAction = new QAction(QStringLiteral("&Add…"), this);
+    m_importBbsAction = new QAction(QStringLiteral("Import &BBS List…"), this);
+    m_editConnectionAction = new QAction(QStringLiteral("&Edit Selected…"), this);
+    m_deleteConnectionAction = new QAction(QStringLiteral("&Delete Selected"), this);
+    m_connectAction = new QAction(QStringLiteral("&Connect Selected"), this);
+    m_disconnectAction = new QAction(QStringLiteral("&Disconnect Selected"), this);
+    m_showConnectionsAction = new QAction(QStringLiteral("Show &Connections/Accounts Window"), this);
+    m_quitAction = new QAction(QStringLiteral("&Quit"), this);
 
-    // Accounts is rebuilt from the saved WaffleHouse connection model. Each
-    // account gets its own submenu so buddy/contact and conversation actions
-    // cannot accidentally target whichever account happened to be selected in
-    // another window.
     m_accountsMenu = bar->addMenu(QStringLiteral("&Accounts"));
     connect(m_accountsMenu, &QMenu::aboutToShow, this, &MainWindow::rebuildAccountsMenu);
 
     QMenu *viewMenu = bar->addMenu(QStringLiteral("&View"));
-
-    // Themes are available directly from View -> Theme as well as from the full
-    // Options dialog. The direct menu makes theme switching quick and obvious.
     QMenu *themeMenu = viewMenu->addMenu(QStringLiteral("&Theme"));
     auto *themeGroup = new QActionGroup(themeMenu);
     themeGroup->setExclusive(true);
 
-    struct ThemeEntry {
-        const char *label;
-        const char *id;
-    };
+    struct ThemeEntry { const char *label; const char *id; };
     static constexpr ThemeEntry themeEntries[] = {
         {"System", "system"}, {"Hacker", "hacker"}, {"Matrix", "matrix"},
         {"Phosphor", "phosphor"}, {"Midnight", "midnight"}, {"Amber", "amber"},
@@ -1020,9 +972,6 @@ void MainWindow::buildMenus()
                 QStringLiteral("Theme changed to %1.").arg(action->text()), 2500);
         });
     }
-
-    // loadOptions() runs after the menu is constructed, so refresh the check mark
-    // immediately before the submenu opens instead of assuming the startup value.
     connect(themeMenu, &QMenu::aboutToShow, this, [this, themeMenu] {
         for (QAction *action : themeMenu->actions()) {
             action->setChecked(action->data().toString() == m_options.theme);
@@ -1030,16 +979,16 @@ void MainWindow::buildMenus()
     });
 
     viewMenu->addSeparator();
-    m_transferWindowAction = viewMenu->addAction(QStringLiteral("&File Transfers…"));
-    viewMenu->addSeparator();
     m_buddyTransparencyAction =
-        viewMenu->addAction(QStringLiteral("Buddy List &Transparency…"));
+        viewMenu->addAction(QStringLiteral("Main Window &Transparency…"));
     m_connectionsTransparencyAction =
-        viewMenu->addAction(QStringLiteral("Connections Window T&ransparency…"));
+        viewMenu->addAction(QStringLiteral("Connections/Accounts Window T&ransparency…"));
 
     QMenu *toolsMenu = bar->addMenu(QStringLiteral("&Tools"));
     m_phoneAction = toolsMenu->addAction(QStringLiteral("Open &Softphone…"));
-    m_showConnectionsAction = toolsMenu->addAction(QStringLiteral("Show &Connections Window"));
+    m_importBbsAction->setText(QStringLiteral("Import &BBS List…"));
+    toolsMenu->addAction(m_importBbsAction);
+    m_transferWindowAction = toolsMenu->addAction(QStringLiteral("File Transfer &Log / Activity…"));
     toolsMenu->addSeparator();
     m_changePasswordAction = toolsMenu->addAction(QStringLiteral("Change AIM &Password…"));
     m_fingerprintAction = toolsMenu->addAction(QStringLiteral("Secure Identity &Fingerprint…"));
@@ -1057,39 +1006,23 @@ void MainWindow::buildMenus()
 
     connect(m_addConnectionAction, &QAction::triggered,
             this, [this] { openConnectionDialog(m_defaults, nullptr); });
-    connect(m_importBbsAction, &QAction::triggered,
-            this, &MainWindow::importBbsList);
-    connect(m_editConnectionAction, &QAction::triggered,
-            this, &MainWindow::editSelected);
-    connect(m_deleteConnectionAction, &QAction::triggered,
-            this, &MainWindow::deleteSelected);
-    connect(m_connectAction, &QAction::triggered,
-            this, &MainWindow::connectSelected);
-    connect(m_disconnectAction, &QAction::triggered,
-            this, &MainWindow::disconnectSelected);
-    connect(m_showConnectionsAction, &QAction::triggered,
-            this, &MainWindow::showConnectionsWindow);
+    connect(m_importBbsAction, &QAction::triggered, this, [this] { importBbsList(); });
+    connect(m_editConnectionAction, &QAction::triggered, this, &MainWindow::editSelected);
+    connect(m_deleteConnectionAction, &QAction::triggered, this, &MainWindow::deleteSelected);
+    connect(m_connectAction, &QAction::triggered, this, &MainWindow::connectSelected);
+    connect(m_disconnectAction, &QAction::triggered, this, &MainWindow::disconnectSelected);
+    connect(m_showConnectionsAction, &QAction::triggered, this, &MainWindow::showConnectionsWindow);
     connect(m_phoneAction, &QAction::triggered,
             m_softphoneWindow, &SoftphoneWindow::showAndRaise);
-    connect(quitAction, &QAction::triggered,
-            this, &MainWindow::quitApplication);
-
-    connect(m_changePasswordAction, &QAction::triggered,
-            this, &MainWindow::changePassword);
-    connect(m_fingerprintAction, &QAction::triggered,
-            this, &MainWindow::showSelectedFingerprint);
-    connect(m_transferWindowAction, &QAction::triggered,
-            this, &MainWindow::showTransferWindow);
-    connect(m_buddyTransparencyAction, &QAction::triggered,
-            this, &MainWindow::setBuddyTransparency);
-    connect(m_connectionsTransparencyAction, &QAction::triggered,
-            this, &MainWindow::setConnectionsTransparency);
-    connect(m_rawAction, &QAction::triggered,
-            this, &MainWindow::rawProtocolCommand);
-    connect(m_optionsAction, &QAction::triggered,
-            this, &MainWindow::showOptionsDialog);
-    connect(helpAction, &QAction::triggered,
-            this, &MainWindow::showHelpDialog);
+    connect(m_quitAction, &QAction::triggered, this, &MainWindow::quitApplication);
+    connect(m_changePasswordAction, &QAction::triggered, this, &MainWindow::changePassword);
+    connect(m_fingerprintAction, &QAction::triggered, this, &MainWindow::showSelectedFingerprint);
+    connect(m_transferWindowAction, &QAction::triggered, this, &MainWindow::showTransferWindow);
+    connect(m_buddyTransparencyAction, &QAction::triggered, this, &MainWindow::setBuddyTransparency);
+    connect(m_connectionsTransparencyAction, &QAction::triggered, this, &MainWindow::setConnectionsTransparency);
+    connect(m_rawAction, &QAction::triggered, this, &MainWindow::rawProtocolCommand);
+    connect(m_optionsAction, &QAction::triggered, this, &MainWindow::showOptionsDialog);
+    connect(helpAction, &QAction::triggered, this, &MainWindow::showHelpDialog);
 
     connect(aboutAction, &QAction::triggered, this, [this] {
         const QString aboutHtml = QStringLiteral(
@@ -1179,6 +1112,45 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
                 openBuddyManager(target);
             }
         });
+
+        menu.addSeparator();
+        if (protocol == ConnectionSettings::Protocol::Oscar) {
+            QAction *profile = menu.addAction(QStringLiteral("Edit AIM Profile…"));
+            profile->setEnabled(state->connected);
+            connect(profile, &QAction::triggered, this, [this, backendId] {
+                if (BackendState *target = stateById(backendId)) {
+                    selectState(target);
+                    editAimProfile(target);
+                }
+            });
+
+            QAction *password = menu.addAction(QStringLiteral("Change OSCAR / AIM Password…"));
+            password->setEnabled(state->connected);
+            connect(password, &QAction::triggered, this, [this, backendId] {
+                if (BackendState *target = stateById(backendId)) {
+                    selectState(target);
+                    changePassword();
+                }
+            });
+        } else {
+            QAction *nick = menu.addAction(QStringLiteral("Change IRC Nick / Nickname…"));
+            nick->setEnabled(state->connected);
+            connect(nick, &QAction::triggered, this, [this, backendId] {
+                if (BackendState *target = stateById(backendId)) {
+                    selectState(target);
+                    changeIrcNick();
+                }
+            });
+        }
+
+        QAction *capabilities = menu.addAction(QStringLiteral("Server Capabilities…"));
+        capabilities->setEnabled(state->connected);
+        connect(capabilities, &QAction::triggered, this, [this, backendId] {
+            if (BackendState *target = stateById(backendId)) {
+                selectState(target);
+                showServerCapabilities(target);
+            }
+        });
     }
 
     menu.addSeparator();
@@ -1194,10 +1166,63 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
     menu.exec(globalPos);
 }
 
+void MainWindow::showBuddyContextMenu(BackendState *state,
+                                      const QString &buddy,
+                                      const QPoint &globalPos)
+{
+    if (!state || !state->backend || buddy.trimmed().isEmpty()) return;
+    const auto protocol = state->backend->settings().protocol;
+    if (protocol != ConnectionSettings::Protocol::Oscar
+        && protocol != ConnectionSettings::Protocol::Irc) return;
+
+    selectState(state);
+    const QString backendId = state->backend->id();
+    const QString target = buddy.trimmed();
+    QMenu menu(this);
+
+    QAction *sendIm = menu.addAction(QStringLiteral("Send IM"));
+    sendIm->setEnabled(state->connected);
+    connect(sendIm, &QAction::triggered, this, [this, backendId, target] {
+        if (BackendState *current = stateById(backendId)) {
+            selectState(current);
+            ensureConversationWindow(current->backend, QStringLiteral("im"), target, true);
+        }
+    });
+
+    QAction *sendFileAction = menu.addAction(QStringLiteral("Send File"));
+    sendFileAction->setEnabled(state->connected);
+    connect(sendFileAction, &QAction::triggered, this, [this, backendId, target] {
+        if (BackendState *current = stateById(backendId)) {
+            selectState(current);
+            if (ChatWindow *window = ensureConversationWindow(
+                    current->backend, QStringLiteral("im"), target, true)) {
+                sendFile(window);
+            }
+        }
+    });
+
+    menu.exec(globalPos);
+}
+
 void MainWindow::rebuildAccountsMenu()
 {
     if (!m_accountsMenu) return;
     m_accountsMenu->clear();
+
+    // This must remain the first submenu under Accounts.
+    QMenu *management = m_accountsMenu->addMenu(QStringLiteral("Account Management"));
+    management->addAction(m_addConnectionAction);
+    management->addAction(m_editConnectionAction);
+    management->addAction(m_deleteConnectionAction);
+    management->addSeparator();
+    management->addAction(m_connectAction);
+    management->addAction(m_disconnectAction);
+    management->addSeparator();
+    management->addAction(m_showConnectionsAction);
+    management->addSeparator();
+    management->addAction(m_quitAction);
+
+    m_accountsMenu->addSeparator();
 
     QList<BackendState *> states = m_states.values();
     std::sort(states.begin(), states.end(), [this](BackendState *a, BackendState *b) {
@@ -1271,10 +1296,18 @@ void MainWindow::rebuildAccountsMenu()
                         setAimPresence(target);
                     }
                 });
+                QAction *password = account->addAction(QStringLiteral("Change OSCAR / AIM Password…"));
+                password->setEnabled(state->connected);
+                connect(password, &QAction::triggered, this, [this, backendId] {
+                    if (BackendState *target = stateById(backendId)) {
+                        selectState(target);
+                        changePassword();
+                    }
+                });
             }
 
             if (protocol == ConnectionSettings::Protocol::Irc) {
-                QAction *nick = account->addAction(QStringLiteral("Change IRC Nickname…"));
+                QAction *nick = account->addAction(QStringLiteral("Change IRC Nick / Nickname…"));
                 nick->setEnabled(state->connected);
                 connect(nick, &QAction::triggered, this, [this, backendId] {
                     if (BackendState *target = stateById(backendId)) {
@@ -1495,6 +1528,174 @@ void MainWindow::openBuddyManager(BackendState *state)
     dialog.exec();
 }
 
+void MainWindow::showServerCapabilities(BackendState *state)
+{
+    if (!state || !state->backend) return;
+    if (!state->connected) {
+        QMessageBox::information(this, QStringLiteral("Server Capabilities"),
+                                 QStringLiteral("Connect this account first so the server can advertise its capabilities."));
+        return;
+    }
+
+    const auto protocol = state->backend->settings().protocol;
+    QString title;
+    QString text;
+    if (protocol == ConnectionSettings::Protocol::Oscar) {
+        title = QStringLiteral("AIM/OSCAR Server Capabilities");
+        text += QStringLiteral("Server: %1\nAccount: %2\n\nAdvertised OSCAR families:\n")
+                    .arg(state->backend->settings().server,
+                         state->identity.isEmpty() ? state->backend->settings().username : state->identity);
+        text += state->serverCapabilityDetails.isEmpty()
+            ? QStringLiteral("  (No family list has been received yet.)\n")
+            : QStringLiteral("  %1\n").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
+        text += QStringLiteral("\nAIM Profile support: %1")
+                    .arg(state->aimProfileSupported ? QStringLiteral("YES") : QStringLiteral("NO"));
+        if (state->aimProfileSupported && state->aimProfileMaxLength > 0) {
+            text += QStringLiteral("\nMaximum profile size: %1 bytes").arg(state->aimProfileMaxLength);
+        }
+        text += QStringLiteral("\n\nWaffleHouse-Client maps these families to:\n  %1")
+                    .arg(state->serverCapabilities.isEmpty()
+                             ? QStringLiteral("(none identified)")
+                             : state->serverCapabilities.join(QStringLiteral("\n  ")));
+
+        if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
+            oscar->refreshServerCapabilities();
+        }
+    } else if (protocol == ConnectionSettings::Protocol::Irc) {
+        title = QStringLiteral("IRC Server Capabilities");
+        text += QStringLiteral("Server: %1\nNick: %2\n\nIRCv3 CAP LS 302:\n")
+                    .arg(state->backend->settings().server,
+                         state->identity.isEmpty() ? state->backend->settings().username : state->identity);
+        text += state->serverCapabilities.isEmpty()
+            ? QStringLiteral("  (No IRCv3 capabilities advertised.)\n")
+            : QStringLiteral("  %1\n").arg(state->serverCapabilities.join(QStringLiteral("\n  ")));
+        text += QStringLiteral("\n005 / ISUPPORT tokens:\n");
+        text += state->serverCapabilityDetails.isEmpty()
+            ? QStringLiteral("  (No ISUPPORT tokens received yet.)")
+            : QStringLiteral("  %1").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
+    } else {
+        QMessageBox::information(this, QStringLiteral("Server Capabilities"),
+                                 QStringLiteral("Capability inspection is currently available for AIM/OSCAR and IRC accounts."));
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(title);
+    dialog.resize(620, 500);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *view = new QPlainTextEdit(&dialog);
+    view->setReadOnly(true);
+    view->setPlainText(text);
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    dialog.exec();
+}
+
+void MainWindow::editAimProfile(BackendState *state)
+{
+    if (!state || !state->backend
+        || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+        return;
+    }
+    if (!state->connected) {
+        QMessageBox::information(this, QStringLiteral("Edit AIM Profile"),
+                                 QStringLiteral("Connect the AIM/OSCAR account first."));
+        return;
+    }
+    if (!state->aimProfileSupported) {
+        QMessageBox::information(
+            this, QStringLiteral("Edit AIM Profile"),
+            QStringLiteral("This OSCAR server did not advertise the Locate (0x0002) family, so AIM profiles are not available on this connection."));
+        return;
+    }
+
+    auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+    if (!oscar) return;
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("Edit AIM Profile — %1")
+                              .arg(state->identity.isEmpty()
+                                       ? state->backend->settings().username : state->identity));
+    dialog.resize(560, 420);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *description = new QLabel(
+        state->aimProfileMaxLength > 0
+            ? QStringLiteral("Edit the profile shown to other AIM users. Server limit: %1 bytes.")
+                  .arg(state->aimProfileMaxLength)
+            : QStringLiteral("Edit the profile shown to other AIM users."),
+        &dialog);
+    description->setWordWrap(true);
+    layout->addWidget(description);
+
+    auto *editor = new QPlainTextEdit(&dialog);
+    editor->setPlainText(state->aimProfile);
+    editor->setPlaceholderText(QStringLiteral("Enter your AIM profile…"));
+    layout->addWidget(editor, 1);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        const QString profile = editor->toPlainText();
+        const int bytes = profile.toUtf8().size();
+        if (state->aimProfileMaxLength > 0 && bytes > state->aimProfileMaxLength) {
+            QMessageBox::warning(&dialog, QStringLiteral("AIM Profile Too Long"),
+                                 QStringLiteral("The profile is %1 bytes, but this server allows %2 bytes.")
+                                     .arg(bytes).arg(state->aimProfileMaxLength));
+            return;
+        }
+        oscar->setProfile(profile);
+        state->aimProfile = profile;
+        dialog.accept();
+    });
+    dialog.exec();
+}
+
+void MainWindow::setMediaWindow(MediaWindow *window)
+{
+    m_mediaWindow = window;
+    if (m_trayShowMediaAction) m_trayShowMediaAction->setEnabled(m_mediaWindow != nullptr);
+    installMediaKeyShortcuts();
+}
+
+void MainWindow::installMediaKeyShortcuts()
+{
+    if (!m_mediaShortcuts.isEmpty()) return;
+
+    const auto bind = [this](Qt::Key key, const QString &command) {
+        auto *shortcut = new QShortcut(
+            QKeySequence(QKeyCombination(Qt::NoModifier, key)), this);
+        shortcut->setContext(Qt::ApplicationShortcut);
+        connect(shortcut, &QShortcut::activated, this, [this, command] {
+            runMediaShortcut(command);
+        });
+        m_mediaShortcuts.append(shortcut);
+    };
+
+    bind(Qt::Key_MediaPlay, QStringLiteral("mplaykey"));
+    bind(Qt::Key_MediaPause, QStringLiteral("mpause"));
+    bind(Qt::Key_MediaTogglePlayPause, QStringLiteral("mtoggle"));
+    bind(Qt::Key_MediaStop, QStringLiteral("mstop"));
+    bind(Qt::Key_MediaNext, QStringLiteral("mnext"));
+    bind(Qt::Key_MediaPrevious, QStringLiteral("mprev"));
+    bind(Qt::Key_VolumeUp, QStringLiteral("mvolup"));
+    bind(Qt::Key_VolumeDown, QStringLiteral("mvoldown"));
+    bind(Qt::Key_VolumeMute, QStringLiteral("mmute"));
+}
+
+void MainWindow::runMediaShortcut(const QString &command)
+{
+    if (!m_mediaWindow) return;
+    QString message;
+    if (m_mediaWindow->executeCommand(command, QString(), &message)
+        && !message.trimmed().isEmpty()) {
+        statusBar()->showMessage(message.section(QLatin1Char('\n'), 0, 0), 2500);
+    }
+}
+
 void MainWindow::showTransferWindow()
 {
     if (m_transferWindow) m_transferWindow->showAndRaise();
@@ -1503,7 +1704,7 @@ void MainWindow::showTransferWindow()
 void MainWindow::buildConnectionsWindow()
 {
     m_connectionsWindow = new QMainWindow(nullptr);
-    m_connectionsWindow->setWindowTitle(QStringLiteral("%1 %2 — Connections").arg(appDisplayName(), appVersionString()));
+    m_connectionsWindow->setWindowTitle(QStringLiteral("%1 %2 — Connections/Accounts").arg(appDisplayName(), appVersionString()));
     m_connectionsWindow->resize(620, 430);
     m_connectionsWindow->setMinimumSize(500, 340);
     m_connectionsWindow->setAttribute(Qt::WA_QuitOnClose, false);
@@ -1516,7 +1717,7 @@ void MainWindow::buildConnectionsWindow()
     auto *header = new QHBoxLayout;
     auto *headings = new QVBoxLayout;
     headings->setSpacing(2);
-    auto *title = new QLabel(QStringLiteral("Connections"), central);
+    auto *title = new QLabel(QStringLiteral("Connections/Accounts"), central);
     title->setObjectName(QStringLiteral("PageTitle"));
     auto *subtitle = new QLabel(QStringLiteral("Saved profiles and live connection activity"), central);
     subtitle->setObjectName(QStringLiteral("PageSubtitle"));
@@ -1634,8 +1835,10 @@ void MainWindow::buildTrayIcon()
 
     m_trayMenu = new QMenu(this);
     m_trayShowBuddyAction = m_trayMenu->addAction(QStringLiteral("Show Buddy List"));
-    m_trayShowConnectionsAction = m_trayMenu->addAction(QStringLiteral("Show Connections"));
+    m_trayShowConnectionsAction = m_trayMenu->addAction(QStringLiteral("Show Connections/Accounts"));
     m_trayShowPhoneAction = m_trayMenu->addAction(QStringLiteral("Show Softphone"));
+    m_trayShowMediaAction = m_trayMenu->addAction(QStringLiteral("Show Media Center"));
+    m_trayShowMediaAction->setEnabled(m_mediaWindow != nullptr);
     m_trayMenu->addSeparator();
     m_trayConnectAction = m_trayMenu->addAction(QStringLiteral("Connect Selected"));
     m_trayDisconnectAction = m_trayMenu->addAction(QStringLiteral("Disconnect Selected"));
@@ -1648,6 +1851,9 @@ void MainWindow::buildTrayIcon()
             this, &MainWindow::showConnectionsWindow);
     connect(m_trayShowPhoneAction, &QAction::triggered,
             m_softphoneWindow, &SoftphoneWindow::showAndRaise);
+    connect(m_trayShowMediaAction, &QAction::triggered, this, [this] {
+        if (m_mediaWindow) m_mediaWindow->showAndRaise();
+    });
     connect(m_trayConnectAction, &QAction::triggered,
             this, &MainWindow::connectSelected);
     connect(m_trayDisconnectAction, &QAction::triggered,
@@ -1769,7 +1975,12 @@ void MainWindow::importBbsList()
         this, QStringLiteral("Import BBS List"), QString(),
         QStringLiteral("BBS Lists (*.csv *.tsv *.json *.txt);;All Files (*)"));
     if (path.isEmpty()) return;
+    importBbsList(path);
+}
 
+void MainWindow::importBbsList(const QString &path)
+{
+    if (path.trimmed().isEmpty()) return;
     QString error;
     const auto entries = BbsDirectory::loadFile(path, &error);
     if (entries.isEmpty()) {
@@ -2109,17 +2320,18 @@ void MainWindow::showHelpDialog()
         "%1\nVersion %3\n\n"
         "%2 HELP\n\n"
         "CONNECTIONS\n"
-        "  Connection > Add... creates AIM/OSCAR, IRC, Telnet/BBS, or SIP/VoIP profiles.\n"
+        "  Accounts > Account Management > Add... creates AIM/OSCAR, IRC, Telnet/BBS, or SIP/VoIP profiles.\n"
         "  New profiles start with no protocol selected. Secrets are not saved unless you opt in.\n"
-        "  Accounts contains one submenu per saved connection for connection-specific actions.\n"
+        "  Accounts begins with Account Management, followed by one submenu per saved account.\n"
         "  AIM/IRC account menus provide IM / Chatroom and Add / Remove Buddies windows.\n"
-        "  Tools contains Show Connections Window, Open Softphone, AIM password, fingerprint, and Options.\n\n"
+        "  Tools contains Open Softphone, Import BBS List, File Transfer Log / Activity, AIM password, fingerprint, raw protocol commands, and Options.\n"
+        "  Media contains local audio/video, SHOUTcast/Icecast, HTTP/HLS streams, and playlist controls.\n\n"
         "SIP / VOIP SOFTPHONE\n"
-        "  SIP accounts are normal saved WaffleHouse connections and remain visible in the Communications Hub.\n"
-        "  The old right-side quick-dial card is removed; the left-rail Softphone button opens the full phone workspace.\n"
+        "  SIP accounts are normal saved WaffleHouse-Client accounts and remain visible in the main Accounts tree.\n"
+        "  The main-window navigation rail is removed; Tools > Open Softphone and the tray menu open the full phone workspace.\n"
         "  SIP contacts remain available from the account management menus and the Softphone profile/workspace.\n"
         "  Tools > Open Softphone also opens the full phone workspace.\n"
-        "  Softphone > Profile edits the same saved SIP account as Connection > Edit.\n"
+        "  Softphone > Profile edits the same saved SIP account as Accounts > Account Management > Edit Selected.\n"
         "  Softphone left rail: Phone, Active Calls, SIP Log, SIP Ladder, Profile, and Activity.\n"
         "  The Phone page includes Prefix, Destination, Caller ID, a live status strip, and a telephone dial pad.\n\n"
         "TELNET / MUD / BBS\n"
@@ -2128,8 +2340,8 @@ void MainWindow::showHelpDialog()
         "  Telnet is plaintext; credentials and traffic are not encrypted by the Telnet protocol.\n\n"
         "SECURE PRIVATE MESSAGES\n"
         "  Secure DMs interoperate with WaffleHouse-Client, WaffleHouse 1.9.1 family clients, GhostPulse, CrossPoint, and legacy CPX3-compatible clients.\n"
-        "  Encryption applies to AIM/OSCAR and IRC private messages only.\n"
-        "  It does not encrypt rooms/channels, Telnet traffic, routing metadata, or server-visible endpoints.\n\n"
+        "  Encryption applies to AIM/OSCAR and IRC private messages; 3.1 also supports CPX secure AIM/IRC rooms.\n"
+        "  Telnet traffic, routing metadata, and server-visible endpoints remain outside CPX encryption.\n\n"
         "  1. Open an IM with another compatible WaffleHouse/CPX3-compatible user.\n"
         "  2. Choose Security > Start Secure Session.\n"
         "  3. Choose Security > Secure Session Status to view both fingerprints.\n"
@@ -2139,7 +2351,7 @@ void MainWindow::showHelpDialog()
         "SECURE AIM / IRC ROOMS\n"
         "  Open an AIM chat room or IRC channel and choose Security > Start Secure Room (or type /secure).\n"
         "  WaffleHouse creates an XChaCha20-Poly1305 shared room key and delivers it only through established CPX encrypted PM sessions.\n"
-        "  Public room traffic contains CPXROOM ciphertext. WaffleHouse peers with the key display [secure-room] plaintext locally; ordinary traffic is marked [plaintext].\n"
+        "  Public room traffic contains CPXROOM ciphertext. WaffleHouse-Client peers with the key display [secure-room] plaintext locally; ordinary traffic is marked [plaintext].\n"
         "  The key owner rotates the room key when membership changes and redistributes it to current secure peers.\n\n"
         "  An unverified secure session is encrypted but not identity-verified.\n"
         "  If a trusted peer later presents a different key, the client rejects that secure session.\n"
@@ -2150,6 +2362,10 @@ void MainWindow::showHelpDialog()
         "  Secure uses CPX encryption/authentication and requires a verified secure session; the dialog explains setup if one is not active.\n"
         "  Unsecured proceeds over ordinary AIM/IRC PM transport without CPX encryption/authentication.\n"
         "  Both modes retain chunking/resume and SHA-256 verification; incoming transfers require explicit acceptance and a destination path.\n\n"
+        "MAIN-WINDOW /COMMAND BAR\n"
+        "  The command box below the Accounts tree accepts CLI-style /commands and invokes GUI actions.\n"
+        "  Examples: /add, /connect, /query USER, /joinprivate ROOM, /nick NEWNICK, /media, /phone, /transfers.\n"
+        "  Commands that need a peer use the selected AIM/IRC buddy when no peer is supplied.\n\n"
         "SLASH ALIASES INSIDE CONVERSATION WINDOWS\n"
         "  Tab          complete/cycle matching slash commands\n"
         "  Shift+Tab    cycle matching commands backward\n"
@@ -2161,12 +2377,21 @@ void MainWindow::showHelpDialog()
         "  /trust       trust the active peer fingerprint\n"
         "  /untrust     forget the trusted peer fingerprint\n"
         "  /secureoff   close the secure session\n\n"
+        "IRC SLASH COMMANDS (IRC CONVERSATIONS)\n"
+        "  /nick NEWNICK          change nickname\n"
+        "  /op NICK... /deop...   grant/remove channel operator\n"
+        "  /voice NICK... /devoice grant/remove channel voice\n"
+        "  /kick NICK [reason]     kick from the active channel\n"
+        "  /ban NICK|MASK /unban   set/remove channel ban\n"
+        "  /topic, /mode, /me, /notice, /invite, /who, /whois, /whowas, /ison, /list, /motd\n"
+        "  /raw or /quote COMMAND  send an IRC protocol line directly\n"
+        "  Unknown /text is sent as normal chat text (and remains CPX-encrypted when the conversation is secured).\n\n"
         "RUNTIME ENVIRONMENT\n"
         "  %4\n"
         "  Graphical-terminal sessions are distinguished from desktop launches and console-only TTYs.\n\n"
         "THEMES\n"
-        "  Use the left-rail Settings button, Tools > Options, or Ctrl+, for full settings.\n"
-        "  View > Theme provides the complete WaffleHouse + S.I.P.H.E.R. theme collection.\n")
+        "  Use Tools > Options or Ctrl+, for full settings.\n"
+        "  View > Theme provides the complete WaffleHouse-Client + S.I.P.H.E.R. theme collection.\n")
         .arg(appAsciiLogo(), appDisplayName(), appVersionString(), RuntimeEnvironment::detect().summary()));
     outer->addWidget(help, 1);
     QDialogButtonBox close(QDialogButtonBox::Close, &dialog);
@@ -2489,6 +2714,29 @@ void MainWindow::wireBackend(ChatBackend *backend)
                         statusBar()->showMessage(QStringLiteral("AIM presence: %1").arg(text), 4000);
                     }
                 }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::serverCapabilitiesChanged, this,
+                [this, backend](const QStringList &features, const QStringList &families,
+                                bool profileSupported, int maxProfileLength) {
+                    if (BackendState *state = stateFor(backend)) {
+                        state->serverCapabilities = features;
+                        state->serverCapabilityDetails = families;
+                        state->aimProfileSupported = profileSupported;
+                        state->aimProfileMaxLength = maxProfileLength;
+                    }
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::profileChanged, this,
+                [this, backend](const QString &profile) {
+                    if (BackendState *state = stateFor(backend)) state->aimProfile = profile;
+                }, Qt::QueuedConnection);
+    }
+    if (auto *irc = qobject_cast<IrcBackend *>(backend)) {
+        connect(irc, &IrcBackend::serverCapabilitiesChanged, this,
+                [this, backend](const QStringList &caps, const QStringList &isupport) {
+                    if (BackendState *state = stateFor(backend)) {
+                        state->serverCapabilities = caps;
+                        state->serverCapabilityDetails = isupport;
+                    }
+                }, Qt::QueuedConnection);
     }
 }
 
@@ -2708,8 +2956,8 @@ void MainWindow::refreshBuddyList()
 
     QTreeWidgetItem *restoreItem = nullptr;
 
-    // Every saved connection remains a top-level Communications Hub account,
-    // including SIP/VoIP. Only the old embedded quick-dial panel was removed.
+    // Every saved connection remains a top-level account in the compact main tree,
+    // including SIP/VoIP.
     for (BackendState *state : states) {
         if (!state || !state->backend) {
             continue;
@@ -3289,6 +3537,651 @@ void MainWindow::changeIrcNick()
     }
 }
 
+QString MainWindow::selectedBuddyName() const
+{
+    if (!m_buddyTree) return {};
+    QTreeWidgetItem *item = m_buddyTree->currentItem();
+    if (!item || !item->parent()) return {};
+    return item->data(0, Qt::UserRole + 1).toString().trimmed();
+}
+
+MainWindow::BackendState *MainWindow::resolveGuiAccount(const QString &token) const
+{
+    const QString clean = token.trimmed();
+    if (clean.isEmpty()) return selectedState();
+
+    QList<BackendState *> states = m_states.values();
+    std::sort(states.begin(), states.end(), [this](BackendState *a, BackendState *b) {
+        return accountMenuLabel(a).compare(accountMenuLabel(b), Qt::CaseInsensitive) < 0;
+    });
+
+    bool indexOk = false;
+    const int index = clean.toInt(&indexOk);
+    if (indexOk && index >= 1 && index <= states.size()) return states.at(index - 1);
+
+    const QString folded = clean.toCaseFolded();
+    for (BackendState *state : states) {
+        if (!state || !state->backend) continue;
+        const auto &cfg = state->backend->settings();
+        const QStringList candidates = {
+            state->backend->id(), state->identity, cfg.username, cfg.server,
+            cfg.sipProfileName, state->backend->protocolName(), accountMenuLabel(state)
+        };
+        for (const QString &candidate : candidates) {
+            if (candidate.trimmed().toCaseFolded() == folded) return state;
+        }
+    }
+    return nullptr;
+}
+
+void MainWindow::executeGuiCommand()
+{
+    if (!m_commandInput) return;
+    const QString line = m_commandInput->text().trimmed();
+    if (line.isEmpty()) return;
+    m_commandInput->clear();
+    executeGuiCommand(line);
+}
+
+void MainWindow::executeGuiCommand(const QString &input)
+{
+    QString line = input.trimmed();
+    if (line.isEmpty()) return;
+    if (!line.startsWith(QLatin1Char('/'))) {
+        statusBar()->showMessage(QStringLiteral("GUI commands must begin with /. Try /help."), 6000);
+        return;
+    }
+
+    QString rest = line.mid(1).trimmed();
+    const QString command = takeGuiArgument(rest).toCaseFolded();
+    if (command.isEmpty()) return;
+
+    auto report = [this](const QString &text, int ms = 7000) {
+        if (!text.isEmpty()) statusBar()->showMessage(text, ms);
+    };
+    auto showText = [this](const QString &title, const QString &text) {
+        QDialog dialog(this);
+        dialog.setWindowTitle(title);
+        dialog.resize(620, 420);
+        auto *layout = new QVBoxLayout(&dialog);
+        auto *view = new QPlainTextEdit(&dialog);
+        view->setReadOnly(true);
+        view->setPlainText(text);
+        layout->addWidget(view, 1);
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+        layout->addWidget(buttons);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        dialog.exec();
+    };
+    auto contextWindow = [this](BackendState *state) -> ChatWindow * {
+        if (!state || !state->backend) return nullptr;
+        const QString buddy = selectedBuddyName();
+        if (!buddy.isEmpty()) {
+            if (ChatWindow *w = m_windows.value(
+                    conversationKey(state->backend, QStringLiteral("im"), buddy), nullptr)) return w;
+        }
+        ChatWindow *only = nullptr;
+        for (ChatWindow *w : m_windows) {
+            if (!w || w->backendId() != state->backend->id() || !w->isVisible()) continue;
+            if (only) return nullptr; // ambiguous; require a more specific command target
+            only = w;
+        }
+        return only;
+    };
+    auto selectedSip = [this]() -> BackendState * {
+        BackendState *state = selectedState();
+        if (state && state->backend
+            && state->backend->settings().protocol == ConnectionSettings::Protocol::Sip) return state;
+        BackendState *only = nullptr;
+        for (BackendState *candidate : m_states) {
+            if (!candidate || !candidate->backend
+                || candidate->backend->settings().protocol != ConnectionSettings::Protocol::Sip) continue;
+            if (only) return nullptr;
+            only = candidate;
+        }
+        return only;
+    };
+
+    // Media commands are implemented by the same MediaController used by the GUI.
+    if (m_mediaWindow) {
+        QString mediaMessage;
+        if (m_mediaWindow->executeCommand(command, rest, &mediaMessage)) {
+            if (!mediaMessage.isEmpty()) {
+                if (mediaMessage.contains(QLatin1Char('\n'))) showText(QStringLiteral("Media Center"), mediaMessage);
+                else report(mediaMessage);
+            }
+            return;
+        }
+    }
+
+    if (command == QStringLiteral("quit") || command == QStringLiteral("exit")) {
+        quitApplication();
+        return;
+    }
+    if (command == QStringLiteral("help")) { showHelpDialog(); return; }
+    if (command == QStringLiteral("options")) { showOptionsDialog(); return; }
+    if (command == QStringLiteral("version")) {
+        BackendState *state = selectedState();
+        QString target = rest.trimmed();
+        if (target.isEmpty()) target = selectedBuddyName();
+        if (state && state->connected && !target.isEmpty()) requestClientVersion(state, target);
+        else report(QStringLiteral("%1 Version %2").arg(appDisplayName(), appVersionString()));
+        return;
+    }
+    if (command == QStringLiteral("env") || command == QStringLiteral("environment")) {
+        const RuntimeEnvironment info = RuntimeEnvironment::detect();
+        showText(QStringLiteral("Runtime Environment"),
+                 QStringLiteral("OS: %1\nMode: %2\nSession: %3\nDesktop/WM: %4\nTerminal: %5")
+                     .arg(info.osName, info.mode, info.sessionType,
+                          info.desktop.isEmpty() ? QStringLiteral("not detected") : info.desktop,
+                          info.terminal.isEmpty() ? QStringLiteral("not detected") : info.terminal));
+        return;
+    }
+
+    if (command == QStringLiteral("autopresence")) {
+        QString args = rest;
+        const QString action = takeGuiArgument(args).toCaseFolded();
+        if (action.isEmpty()) {
+            report(QStringLiteral("Auto OSCAR presence: %1 | idle %2 min | away %3 min")
+                       .arg(m_options.autoPresenceEnabled ? QStringLiteral("ON") : QStringLiteral("OFF"))
+                       .arg(m_options.autoIdleMinutes).arg(m_options.autoAwayMinutes));
+            return;
+        }
+        if (action == QStringLiteral("on") || action == QStringLiteral("off")) {
+            m_options.autoPresenceEnabled = action == QStringLiteral("on");
+            saveOptions();
+            report(QStringLiteral("Automatic OSCAR idle/away %1.").arg(action.toUpper()));
+            return;
+        }
+        bool ok = false;
+        const int minutes = takeGuiArgument(args).toInt(&ok);
+        if (!ok || minutes < 1) { report(QStringLiteral("Usage: /autopresence on|off|idle MINUTES|away MINUTES")); return; }
+        if (action == QStringLiteral("idle") && minutes < m_options.autoAwayMinutes) m_options.autoIdleMinutes = minutes;
+        else if (action == QStringLiteral("away") && minutes > m_options.autoIdleMinutes) m_options.autoAwayMinutes = minutes;
+        else { report(QStringLiteral("Idle must be below away; away must be above idle.")); return; }
+        saveOptions();
+        report(QStringLiteral("Auto OSCAR presence: idle %1 min, away %2 min.")
+                   .arg(m_options.autoIdleMinutes).arg(m_options.autoAwayMinutes));
+        return;
+    }
+
+    if (command == QStringLiteral("notifications")) {
+        QStringList lines;
+        lines << QStringLiteral("Notification sounds: %1")
+                     .arg(NotificationManager::globalEnabled() ? QStringLiteral("ON") : QStringLiteral("OFF"));
+        for (const auto event : NotificationManager::configurableEvents()) {
+            const auto cfg = NotificationManager::setting(event);
+            lines << QStringLiteral("%1 [%2] — %3")
+                         .arg(NotificationManager::key(event),
+                              cfg.enabled ? QStringLiteral("on") : QStringLiteral("off"),
+                              cfg.soundSpec);
+        }
+        showText(QStringLiteral("Notification Sounds"), lines.join(QLatin1Char('\n')));
+        return;
+    }
+    if (command == QStringLiteral("notify")) {
+        const QString mode = rest.trimmed().toCaseFolded();
+        if (mode != QStringLiteral("on") && mode != QStringLiteral("off")) { report(QStringLiteral("Usage: /notify on|off")); return; }
+        NotificationManager::setGlobalEnabled(mode == QStringLiteral("on"));
+        report(QStringLiteral("Notification sounds %1.").arg(mode.toUpper()));
+        return;
+    }
+    if (command == QStringLiteral("sound") || command == QStringLiteral("soundtest")) {
+        QString args = rest;
+        const QString eventName = takeGuiArgument(args);
+        const auto event = NotificationManager::eventFromKey(eventName);
+        if (!event) { report(QStringLiteral("Unknown notification event.")); return; }
+        if (command == QStringLiteral("soundtest")) {
+            NotificationManager::playSpec(NotificationManager::setting(*event).soundSpec, true);
+            report(QStringLiteral("Tested %1 sound.").arg(NotificationManager::displayName(*event)));
+            return;
+        }
+        QString value = args.trimmed();
+        if (value.isEmpty()) { report(QStringLiteral("Usage: /sound EVENT builtin|off|PATH")); return; }
+        NotificationManager::Setting cfg = NotificationManager::setting(*event);
+        if (value.compare(QStringLiteral("builtin"), Qt::CaseInsensitive) == 0) {
+            cfg.enabled = true; cfg.soundSpec = NotificationManager::builtinSpec(*event);
+        } else if (value.compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0
+                   || value.compare(QStringLiteral("none"), Qt::CaseInsensitive) == 0) {
+            cfg.enabled = false; cfg.soundSpec = QStringLiteral("none");
+        } else {
+            if (!QFileInfo::exists(value)) { report(QStringLiteral("Sound file does not exist: %1").arg(value)); return; }
+            cfg.enabled = true; cfg.soundSpec = NotificationManager::customSpec(QFileInfo(value).absoluteFilePath());
+        }
+        NotificationManager::setSetting(*event, cfg);
+        report(QStringLiteral("%1 sound updated.").arg(NotificationManager::displayName(*event)));
+        return;
+    }
+
+    if (command == QStringLiteral("themes")) {
+        showText(QStringLiteral("Themes"), QStringLiteral(
+            "system\nhacker\nmatrix\nphosphor\nmidnight\namber\nice\nclassic-light\nsolarized\nsolarized-dark\n"
+            "dracula\nnord\ncyberpunk\nblood-moon\nocean\nretro-blue\nmonochrome\nblue-box\nred-box\nbeige-box\n"
+            "2600\nwargames\ncrt-green\nvt220\ncobalt\nvaporwave\nstealth\nsynthwave\nc64\ndos\nwaffle-iron\n"
+            "ghostline\nhot-dog-stand\nneon-miami"));
+        return;
+    }
+    if (command == QStringLiteral("theme")) {
+        QString name = rest.trimmed().toCaseFolded();
+        name.replace(QLatin1Char('_'), QLatin1Char('-'));
+        if (name.isEmpty()) { report(QStringLiteral("Current theme: %1").arg(m_options.theme)); return; }
+        static const QSet<QString> themes = {
+            QStringLiteral("system"), QStringLiteral("hacker"), QStringLiteral("matrix"), QStringLiteral("phosphor"),
+            QStringLiteral("midnight"), QStringLiteral("amber"), QStringLiteral("ice"), QStringLiteral("classic-light"),
+            QStringLiteral("solarized"), QStringLiteral("solarized-dark"), QStringLiteral("dracula"), QStringLiteral("nord"),
+            QStringLiteral("cyberpunk"), QStringLiteral("blood-moon"), QStringLiteral("ocean"), QStringLiteral("retro-blue"),
+            QStringLiteral("monochrome"), QStringLiteral("blue-box"), QStringLiteral("red-box"), QStringLiteral("beige-box"),
+            QStringLiteral("2600"), QStringLiteral("wargames"), QStringLiteral("crt-green"), QStringLiteral("vt220"),
+            QStringLiteral("cobalt"), QStringLiteral("vaporwave"), QStringLiteral("stealth"), QStringLiteral("synthwave"),
+            QStringLiteral("c64"), QStringLiteral("dos"), QStringLiteral("waffle-iron"), QStringLiteral("ghostline"),
+            QStringLiteral("hot-dog-stand"), QStringLiteral("neon-miami")
+        };
+        if (!themes.contains(name)) { report(QStringLiteral("Unknown theme '%1'. Use /themes.").arg(name)); return; }
+        m_options.theme = name; saveOptions(); applyTheme();
+        report(QStringLiteral("Theme changed to %1.").arg(name));
+        return;
+    }
+
+    if (command == QStringLiteral("add")) { openConnectionDialog(m_defaults, nullptr); return; }
+    if (command == QStringLiteral("connections") || command == QStringLiteral("accounts")
+        || command == QStringLiteral("servers")) { showConnectionsWindow(); return; }
+    if (command == QStringLiteral("active")) {
+        QStringList lines;
+        for (BackendState *state : m_states) {
+            if (!state || !state->backend || (!state->connected && !state->connecting)) continue;
+            lines << QStringLiteral("%1 — %2").arg(accountMenuLabel(state),
+                state->connecting ? QStringLiteral("Connecting") : QStringLiteral("Online"));
+        }
+        showText(QStringLiteral("Active Accounts"), lines.isEmpty() ? QStringLiteral("No active accounts.") : lines.join(QLatin1Char('\n')));
+        return;
+    }
+    if (command == QStringLiteral("conn") || command == QStringLiteral("server")) {
+        const QString token = takeGuiArgument(rest);
+        QList<BackendState *> states = m_states.values();
+        std::sort(states.begin(), states.end(), [this](BackendState *a, BackendState *b) {
+            return accountMenuLabel(a).compare(accountMenuLabel(b), Qt::CaseInsensitive) < 0;
+        });
+        if (token.compare(QStringLiteral("next"), Qt::CaseInsensitive) == 0
+            || token.compare(QStringLiteral("prev"), Qt::CaseInsensitive) == 0
+            || token.compare(QStringLiteral("previous"), Qt::CaseInsensitive) == 0) {
+            if (states.isEmpty()) return;
+            BackendState *current = selectedState();
+            int index = states.indexOf(current);
+            if (index < 0) index = 0;
+            if (token.compare(QStringLiteral("next"), Qt::CaseInsensitive) == 0) index = (index + 1) % states.size();
+            else index = (index - 1 + states.size()) % states.size();
+            selectState(states.at(index));
+            report(QStringLiteral("Selected %1").arg(accountMenuLabel(states.at(index))));
+            return;
+        }
+        if (BackendState *state = resolveGuiAccount(token)) {
+            selectState(state); report(QStringLiteral("Selected %1").arg(accountMenuLabel(state)));
+        } else report(QStringLiteral("Account not found. Use /connections."));
+        return;
+    }
+    if (command == QStringLiteral("connect") || command == QStringLiteral("disconnect")
+        || command == QStringLiteral("delete") || command == QStringLiteral("delconn")
+        || command == QStringLiteral("edit")) {
+        BackendState *state = resolveGuiAccount(takeGuiArgument(rest));
+        if (!state) { report(QStringLiteral("Account not found.")); return; }
+        selectState(state);
+        if (command == QStringLiteral("connect")) connectState(state);
+        else if (command == QStringLiteral("disconnect")) disconnectSelected();
+        else if (command == QStringLiteral("edit")) editSelected();
+        else deleteSelected();
+        return;
+    }
+
+    if (command == QStringLiteral("bbsimport")) {
+        const QString path = takeGuiArgument(rest);
+        if (path.isEmpty()) importBbsList();
+        else importBbsList(path);
+        return;
+    }
+    if (command == QStringLiteral("telnet")) {
+        QString spec = takeGuiArgument(rest);
+        const QString portArg = takeGuiArgument(rest);
+        if (spec.isEmpty()) { report(QStringLiteral("Usage: /telnet HOST [PORT] or /telnet HOST:PORT")); return; }
+        quint16 port = 23;
+        QString host = spec;
+        bool ok = false;
+        if (!portArg.isEmpty()) {
+            const int p = portArg.toInt(&ok); if (ok && p > 0 && p <= 65535) port = static_cast<quint16>(p);
+        } else if (spec.count(QLatin1Char(':')) == 1) {
+            const int colon = spec.lastIndexOf(QLatin1Char(':'));
+            const int p = spec.mid(colon + 1).toInt(&ok);
+            if (ok && p > 0 && p <= 65535) { port = static_cast<quint16>(p); host = spec.left(colon); }
+        }
+        ConnectionSettings cfg;
+        cfg.protocol = ConnectionSettings::Protocol::Telnet;
+        cfg.server = host;
+        cfg.port = port;
+        cfg.username = host;
+        cfg.telnetTerminalType = QStringLiteral("ANSI");
+        if (ChatBackend *backend = createBackend(cfg)) attachBackend(backend, false, false, false, true);
+        return;
+    }
+
+    BackendState *state = selectedState();
+
+    // SIP/softphone command family.
+    if (command == QStringLiteral("phone") || command == QStringLiteral("phoneprofile")
+        || command == QStringLiteral("phoneconfig") || command == QStringLiteral("phoneactivity")
+        || command == QStringLiteral("calls")) {
+        m_softphoneWindow->showAndRaise();
+        return;
+    }
+    if (command == QStringLiteral("phonestart") || command == QStringLiteral("phonestop")) {
+        BackendState *sip = selectedSip();
+        if (!sip) { report(QStringLiteral("Select a SIP account first.")); return; }
+        selectState(sip);
+        if (command == QStringLiteral("phonestart")) connectState(sip); else disconnectSelected();
+        m_softphoneWindow->showAndRaise();
+        return;
+    }
+    if (command == QStringLiteral("prefix")) {
+        BackendState *sip = selectedSip();
+        if (!sip || !sip->backend) { report(QStringLiteral("Select a SIP account first.")); return; }
+        QString value = takeGuiArgument(rest);
+        if (value.isEmpty()) {
+            const QString current = m_sipController->dialPrefix(sip->backend->id());
+            report(QStringLiteral("Current PBX dial prefix: %1").arg(current.isEmpty() ? QStringLiteral("<none>") : current));
+            return;
+        }
+        if (value.compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0
+            || value.compare(QStringLiteral("none"), Qt::CaseInsensitive) == 0 || value == QStringLiteral("-")) value.clear();
+        QString error;
+        if (!m_sipController->setDialPrefix(sip->backend->id(), value, &error)) report(QStringLiteral("Dial prefix failed: %1").arg(error));
+        else report(QStringLiteral("Dial prefix set to %1").arg(value.isEmpty() ? QStringLiteral("<none>") : value));
+        return;
+    }
+    if (command == QStringLiteral("dialpreview") || command == QStringLiteral("dial") || command == QStringLiteral("dialraw")) {
+        BackendState *sip = selectedSip();
+        if (!sip || !sip->backend) { report(QStringLiteral("Select a SIP account first.")); return; }
+        const QString destination = takeGuiArgument(rest);
+        const QString callerId = takeGuiArgument(rest);
+        if (destination.isEmpty()) { report(QStringLiteral("Usage: /%1 DESTINATION [CALLER-ID]").arg(command)); return; }
+        QString error;
+        const bool applyPrefix = command != QStringLiteral("dialraw");
+        const QString preview = m_sipController->dialPreview(sip->backend->id(), destination, applyPrefix, &error);
+        if (command == QStringLiteral("dialpreview")) {
+            if (!error.isEmpty()) report(QStringLiteral("Dial preview failed: %1").arg(error));
+            else showText(QStringLiteral("SIP Dial Preview"), QStringLiteral("Entered: %1\nRequest-URI target: %2").arg(destination, preview));
+            return;
+        }
+        m_sipController->setSelectedAccountId(sip->backend->id());
+        const int id = m_sipController->dial(sip->backend->id(), destination, callerId, &error, applyPrefix);
+        if (id < 0) report(QStringLiteral("Dial failed: %1").arg(error));
+        else { m_softphoneWindow->showAndRaise(); report(QStringLiteral("Dialing call %1 -> %2").arg(id).arg(preview)); }
+        return;
+    }
+    if (command == QStringLiteral("answer") || command == QStringLiteral("reject")
+        || command == QStringLiteral("hangup") || command == QStringLiteral("hold")
+        || command == QStringLiteral("callresume") || command == QStringLiteral("mute")
+        || command == QStringLiteral("unmute") || command == QStringLiteral("dtmf")) {
+        bool ok = false;
+        const int id = takeGuiArgument(rest).toInt(&ok);
+        if (!ok || id < 0) { report(QStringLiteral("Usage: /%1 CALL-ID%2").arg(command, command == QStringLiteral("dtmf") ? QStringLiteral(" DIGITS") : QString())); return; }
+        QString error;
+        bool result = false;
+        if (command == QStringLiteral("answer")) result = m_sipController->answer(id, &error);
+        else if (command == QStringLiteral("reject")) result = m_sipController->reject(id, &error);
+        else if (command == QStringLiteral("hangup")) result = m_sipController->hangup(id, &error);
+        else if (command == QStringLiteral("hold")) result = m_sipController->hold(id, &error);
+        else if (command == QStringLiteral("callresume")) result = m_sipController->resume(id, &error);
+        else if (command == QStringLiteral("mute") || command == QStringLiteral("unmute")) result = m_sipController->setMuted(id, command == QStringLiteral("mute"), &error);
+        else {
+            const QString digits = takeGuiArgument(rest);
+            if (digits.isEmpty()) { report(QStringLiteral("Usage: /dtmf CALL-ID DIGITS")); return; }
+            result = m_sipController->sendDtmf(id, digits, &error);
+        }
+        if (!result) report(QStringLiteral("SIP command failed: %1").arg(error));
+        else m_softphoneWindow->showAndRaise();
+        return;
+    }
+    if (command == QStringLiteral("siplog")) {
+        bool ok = true; int id = -1;
+        if (!rest.trimmed().isEmpty()) id = takeGuiArgument(rest).toInt(&ok);
+        if (!ok) { report(QStringLiteral("Usage: /siplog [CALL-ID]")); return; }
+        showText(QStringLiteral("SIP Log"), m_sipController->sipLogText(id)); return;
+    }
+    if (command == QStringLiteral("ladder")) {
+        bool ok = false; const int id = takeGuiArgument(rest).toInt(&ok);
+        if (!ok || id < 0) { report(QStringLiteral("Usage: /ladder CALL-ID")); return; }
+        showText(QStringLiteral("SIP Ladder"), m_sipController->ladderText(id)); return;
+    }
+    if (command == QStringLiteral("audio-devices")) {
+        showText(QStringLiteral("SIP Audio Devices"), m_sipController->audioDevicesText() + QStringLiteral("\n\n") + m_sipController->audioSummary()); return;
+    }
+    if (command == QStringLiteral("audio-use")) {
+        bool ok1 = false, ok2 = false;
+        const int capture = takeGuiArgument(rest).toInt(&ok1);
+        const int playback = takeGuiArgument(rest).toInt(&ok2);
+        if (!ok1 || !ok2) { report(QStringLiteral("Usage: /audio-use CAPTURE-ID PLAYBACK-ID")); return; }
+        QString error;
+        if (!m_sipController->setAudioDevices(capture, playback, &error)) report(QStringLiteral("Audio selection failed: %1").arg(error));
+        else report(m_sipController->audioSummary());
+        return;
+    }
+    if (command == QStringLiteral("audio-auto")) {
+        const QString value = takeGuiArgument(rest).toCaseFolded();
+        if (value != QStringLiteral("on") && value != QStringLiteral("off")) { report(QStringLiteral("Usage: /audio-auto on|off")); return; }
+        m_sipController->setAudioAutoSwitch(value == QStringLiteral("on")); report(m_sipController->audioSummary()); return;
+    }
+
+    if (command == QStringLiteral("fingerprint")) { showSelectedFingerprint(); return; }
+
+    // AIM presence commands.
+    if (command == QStringLiteral("away") || command == QStringLiteral("afk")
+        || command == QStringLiteral("idle") || command == QStringLiteral("back")
+        || command == QStringLiteral("status")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+            report(QStringLiteral("This command requires an online AIM/OSCAR account.")); return;
+        }
+        auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+        if (!oscar) return;
+        if (command == QStringLiteral("away")) oscar->setAwayMessage(rest.trimmed());
+        else if (command == QStringLiteral("afk")) oscar->setAfkMessage(rest.trimmed());
+        else if (command == QStringLiteral("idle")) {
+            const QString value = takeGuiArgument(rest).toCaseFolded();
+            if (value == QStringLiteral("off") || value == QStringLiteral("0")) oscar->setIdleSeconds(0);
+            else { bool ok = false; const uint seconds = value.isEmpty() ? 1u : value.toUInt(&ok); if (!value.isEmpty() && !ok) { report(QStringLiteral("Usage: /idle [SECONDS|off]")); return; } oscar->setIdleSeconds(seconds); }
+        } else if (command == QStringLiteral("back")) oscar->setBack();
+        else report(QStringLiteral("AIM status: %1%2").arg(state->presenceState, state->presenceMessage.isEmpty() ? QString() : QStringLiteral(" — %1").arg(state->presenceMessage)));
+        return;
+    }
+
+    if (command == QStringLiteral("passwd")) { changePassword(); return; }
+    if (command == QStringLiteral("nick")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Irc) {
+            report(QStringLiteral("/nick requires an online IRC account.")); return;
+        }
+        const QString nick = takeGuiArgument(rest);
+        if (nick.isEmpty()) changeIrcNick(); else state->backend->changeNickname(nick);
+        return;
+    }
+
+    if (command == QStringLiteral("buddies") || command == QStringLiteral("buddylist")) {
+        if (!state || !state->backend) { report(QStringLiteral("Select an AIM/IRC account first.")); return; }
+        QStringList names = state->buddies.values(); names.sort(Qt::CaseInsensitive);
+        showText(QStringLiteral("Buddy List — %1").arg(accountMenuLabel(state)),
+                 names.isEmpty() ? QStringLiteral("No buddies configured.") : names.join(QLatin1Char('\n')));
+        return;
+    }
+    if (command == QStringLiteral("addbuddy") || command == QStringLiteral("delbuddy")
+        || command == QStringLiteral("removebuddy")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select and connect an AIM/IRC account first.")); return; }
+        const QString buddy = takeGuiArgument(rest);
+        if (buddy.isEmpty()) { if (command == QStringLiteral("addbuddy")) addBuddy(); else removeBuddy(); return; }
+        if (command == QStringLiteral("addbuddy")) state->backend->addBuddy(buddy);
+        else state->backend->removeBuddy(buddy);
+        return;
+    }
+
+    if (command == QStringLiteral("query")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online AIM/IRC account first.")); return; }
+        const QString target = takeGuiArgument(rest);
+        if (target.isEmpty()) { report(QStringLiteral("Usage: /query USER")); return; }
+        ensureConversationWindow(state->backend, QStringLiteral("im"), target, true);
+        return;
+    }
+    if (command == QStringLiteral("msg")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online AIM/IRC account first.")); return; }
+        const QString target = takeGuiArgument(rest);
+        const QString message = rest.trimmed();
+        if (target.isEmpty() || message.isEmpty()) { report(QStringLiteral("Usage: /msg USER MESSAGE")); return; }
+        ChatWindow *window = ensureConversationWindow(state->backend, QStringLiteral("im"), target, true);
+        sendPrivateText(state, target, message, window);
+        return;
+    }
+    if (command == QStringLiteral("join") || command == QStringLiteral("j")
+        || command == QStringLiteral("joinprivate")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online AIM/IRC account first.")); return; }
+        QString room = rest.trimmed();
+        if (room.isEmpty()) { report(QStringLiteral("Usage: /%1 ROOM").arg(command)); return; }
+        const auto protocol = state->backend->settings().protocol;
+        if (protocol != ConnectionSettings::Protocol::Oscar && protocol != ConnectionSettings::Protocol::Irc) {
+            report(QStringLiteral("Room commands require AIM/OSCAR or IRC.")); return;
+        }
+        if (command == QStringLiteral("joinprivate") && protocol != ConnectionSettings::Protocol::Oscar) {
+            report(QStringLiteral("/joinprivate is an AIM/OSCAR private-exchange command.")); return;
+        }
+        if (protocol == ConnectionSettings::Protocol::Irc
+            && !QStringLiteral("#&+!").contains(room.front())) room.prepend(QLatin1Char('#'));
+        const bool privateRoom = command == QStringLiteral("joinprivate");
+        m_closedRoomKeys.remove(conversationKey(state->backend, QStringLiteral("chat"), room));
+        state->backend->joinRoom(room, privateRoom);
+        ensureConversationWindow(state->backend, QStringLiteral("chat"), room, true);
+        return;
+    }
+
+    ChatWindow *ctx = contextWindow(state);
+    if (command == QStringLiteral("say")) {
+        if (!ctx || ctx->kind() != QStringLiteral("chat") || rest.trimmed().isEmpty()) {
+            report(QStringLiteral("/say needs one visible room window for the selected account.")); return;
+        }
+        handleConversationMessage(ctx, rest.trimmed()); return;
+    }
+    if (command == QStringLiteral("rooms") || command == QStringLiteral("channels")) {
+        if (!state) { report(QStringLiteral("Select an account first.")); return; }
+        QStringList rooms = state->discoveredRooms.values(); rooms.sort(Qt::CaseInsensitive);
+        showText(QStringLiteral("Known Rooms / Channels"), rooms.isEmpty() ? QStringLiteral("No rooms known yet.") : rooms.join(QLatin1Char('\n'))); return;
+    }
+    if (command == QStringLiteral("members") || command == QStringLiteral("names")) {
+        if (!ctx || ctx->kind() != QStringLiteral("chat")) { report(QStringLiteral("Open one room/channel window first.")); return; }
+        QStringList members = ctx->members(); members.sort(Qt::CaseInsensitive);
+        showText(QStringLiteral("Members — %1").arg(ctx->displayName()), members.join(QLatin1Char('\n'))); return;
+    }
+    if (command == QStringLiteral("window") || command == QStringLiteral("buffer") || command == QStringLiteral("use")) {
+        const QString token = rest.trimmed();
+        if (token.isEmpty()) { report(QStringLiteral("Usage: /window NAME")); return; }
+        for (ChatWindow *window : m_windows) {
+            if (!window) continue;
+            if (window->displayName().compare(token, Qt::CaseInsensitive) == 0
+                || window->target().compare(token, Qt::CaseInsensitive) == 0) {
+                window->show(); window->raise(); window->activateWindow(); return;
+            }
+        }
+        report(QStringLiteral("No GUI conversation window named %1.").arg(token)); return;
+    }
+    if (command == QStringLiteral("close")) {
+        if (ctx) ctx->close(); else report(QStringLiteral("Select a buddy or leave one conversation window visible first."));
+        return;
+    }
+    if (command == QStringLiteral("clear")) {
+        if (ctx) ctx->clearTranscript(); else report(QStringLiteral("Select a buddy or leave one conversation window visible first."));
+        return;
+    }
+
+    if (command == QStringLiteral("secure") || command == QStringLiteral("securestatus")
+        || command == QStringLiteral("secureoff") || command == QStringLiteral("trust")
+        || command == QStringLiteral("untrust")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online AIM/IRC account first.")); return; }
+        QString target = rest.trimmed();
+        ChatWindow *window = nullptr;
+        if (!target.isEmpty()) window = ensureConversationWindow(state->backend, QStringLiteral("im"), target, true);
+        else {
+            target = selectedBuddyName();
+            if (!target.isEmpty()) window = ensureConversationWindow(state->backend, QStringLiteral("im"), target, true);
+            else window = ctx;
+        }
+        if (!window) { report(QStringLiteral("Specify a peer or open/select a conversation first.")); return; }
+        if (command == QStringLiteral("secure")) startSecureSession(window);
+        else if (command == QStringLiteral("securestatus")) showSecureStatus(window);
+        else if (command == QStringLiteral("secureoff")) closeSecureSession(window);
+        else if (command == QStringLiteral("trust")) trustSecurePeer(window);
+        else untrustSecurePeer(window);
+        return;
+    }
+
+    if (command == QStringLiteral("sendfile")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online AIM/IRC account first.")); return; }
+        QString target = takeGuiArgument(rest);
+        if (target.isEmpty()) target = selectedBuddyName();
+        if (target.isEmpty()) { report(QStringLiteral("Select a buddy or use /sendfile USER.")); return; }
+        if (ChatWindow *window = ensureConversationWindow(state->backend, QStringLiteral("im"), target, true)) sendFile(window);
+        return;
+    }
+    if (command == QStringLiteral("transfers")) { showTransferWindow(); return; }
+    if (command == QStringLiteral("canceltransfer") || command == QStringLiteral("resume")
+        || command == QStringLiteral("cleartransfer")) {
+        const QString id = takeGuiArgument(rest);
+        if (id.isEmpty()) { report(QStringLiteral("Usage: /%1 ID").arg(command)); return; }
+        if (command == QStringLiteral("canceltransfer")) cancelFileTransfer(id);
+        else if (command == QStringLiteral("resume")) resumeFileTransfer(id);
+        else clearFileTransfer(id);
+        return;
+    }
+    if (command == QStringLiteral("decline")) {
+        const QString id = takeGuiArgument(rest);
+        if (id.isEmpty()) { report(QStringLiteral("Usage: /decline ID [reason]")); return; }
+        const auto info = m_fileTransfers.transfer(id);
+        BackendState *owner = stateById(m_fileTransferProfiles.value(id));
+        if (info.id.isEmpty() || !owner) { report(QStringLiteral("Transfer not found.")); return; }
+        const QString payload = m_fileTransfers.declineIncoming(id,
+            rest.trimmed().isEmpty() ? QStringLiteral("declined by user") : rest.trimmed());
+        if (owner->connected) sendSecureControlPayload(owner, info.target, payload);
+        refreshTransferWindow(id, QStringLiteral("Download"), info.target, QStringLiteral("Declined"));
+        return;
+    }
+    if (command == QStringLiteral("accept")) {
+        showTransferWindow();
+        report(QStringLiteral("Incoming offers are accepted from the File Transfer Log / Activity window so the destination path and security mode can be confirmed."));
+        return;
+    }
+
+    if (command == QStringLiteral("raw")) {
+        if (!state || !state->connected || !state->backend) { report(QStringLiteral("Select an online account first.")); return; }
+        const auto protocol = state->backend->settings().protocol;
+        if (protocol == ConnectionSettings::Protocol::Oscar) {
+            QString args = rest;
+            const QString family = takeGuiArgument(args);
+            const QString subtype = takeGuiArgument(args);
+            const QString payload = args.trimmed();
+            if (family.isEmpty() || subtype.isEmpty()) { report(QStringLiteral("Usage: /raw FAMILY SUBTYPE [HEX]")); return; }
+            state->backend->sendRaw(family, subtype, payload);
+        } else {
+            if (rest.trimmed().isEmpty()) { report(QStringLiteral("Usage: /raw COMMAND")); return; }
+            state->backend->sendRaw(rest.trimmed());
+        }
+        return;
+    }
+
+    // Remaining IRC /commands share the same parser used inside IRC chat windows.
+    if (state && state->connected && state->backend
+        && state->backend->settings().protocol == ConnectionSettings::Protocol::Irc) {
+        if (auto *irc = qobject_cast<IrcBackend *>(state->backend)) {
+            const QString room = ctx && ctx->kind() == QStringLiteral("chat") ? ctx->target() : QString();
+            if (irc->handleSlashCommand(room, line)) return;
+        }
+    }
+
+    report(QStringLiteral("Unknown or context-inappropriate GUI command: /%1. Try /help.").arg(command), 9000);
+}
+
 void MainWindow::rawProtocolCommand()
 {
     BackendState *state = selectedState();
@@ -3379,7 +4272,7 @@ void MainWindow::setConnectionsTransparency()
     const int current = static_cast<int>(m_connectionsOpacity * 100.0 + 0.5);
     const int percent = QInputDialog::getInt(
         this,
-        QStringLiteral("Connections Window Transparency"),
+        QStringLiteral("Connections/Accounts Window Transparency"),
         QStringLiteral("Window opacity (%):"),
         current,
         30,
@@ -4633,6 +5526,19 @@ void MainWindow::handleConversationMessage(ChatWindow *window, const QString &te
                 if (command == QStringLiteral("/trust")) { trustSecurePeer(window); return; }
                 if (command == QStringLiteral("/untrust")) { untrustSecurePeer(window); return; }
             }
+        }
+    }
+
+    // IRC conversation input uses the same slash-command parser as the CLI.
+    // WaffleHouse-local commands above keep priority. Recognized IRC commands
+    // bypass CPX room encryption; unknown /text deliberately falls through and
+    // is sent as ordinary (and, when enabled, secure-room-encrypted) chat text.
+    if (state->backend->settings().protocol == ConnectionSettings::Protocol::Irc
+        && window->kind() != QStringLiteral("terminal")) {
+        if (auto *irc = qobject_cast<IrcBackend *>(state->backend)) {
+            const QString roomContext = window->kind() == QStringLiteral("chat")
+                ? window->target() : QString();
+            if (irc->handleSlashCommand(roomContext, text)) return;
         }
     }
 

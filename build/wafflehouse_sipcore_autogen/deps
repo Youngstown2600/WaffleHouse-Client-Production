@@ -1,16 +1,16 @@
 wafflehouse_sipcore_autogen/timestamp: \
-	/home/gitsc/WaffleHouse-Client-Testing/CMakeLists.txt \
-	/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
-	/home/gitsc/WaffleHouse-Client-Testing/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/CallSession.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/Logger.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/Profile.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/RuntimePaths.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipAccount.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipEngine.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipTrace.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/SipWireMonitor.cpp \
-	/home/gitsc/WaffleHouse-Client-Testing/src/sipcore/TextPool.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/CMakeLists.txt \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/3rdparty/kwin/FindXKB.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/FindWrapAtomic.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/FindWrapOpenGL.cmake \

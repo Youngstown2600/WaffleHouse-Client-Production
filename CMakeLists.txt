@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 3.1.0 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 3.3.1 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -81,6 +81,8 @@ target_link_libraries(wafflehouse_sipcore PUBLIC ${PJPROJECT_STATIC_LDFLAGS} Thr
 
 qt_add_executable(${APP_EXECUTABLE}
     src/main.cpp
+    src/mediacontroller.cpp
+    src/mediawindow.cpp
     src/backend.cpp
     src/ircbackend.cpp
     src/oscarprotocol.cpp
@@ -134,7 +136,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="3.1"
+    APP_VERSION_STRING="3.3r1"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
 )
 

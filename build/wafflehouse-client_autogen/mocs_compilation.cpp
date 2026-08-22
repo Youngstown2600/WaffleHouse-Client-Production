@@ -5,6 +5,8 @@
 #include "UVLADIE3JM/moc_directtransfer.cpp"
 #include "UVLADIE3JM/moc_ircbackend.cpp"
 #include "UVLADIE3JM/moc_mainwindow.cpp"
+#include "UVLADIE3JM/moc_mediacontroller.cpp"
+#include "UVLADIE3JM/moc_mediawindow.cpp"
 #include "UVLADIE3JM/moc_oscarbackend.cpp"
 #include "UVLADIE3JM/moc_sipbackend.cpp"
 #include "UVLADIE3JM/moc_sipcontroller.cpp"

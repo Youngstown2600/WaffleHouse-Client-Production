@@ -7,6 +7,7 @@
 #include "directtransfer.h"
 
 #include <QHash>
+#include <QList>
 #include <QMainWindow>
 #include <QSet>
 
@@ -29,12 +30,16 @@ class QEvent;
 class QComboBox;
 class QLineEdit;
 class QPoint;
+class QShortcut;
+
+class MediaWindow;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
     explicit MainWindow(const ConnectionSettings &defaults = {}, QWidget *parent = nullptr);
     ~MainWindow() override;
+    void setMediaWindow(MediaWindow *window);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -71,6 +76,11 @@ private:
         QString presenceMessage;
         quint32 idleSeconds = 0;
         QString autoPresenceState;
+        QStringList serverCapabilities;
+        QStringList serverCapabilityDetails;
+        bool aimProfileSupported = false;
+        int aimProfileMaxLength = 0;
+        QString aimProfile;
     };
 
     void buildMenus();
@@ -79,6 +89,7 @@ private:
     void buildTrayIcon();
 
     void importBbsList();
+    void importBbsList(const QString &path);
     void openConnectionDialog(const ConnectionSettings &defaults = {},
                               BackendState *editingState = nullptr);
     ChatBackend *createBackend(const ConnectionSettings &settings);
@@ -117,8 +128,13 @@ private:
     void rebuildAccountsMenu();
     QString accountMenuLabel(BackendState *state) const;
     void showAccountContextMenu(BackendState *state, const QPoint &globalPos);
+    void showBuddyContextMenu(BackendState *state, const QString &buddy, const QPoint &globalPos);
     void openMessagingDialog(BackendState *state, const QString &presetTarget = QString(), bool startRoomTab = false);
     void openBuddyManager(BackendState *state);
+    void showServerCapabilities(BackendState *state);
+    void editAimProfile(BackendState *state);
+    void installMediaKeyShortcuts();
+    void runMediaShortcut(const QString &command);
 
     QString conversationKey(ChatBackend *backend,
                             const QString &kind,
@@ -152,6 +168,10 @@ private:
     void requestClientVersion(BackendState *state, const QString &target);
     void changeIrcNick();
     void rawProtocolCommand();
+    void executeGuiCommand();
+    void executeGuiCommand(const QString &line);
+    BackendState *resolveGuiAccount(const QString &token) const;
+    QString selectedBuddyName() const;
 
     void setBuddyTransparency();
     void setConnectionsTransparency();
@@ -282,12 +302,14 @@ private:
     QAction *m_transferWindowAction = nullptr;
     QAction *m_fingerprintAction = nullptr;
     QAction *m_phoneAction = nullptr;
+    QAction *m_quitAction = nullptr;
 
     QSystemTrayIcon *m_trayIcon = nullptr;
     QMenu *m_trayMenu = nullptr;
     QAction *m_trayShowBuddyAction = nullptr;
     QAction *m_trayShowConnectionsAction = nullptr;
     QAction *m_trayShowPhoneAction = nullptr;
+    QAction *m_trayShowMediaAction = nullptr;
     QAction *m_trayConnectAction = nullptr;
     QAction *m_trayDisconnectAction = nullptr;
 
@@ -317,6 +339,10 @@ private:
     TransferWindow *m_transferWindow = nullptr;
     SipController *m_sipController = nullptr;
     SoftphoneWindow *m_softphoneWindow = nullptr;
+    MediaWindow *m_mediaWindow = nullptr;
+    QLineEdit *m_commandInput = nullptr;
+    QPushButton *m_commandRunButton = nullptr;
+    QList<QShortcut *> m_mediaShortcuts;
 
     QHash<QString, BackendState *> m_states;
     QHash<QString, ChatWindow *> m_windows;
