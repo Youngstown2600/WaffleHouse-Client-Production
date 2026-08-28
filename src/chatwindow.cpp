@@ -232,9 +232,10 @@ void ChatWindow::buildUi()
         outer->addLayout(inputRow);
     
         m_messageEdit->installEventFilter(this);
-        connect(m_messageEdit, &QLineEdit::textEdited, this, [this] {
+        connect(m_messageEdit, &QLineEdit::textEdited, this, [this](const QString &text) {
             resetCommandCompletion();
             resetMemberCompletion();
+            if (m_kind == QStringLiteral("im")) emit inputActivity(this, !text.isEmpty());
         });
         connect(m_messageEdit, &QLineEdit::returnPressed,
                 this, &ChatWindow::sendMessage);
@@ -418,12 +419,18 @@ void ChatWindow::refreshTitle()
         ? m_backend->protocolName()
         : QStringLiteral("Disconnected");
     m_heading->setText(m_displayName);
-    m_connectionLabel->setText(
-        QStringLiteral("%1 · %2")
-            .arg(protocol,
-                 m_online ? QStringLiteral("online") : QStringLiteral("offline")));
+    QString connectionText = QStringLiteral("%1 · %2")
+        .arg(protocol, m_online ? QStringLiteral("online") : QStringLiteral("offline"));
+    if (!m_peerTypingState.isEmpty()) connectionText += QStringLiteral(" · %1").arg(m_peerTypingState);
+    m_connectionLabel->setText(connectionText);
     setWindowTitle(QStringLiteral("%1 — %2 — %3 %4")
                        .arg(m_displayName, protocol, appDisplayName(), appVersionString()));
+}
+
+void ChatWindow::setPeerTypingState(const QString &state)
+{
+    m_peerTypingState = state.trimmed();
+    refreshTitle();
 }
 
 void ChatWindow::appendMessage(const QString &text)
@@ -591,6 +598,7 @@ void ChatWindow::sendMessage()
     }
 
     m_messageEdit->clear();
+    if (m_kind == QStringLiteral("im")) emit inputActivity(this, false);
     emit messageSubmitted(this, message);
 }
 

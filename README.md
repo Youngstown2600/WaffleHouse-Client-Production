@@ -1,19 +1,22 @@
-# WaffleHouse-Client 3.3r1
+# WaffleHouse-Client 5.0r4 — Unix/Linux
 
-WaffleHouse-Client is the unified C++ GUI/CLI communications client with AIM/OSCAR, IRC, Telnet/BBS, SIP/VoIP, CPX encrypted DMs, Secure Rooms, secure/unsecured file transfer, notifications, themes, and integrated media playback.
+Dedicated source release for **Linux and FreeBSD**. This package contains both the Qt GUI and ncurses CLI frontends and the shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
 
-The built-in Media Center supports local audio/video, direct HTTP/HTTPS media, SHOUTcast/Icecast radio, HLS streams, and M3U/M3U8/PLS playlists through an external `mpv` backend. Supported targets remain Debian-family Linux, Fedora, Slackware, and FreeBSD.
+## Build
 
-**Version 3.3r1 does not include YouTube streaming support.** There is no YouTube button or menu action in the GUI, no `/myoutube` CLI command, and no yt-dlp/Deno dependency or resolver code. mpv is launched with `--ytdl=no` so the removed feature is not reintroduced implicitly.
+```sh
+./build.sh
+```
 
-Stop preserves the queue. Pressing Play/Resume while stopped automatically begins with the first queued item.
+The builder detects Linux vs. FreeBSD, checks/install dependencies where supported, prepares the managed PJSIP 2.17 dependency, and builds WaffleHouse-Client. See `BUILDING-Linux.md` or `BUILDING-FreeBSD.md` for platform notes.
 
-The 3.3r1 GUI uses a compact main Accounts window without the old left navigation rail. Account lifecycle actions are under **Accounts → Account Management**; Tools contains BBS import, the file-transfer activity log, and Softphone access. AIM/IRC accounts and buddies expose protocol-aware right-click actions. The main window also includes a `/command` box that maps CLI-style commands to GUI/backend actions.
+## 5.0r4 highlights
 
-### 3.3r1 account/media additions
+- OSCAR typing status now stays in the normal AIM IM window; no extra typing-only window is opened.
+- Redesigned Softphone **Phone** workspace.
+- Dedicated **SIP Accounts** navigation tab.
+- GUI Answer, Reject, Hang Up, Hold, Resume, Mute, Blind Transfer, Attended Transfer, DTMF, and Diagnostics controls.
+- Conventional **File → Exit** with Ctrl+Q and the existing clean-shutdown path.
+- GUI and CLI remain in the same desktop executable.
 
-- Hardware multimedia keys control the integrated Media Center across the GUI: Play, Pause, Play/Pause, Stop, Previous, Next, Volume Up, Volume Down, and Mute.
-- Right-click a connected AIM/OSCAR account for **Edit AIM Profile…** or **Server Capabilities…**. Profile availability is based on the server-advertised OSCAR Locate family, with Locate rights used to discover the maximum profile size when the server reports it.
-- Right-click a connected IRC account for **Server Capabilities…**. WaffleHouse-Client records IRCv3 `CAP LS 302` results and the server's numeric 005/ISUPPORT feature tokens.
-
-See `MEDIA.md`, `BUILDING-Linux.md`, `BUILDING-FreeBSD.md`, and `CHANGELOG.md` for details.
+This archive intentionally contains no macOS or Termux builder/source bundle, no historical 3.x release audits, and no internal regression-test tree.

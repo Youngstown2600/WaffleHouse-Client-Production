@@ -32,6 +32,8 @@ public:
     void addBuddy(const QString &name) override;
     void removeBuddy(const QString &name) override;
     void requestClientVersion(const QString &target);
+    void requestWhois(const QString &target);
+    void refreshServerCapabilities();
 
     // Shared IRC slash-command parser used by both the Qt GUI and ncurses CLI.
     // Returns true only when INPUT is a recognized IRC command. Unknown slash
@@ -42,6 +44,7 @@ public:
 signals:
     void serverCapabilitiesChanged(const QStringList &ircv3Capabilities,
                                    const QStringList &isupportTokens);
+    void whoisReply(const QString &nick, const QString &line, bool complete);
 
 private:
     enum class CommandType {

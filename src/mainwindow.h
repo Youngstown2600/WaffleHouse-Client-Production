@@ -31,6 +31,7 @@ class QComboBox;
 class QLineEdit;
 class QPoint;
 class QShortcut;
+class OscarVoiceSession;
 
 class MediaWindow;
 
@@ -81,6 +82,7 @@ private:
         bool aimProfileSupported = false;
         int aimProfileMaxLength = 0;
         QString aimProfile;
+        QString serverCapabilitiesUpdated;
     };
 
     void buildMenus();
@@ -111,6 +113,10 @@ private:
     void applyConversationOptions();
     void showOptionsDialog();
     void showHelpDialog();
+    void showCommandPalette();
+    void showClientCapabilities();
+    void showUnifiedContacts();
+    void showHistory();
     bool ensureConnectionSecret(BackendState *state);
 
     BackendState *stateFor(ChatBackend *backend) const;
@@ -133,6 +139,11 @@ private:
     void openBuddyManager(BackendState *state);
     void showServerCapabilities(BackendState *state);
     void editAimProfile(BackendState *state);
+    void showAimUserInfo(BackendState *state, const QString &target, bool profileFocus = false);
+    void showIrcWhois(BackendState *state, const QString &target);
+    OscarVoiceSession *ensureOscarVoiceSession();
+    void startOscarVoice(BackendState *state, const QString &target);
+    void hangupOscarVoice(bool notifyPeer = true);
     void installMediaKeyShortcuts();
     void runMediaShortcut(const QString &command);
 
@@ -343,6 +354,11 @@ private:
     QLineEdit *m_commandInput = nullptr;
     QPushButton *m_commandRunButton = nullptr;
     QList<QShortcut *> m_mediaShortcuts;
+
+    OscarVoiceSession *m_oscarVoice = nullptr;
+    QString m_oscarVoiceBackendId;
+    QString m_oscarVoicePeer;
+    QString m_oscarVoiceCookie;
 
     QHash<QString, BackendState *> m_states;
     QHash<QString, ChatWindow *> m_windows;

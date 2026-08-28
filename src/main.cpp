@@ -372,8 +372,9 @@ int main(int argc, char *argv[])
     if (mode == FrontendMode::Gui) {
         if (!runtime.graphicalSession && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             fprintf(stderr,
-                    "WaffleHouse-Client 3.3r1: GUI mode requested but no X11/Wayland session was detected.\n"
+                    "WaffleHouse-Client %s: GUI mode requested but no X11/Wayland session was detected.\n"
                     "Detected: %s\nUse --cli from an interactive terminal.\n",
+                    appVersionString().toUtf8().constData(),
                     runtime.summary().toUtf8().constData());
             return 2;
         }
@@ -382,8 +383,9 @@ int main(int argc, char *argv[])
 
     if (!runtime.ttyAttached) {
         fprintf(stderr,
-                "WaffleHouse-Client 3.3r1 CLI: CLI mode requires an interactive terminal.\n"
+                "WaffleHouse-Client %s CLI: CLI mode requires an interactive terminal.\n"
                 "Detected: %s\nUse --gui inside a graphical session.\n",
+                appVersionString().toUtf8().constData(),
                 runtime.summary().toUtf8().constData());
         return 2;
     }

@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipbackend.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipbackend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -300,15 +300,15 @@ CMakeFiles/wafflehouse-client.dir/src/sipbackend.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Profile.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QPointer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qpointer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qsharedpointer.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qshareddata.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qsharedpointer_impl.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \

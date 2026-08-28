@@ -77,10 +77,10 @@
 #define __UINT32_MAX__ 0xffffffffU
 #define __GXX_EXPERIMENTAL_CXX0X__ 1
 #define __DBL_DENORM_MIN__ double(4.94065645841246544176568792868221372e-324L)
-#define WAFFLEHOUSE_SOURCE_SOUND_DIR "/home/gitsc/Coding/WaffleHouse-Client-3.3r1/sounds"
+#define WAFFLEHOUSE_SOURCE_SOUND_DIR "/home/gitsc/Coding/WaffleHouse-Client-Beta/sounds"
 #define __FLT128_MIN_EXP__ (-16381)
 #define __WINT_MIN__ 0U
-#define APP_VERSION_STRING "3.3r1"
+#define APP_VERSION_STRING "5.0r4"
 #define __FLT128_MIN_10_EXP__ (-4931)
 #define __FLT32X_IS_IEC_60559__ 1
 #define __INT_LEAST16_WIDTH__ 16
@@ -137,6 +137,7 @@
 #define __FLT_HAS_DENORM__ 1
 #define __SIZEOF_LONG_DOUBLE__ 16
 #define __BIGGEST_ALIGNMENT__ 16
+#define WAFFLEHOUSE_OSCAR_VOICE 1
 #define __STDC_UTF_16__ 1
 #define __FLT64_MAX_10_EXP__ 308
 #define __BFLT16_IS_IEC_60559__ 0
@@ -237,6 +238,7 @@
 #define __BFLT16_MIN__ 1.17549435082228750796873653722224568e-38BF16
 #define __FLT128_HAS_DENORM__ 1
 #define __FLT32_DECIMAL_DIG__ 9
+#define WAFFLEHOUSE_GUI 1
 #define __FLT128_DIG__ 33
 #define __INT32_C(c) c
 #define __DEC64_EPSILON__ 1E-15DD
@@ -264,6 +266,7 @@
 #define __UINTMAX_C(c) c ## UL
 #define __FLT16_DIG__ 3
 #define __k8 1
+#define QT_MULTIMEDIA_LIB 1
 #define __FLT32X_MIN__ 2.22507385850720138309023271733240406e-308F32x
 #define __SIG_ATOMIC_MAX__ 0x7fffffff
 #define __cpp_constexpr 201603L

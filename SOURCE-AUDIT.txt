@@ -1,2 +1,0 @@
-WaffleHouse-Client 3.3r1 source audit
-See SOURCE-AUDIT-3.3r1.txt.

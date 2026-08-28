@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/RuntimePaths.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/RuntimePaths.h \
  /usr/include/c++/13/filesystem \
  /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \

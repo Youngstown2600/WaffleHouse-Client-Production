@@ -1,6 +1,0 @@
-WaffleHouse-Client 3.3r1
-Integrated Media Center
-
-The Media Center remains part of the main WaffleHouse-Client application. It supports local media, direct HTTP/HLS streams, SHOUTcast/Icecast radio, playlists, queue transport, volume, shuffle/repeat, and EQ.
-
-YouTube streaming support is intentionally removed. Stop preserves the queue, and Play/Resume after Stop starts the first queued item automatically.

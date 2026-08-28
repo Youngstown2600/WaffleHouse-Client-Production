@@ -92,6 +92,17 @@ void IrcBackend::requestClientVersion(const QString &target)
     sendRaw(QStringLiteral("PRIVMSG %1 :\x01VERSION\x01").arg(clean));
 }
 
+void IrcBackend::requestWhois(const QString &target)
+{
+    const QString clean = target.trimmed();
+    if (!clean.isEmpty()) sendRaw(QStringLiteral("WHOIS %1").arg(clean));
+}
+
+void IrcBackend::refreshServerCapabilities()
+{
+    sendRaw(QStringLiteral("CAP LS 302"));
+}
+
 void IrcBackend::joinRoom(const QString &room, bool)
 {
     enqueue({CommandType::Join, room, {}});
@@ -936,6 +947,53 @@ void IrcBackend::processLine(const QString &line)
     if (interestingErrors.contains(parsed.command)) {
         emit eventReceived(QStringLiteral("status"), QString(),
                            QStringLiteral("[IRC %1] %2")
+                               .arg(parsed.command, parsed.params.join(QLatin1Char(' '))));
+        return;
+    }
+
+    static const QSet<QString> whoisReplies = {
+        QStringLiteral("301"), QStringLiteral("311"), QStringLiteral("312"),
+        QStringLiteral("313"), QStringLiteral("317"), QStringLiteral("318"),
+        QStringLiteral("319"), QStringLiteral("330"), QStringLiteral("338"),
+        QStringLiteral("671")
+    };
+    if (whoisReplies.contains(parsed.command) && parsed.params.size() >= 2) {
+        const QString whoisNick = parsed.params.at(1);
+        QString human;
+        const QStringList p = parsed.params;
+        if (parsed.command == QStringLiteral("311") && p.size() >= 6) {
+            human = QStringLiteral("User: %1@%2 | Real name: %3")
+                        .arg(p.at(2), p.at(3), p.mid(5).join(QLatin1Char(' ')));
+        } else if (parsed.command == QStringLiteral("312") && p.size() >= 4) {
+            human = QStringLiteral("Server: %1 — %2").arg(p.at(2), p.mid(3).join(QLatin1Char(' ')));
+        } else if (parsed.command == QStringLiteral("313")) {
+            human = QStringLiteral("IRC operator: yes");
+        } else if (parsed.command == QStringLiteral("317") && p.size() >= 4) {
+            bool okIdle = false;
+            bool okSignon = false;
+            const qint64 idle = p.at(2).toLongLong(&okIdle);
+            const qint64 signon = p.at(3).toLongLong(&okSignon);
+            human = QStringLiteral("Idle: %1 sec | Signed on: %2")
+                        .arg(okIdle ? QString::number(idle) : p.at(2),
+                             okSignon ? QDateTime::fromSecsSinceEpoch(signon).toLocalTime().toString(Qt::ISODate) : p.at(3));
+        } else if (parsed.command == QStringLiteral("319") && p.size() >= 3) {
+            human = QStringLiteral("Channels: %1").arg(p.mid(2).join(QLatin1Char(' ')));
+        } else if (parsed.command == QStringLiteral("330") && p.size() >= 3) {
+            human = QStringLiteral("Services account: %1").arg(p.at(2));
+        } else if (parsed.command == QStringLiteral("338") && p.size() >= 3) {
+            human = QStringLiteral("Actual host/IP: %1").arg(p.at(2));
+        } else if (parsed.command == QStringLiteral("301") && p.size() >= 3) {
+            human = QStringLiteral("Away: %1").arg(p.mid(2).join(QLatin1Char(' ')));
+        } else if (parsed.command == QStringLiteral("671")) {
+            human = QStringLiteral("Secure connection: yes (TLS)");
+        } else if (parsed.command == QStringLiteral("318")) {
+            human = QStringLiteral("Last Updated: %1").arg(QDateTime::currentDateTime().toString(Qt::ISODate));
+        } else {
+            human = QStringLiteral("[%1] %2")
+                        .arg(parsed.command, parsed.params.mid(1).join(QLatin1Char(' ')));
+        }
+        emit whoisReply(whoisNick, human, parsed.command == QStringLiteral("318"));
+        emit eventReceived(QStringLiteral("status"), QString(), QStringLiteral("[IRC %1] %2")
                                .arg(parsed.command, parsed.params.join(QLatin1Char(' '))));
         return;
     }

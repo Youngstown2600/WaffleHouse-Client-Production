@@ -1,20 +1,18 @@
-# WaffleHouse-Client 3.1r6 — Linux build notes
+# WaffleHouse-Client 3.4r1 — Linux build notes
 
-The Media Center uses the same C++/Qt6 source on supported Linux distributions. The runtime media stack is `mpv` + `ffmpeg` for local media, direct HTTP/HLS streams, internet radio, and playlists.
+WaffleHouse-Client 3.4r1 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
 
 ## Debian / Ubuntu / Linux Mint and derivatives
 
-`build.sh` detects `apt-get` and can install the Qt6, compiler, libsodium/ncurses/xkbcommon, SIP/audio, mpv, and ffmpeg packages automatically.
+`build.sh` can install `qt6-base-dev`, `qt6-multimedia-dev`, compiler/CMake/pkg-config, libsodium, ncurses, xkbcommon, PJSIP prerequisites, ALSA development files, mpv, and ffmpeg.
 
 ## Fedora / dnf systems
 
-`build.sh` detects `dnf` (and `yum` as a compatibility path) and installs the corresponding development/runtime packages before rebuilding the dependency audit.
+The builder uses the Qt 6 base and `qt6-qtmultimedia-devel` development packages plus the corresponding crypto/audio/network prerequisites.
 
 ## Slackware
 
-`build.sh` detects `/etc/slackware-version` or `slackpkg`. It uses `slackpkg` for available base packages. If `sbopkg` is installed it can also attempt the SlackBuilds packages `qt6` and `mpv`.
-
-Slackware package sources vary by installation, so the final dependency audit remains authoritative.
+The builder detects Slackware/slackpkg and uses available base packages; if `sbopkg` is available it can assist with Qt6/mpv packages. Package availability varies by Slackware installation, so the final dependency audit remains authoritative.
 
 ## Testing without system application installation
 
@@ -22,4 +20,4 @@ Slackware package sources vary by installation, so the final dependency audit re
 ./build.sh --no-install
 ```
 
-This still allows dependency setup unless `--no-auto-deps` is also supplied. WaffleHouse itself is not copied to `/usr/local/bin` when `--no-install` is used.
+Use `--no-auto-deps` as well if you only want the dependency audit/build attempt and do not want the builder to install missing packages.

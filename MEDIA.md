@@ -1,4 +1,4 @@
-# WaffleHouse-Client 3.3r1 — Media Center
+# WaffleHouse-Client 3.4r1 — Media Center
 
 The WaffleHouse-Client Media Center is the integrated mpv-backed media and internet-radio player for Linux and FreeBSD.
 
@@ -8,7 +8,7 @@ Supported workflows include local audio, local video, direct HTTP/HTTPS media, S
 
 ## YouTube removal
 
-The dedicated YouTube streaming/audio feature is intentionally absent from WaffleHouse-Client 3.3r1. The GUI button and Media-menu action are removed, `/myoutube` is absent from the CLI, yt-dlp/Deno resolver dependencies are removed, and mpv starts with `--ytdl=no`.
+The dedicated YouTube streaming/audio feature is intentionally absent from WaffleHouse-Client 3.4r1. The GUI button and Media-menu action are removed, `/myoutube` is absent from the CLI, yt-dlp/Deno resolver dependencies are removed, and mpv starts with `--ytdl=no`.
 
 ## Media Center
 

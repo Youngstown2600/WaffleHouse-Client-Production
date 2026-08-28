@@ -1,4 +1,5 @@
 /usr/local/bin/wafflehouse-client
+/usr/local/bin/wafflehouse-shell
 /usr/local/share/applications/wafflehouse-client.desktop
 /usr/local/share/icons/hicolor/16x16/apps/wafflehouse-client.png
 /usr/local/share/icons/hicolor/22x22/apps/wafflehouse-client.png

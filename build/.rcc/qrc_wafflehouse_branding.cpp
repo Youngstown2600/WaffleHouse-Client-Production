@@ -7,7 +7,7 @@
 *****************************************************************************/
 
 static const unsigned char qt_resource_data[] = {
-  // /home/gitsc/Coding/WaffleHouse-Client-3.3r1/assets/branding/wafflehouse-client-logo.png
+  // /home/gitsc/Coding/WaffleHouse-Client-Beta/assets/branding/wafflehouse-client-logo.png
   0x0,0x14,0xc3,0x1a,
   0x89,
   0x50,0x4e,0x47,0xd,0xa,0x1a,0xa,0x0,0x0,0x0,0xd,0x49,0x48,0x44,0x52,0x0,

@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSession.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSession.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSnapshot.h \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -128,7 +128,7 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator.h \
  /usr/include/c++/13/bits/uses_allocator_args.h /usr/include/c++/13/tuple \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/ext/aligned_buffer.h \
  /usr/include/c++/13/bits/node_handle.h \
@@ -540,8 +540,11 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
  /usr/include/c++/13/backward/auto_ptr.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Logger.h \
- /usr/include/c++/13/algorithm \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Logger.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipEngine.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Profile.h \
+ /usr/include/c++/13/atomic /usr/include/c++/13/utility \
+ /usr/include/c++/13/bits/stl_relops.h /usr/include/c++/13/algorithm \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /usr/include/c++/13/chrono /usr/include/c++/13/filesystem \
  /usr/include/c++/13/bits/fs_fwd.h /usr/include/c++/13/bits/fs_path.h \
@@ -554,7 +557,6 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: \
  /usr/include/c++/13/bits/quoted_string.h /usr/include/c++/13/sstream \
  /usr/include/c++/13/bits/sstream.tcc /usr/include/c++/13/codecvt \
  /usr/include/c++/13/bits/fs_dir.h /usr/include/c++/13/bits/fs_ops.h \
- /usr/include/c++/13/utility /usr/include/c++/13/bits/stl_relops.h \
  /usr/include/x86_64-linux-gnu/sys/stat.h \
  /usr/include/x86_64-linux-gnu/bits/stat.h \
  /usr/include/x86_64-linux-gnu/bits/struct_stat.h \

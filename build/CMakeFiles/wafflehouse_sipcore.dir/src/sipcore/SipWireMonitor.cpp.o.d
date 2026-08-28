@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipWireMonitor.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipWireMonitor.h \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsip/sip_module.h \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsip/sip_types.h \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsip/sip_config.h \
@@ -107,7 +107,7 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: \
  /usr/include/c++/13/ext/atomicity.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/atomic_word.h \
  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Logger.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Logger.h \
  /usr/include/c++/13/fstream /usr/include/c++/13/istream \
  /usr/include/c++/13/ios /usr/include/c++/13/iosfwd \
  /usr/include/c++/13/bits/stringfwd.h \
@@ -198,10 +198,10 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h \
  /usr/include/c++/13/bits/fstream.tcc \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipEngine.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipEngine.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/ext/aligned_buffer.h \
  /usr/include/c++/13/bits/node_handle.h \

@@ -2,6 +2,7 @@
 #include "trunkmonkey/CallSession.h"
 #include "trunkmonkey/Logger.h"
 #include "trunkmonkey/RuntimePaths.h"
+#include "trunkmonkey/RemoteSipAudio.h"
 #include "trunkmonkey/SipAccount.h"
 #include "trunkmonkey/SipWireMonitor.h"
 #include "trunkmonkey/Version.h"
@@ -83,6 +84,28 @@ std::string quotedDisplayName(std::string value)
 std::string nameAddr(const std::string& value)
 {
     return value.find('<')!=std::string::npos ? value : "<"+value+">";
+}
+
+bool envEnabled(const char* name)
+{
+    const char* raw=std::getenv(name);
+    if(raw==nullptr || *raw=='\0') return false;
+    std::string value=raw;
+    std::transform(value.begin(),value.end(),value.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+    return value!="0" && value!="false" && value!="no" && value!="off";
+}
+
+std::string envText(const char* name)
+{
+    const char* raw=std::getenv(name);
+    return raw==nullptr ? std::string{} : std::string(raw);
+}
+
+bool shellSessionSipIsolation()
+{
+    return envEnabled("WAFFLEHOUSE_SIP_EPHEMERAL_PORTS") ||
+           envEnabled("WAFFLEHOUSE_SHELL_SESSION") ||
+           !envText("SSH_CONNECTION").empty() || !envText("SSH_TTY").empty();
 }
 
 struct AudioDeviceKey {
@@ -296,6 +319,7 @@ void SipEngine::start(const SipProfile& p,unsigned maxCalls)
 namespace {
 std::string sipTransportKey(const SipProfile& p)
 {
+    if(shellSessionSipIsolation()) return toString(p.transport)+":ssh-session-auto";
     return toString(p.transport)+":"+std::to_string(p.localSipPort);
 }
 }
@@ -307,12 +331,17 @@ pj::TransportId SipEngine::ensureTransport(const SipProfile& p)
     const auto existing=transports_.find(key);
     if(existing!=transports_.end()) return existing->second;
     pj::TransportConfig tc;
-    tc.port=p.localSipPort;
+    tc.port=shellSessionSipIsolation()?0U:p.localSipPort;
     pjsip_transport_type_e type=PJSIP_TRANSPORT_UDP;
     if(p.transport==Transport::Tcp) type=PJSIP_TRANSPORT_TCP;
     else if(p.transport==Transport::Tls) type=PJSIP_TRANSPORT_TLS;
     const pj::TransportId id=endpoint_->transportCreate(type,tc);
     transports_[key]=id;
+    try {
+        const auto info=endpoint_->transportGetInfo(id);
+        logger_.info("SIP signaling transport created: "+info.typeName+" local="+info.localAddress+
+                     (shellSessionSipIsolation()?" [SSH session-isolated]":""));
+    } catch (...) {}
     return id;
 }
 
@@ -352,6 +381,13 @@ void SipEngine::createAccount(const std::string& accountId,const SipProfile& inp
     ac.sipConfig.authCreds.emplace_back("digest","*",authUser,0,p.password);
     if(!p.outboundProxy.empty()) ac.sipConfig.proxies.push_back(p.outboundProxy);
     ac.natConfig.iceEnabled=p.useIce;
+    if(shellSessionSipIsolation()){
+        // Every shell-login WaffleHouse process owns independent RTP/RTCP
+        // sockets. Port 0 lets the kernel allocate collision-free ephemeral
+        // ports instead of every user competing for PJSUA's normal base port.
+        ac.mediaConfig.transportConfig.port=0;
+        ac.mediaConfig.transportConfig.portRange=0;
+    }
     if(p.enableSrtp) ac.mediaConfig.srtpUse=PJMEDIA_SRTP_OPTIONAL;
 
     SipAccount* accountPtr=state.account.get();
@@ -450,6 +486,22 @@ void SipEngine::start(const std::vector<std::pair<std::string,SipProfile>>& init
         stopping_=false;
         started_=true;
 
+        const std::string remotePlaybackSocket=envText("WAFFLEHOUSE_REMOTE_SIP_PLAY_SOCKET");
+        const std::string remoteCaptureSocket=envText("WAFFLEHOUSE_REMOTE_SIP_CAPTURE_SOCKET");
+        const bool remoteAudioRequested=!remotePlaybackSocket.empty() || !remoteCaptureSocket.empty();
+        const bool remoteAudioReady=!remotePlaybackSocket.empty() && !remoteCaptureSocket.empty();
+        if(remoteAudioRequested && !remoteAudioReady)
+            throw std::runtime_error("SSH SIP audio bridge is incomplete: both playback and capture sockets are required");
+
+        if(remoteAudioReady){
+            auto& audio=endpoint_->audDevManager();
+            // A null device keeps PJSIP's conference clock alive without
+            // opening host audio hardware on a headless shell server.
+            audio.setNullDev();
+            remoteAudioBridge_=std::make_unique<RemoteSipAudioBridge>(logger_);
+            remoteAudioBridge_->start(remotePlaybackSocket,remoteCaptureSocket);
+            logger_.info("PJSIP audio routed through WaffleHouse SSH companion; server sound hardware disabled for this session");
+        } else {
         // Enumerate audio devices after PJSIP has started. Capture and playback
         // are intentionally selected independently: FreeBSD laptops commonly
         // expose an internal duplex codec plus a dedicated headset-mic capture
@@ -561,6 +613,7 @@ void SipEngine::start(const std::vector<std::pair<std::string,SipProfile>>& init
         } catch(const pj::Error& e){
             logger_.warn("Unable to enumerate/select PJSIP audio devices: "+e.info());
         }
+        } // local-audio mode
 
 
         for(const auto& item:initialAccounts) createAccount(item.first,item.second,false);
@@ -801,6 +854,13 @@ void SipEngine::stop()
     }
     drainingAccounts.clear();
 
+    // Custom AudioMediaPort objects must unregister while the PJSUA2 endpoint
+    // and conference bridge still exist.
+    if(remoteAudioBridge_){
+        try{ remoteAudioBridge_->stop(); }catch(...){}
+        remoteAudioBridge_.reset();
+    }
+
     if(endpoint_){
         try{ endpoint_->libDestroy(); }
         catch(const pj::Error& e){ logger_.warn("PJSUA2 endpoint shutdown: "+e.info()); }
@@ -825,6 +885,25 @@ bool SipEngine::started()const{return started_;}
 bool SipEngine::registered()const{return registered_;}
 std::string SipEngine::registrationText()const{std::lock_guard<std::mutex> lock(regMutex_);return registrationText_;}
 const SipProfile& SipEngine::profile()const{return profile_;}
+
+pj::AudioMedia& SipEngine::playbackMedia()
+{
+    if(remoteAudioBridge_ && remoteAudioBridge_->active()) return remoteAudioBridge_->playbackSink();
+    if(!endpoint_) throw std::runtime_error("SIP endpoint is not initialized");
+    return endpoint_->audDevManager().getPlaybackDevMedia();
+}
+
+pj::AudioMedia& SipEngine::captureMedia()
+{
+    if(remoteAudioBridge_ && remoteAudioBridge_->active()) return remoteAudioBridge_->captureSource();
+    if(!endpoint_) throw std::runtime_error("SIP endpoint is not initialized");
+    return endpoint_->audDevManager().getCaptureDevMedia();
+}
+
+bool SipEngine::remoteAudioActive() const noexcept
+{
+    return remoteAudioBridge_ && remoteAudioBridge_->active();
+}
 
 void SipEngine::setDialPrefix(const std::string& accountId,const std::string& prefix)
 {
@@ -963,7 +1042,7 @@ int SipEngine::makeCall(const std::string& accountId,const std::string& destinat
         profile=it->second.profile;
         activePrefix=it->second.dialPrefix;
     }
-    auto call=std::make_shared<CallSession>(*account,logger_,CallDirection::Outgoing,purpose);
+    auto call=std::make_shared<CallSession>(*account,logger_,*this,CallDirection::Outgoing,purpose);
     call->setAccountIdentity(accountId,profile.name);
     call->setRequestedCallerId(callerId);
     call->setUpdateCallback([this](int id){ onCallUpdated(id); });
@@ -1106,6 +1185,27 @@ void SipEngine::sendDtmf(int id,const std::string& digits,unsigned durationMs)
     if(digits.empty()) throw std::runtime_error("DTMF digits required");
     call->sendDtmfDigits(digits,durationMs);
 }
+void SipEngine::blindTransfer(int id,const std::string& destination)
+{
+    auto call=requirePhoneCall(id);
+    const auto snap=call->snapshot();
+    const std::string target=normalizeDestination(snap.accountId,destination,true);
+    call->blindTransfer(target);
+    logger_.info("Blind transfer requested: call="+std::to_string(id)+" target="+target);
+}
+void SipEngine::attendedTransfer(int id,int consultationCallId)
+{
+    if(id==consultationCallId) throw std::runtime_error("A call cannot replace itself");
+    auto original=requirePhoneCall(id);
+    auto consultation=requirePhoneCall(consultationCallId);
+    const auto a=original->snapshot();
+    const auto b=consultation->snapshot();
+    if(a.accountId!=b.accountId)
+        throw std::runtime_error("Attended transfer currently requires both calls to use the same SIP account");
+    original->attendedTransfer(*consultation);
+    logger_.info("Attended transfer requested: call="+std::to_string(id)+" consultation="+std::to_string(consultationCallId));
+}
+
 
 void SipEngine::setMicrophoneMuted(int id,bool muted)
 {
@@ -1511,7 +1611,7 @@ std::string SipEngine::callReport(int id)const
 {
     const auto c=callSnapshot(id);std::ostringstream o;
     const double rxDen=static_cast<double>(c.rtpRxPackets+c.rtpRxLoss);const double lossPct=rxDen>0?100.0*c.rtpRxLoss/rxDen:0.0;
-    o<<"WaffleHouse-Client 1.0.0 — SIP Inspection, Protocol Handling, Enumeration & Recon\nCALL DIAGNOSTIC REPORT\n\n"
+    o<<"WaffleHouse-Client 5.0 — SIP Call Quality & Diagnostics\nCALL DIAGNOSTIC REPORT\n\n"
      <<"Call ID:        "<<id<<"\nSIP Call-ID:    "<<c.callIdString<<"\nRemote URI:     "<<c.remoteUri<<"\nCaller ID:      "<<c.callerId<<"\nState:          "<<c.state<<"\nLast SIP:       "<<c.lastStatusCode<<" "<<c.lastReason<<"\n"
      <<"Codec:          "<<c.codecName<<(c.codecClockRate?"/"+std::to_string(c.codecClockRate):std::string{})<<"\n"
      <<"Microphone:     "<<(c.microphoneMuted?"MUTED":"live")<<"\n"
@@ -1522,7 +1622,8 @@ std::string SipEngine::callReport(int id)const
      <<"RX loss:        "<<std::fixed<<std::setprecision(2)<<lossPct<<"%\n"
      <<"Jitter TX/RX:   "<<std::setprecision(1)<<c.txJitterMs<<" / "<<c.rxJitterMs<<" ms\n"
      <<"RTT:            "<<c.rttMs<<" ms\nJitter buffer:  "<<c.jitterBufferDelayMs<<" ms\n"
-     <<"Est. R-factor:  "<<c.estimatedRFactor<<"\nEst. MOS:       "<<c.estimatedMos<<" (engineering estimate; not PESQ/POLQA)\n\n";
+     <<"Est. R-factor:  "<<c.estimatedRFactor<<"\nEst. MOS:       "<<c.estimatedMos<<" (engineering estimate; not PESQ/POLQA)\n"
+     <<"Quality:        "<<(c.estimatedMos>=4.0?"EXCELLENT":c.estimatedMos>=3.6?"GOOD":c.estimatedMos>=3.1?"FAIR":c.estimatedMos>0?"POOR":"UNKNOWN")<<"\n\n";
     if(c.purpose==CallPurpose::Phone){try{o<<sipLadder(id)<<"\n";}catch(...){} }
     return o.str();
 }
@@ -1612,7 +1713,7 @@ void SipEngine::onIncomingCall(const std::string& accountId,int id)
         account=it->second.account.get();
         profile=it->second.profile;
     }
-    auto call=std::make_shared<CallSession>(*account,logger_,CallDirection::Incoming,CallPurpose::Phone,id);
+    auto call=std::make_shared<CallSession>(*account,logger_,*this,CallDirection::Incoming,CallPurpose::Phone,id);
     call->setAccountIdentity(accountId,profile.name);
     call->setUpdateCallback([this](int callId){ onCallUpdated(callId); });
     addCall(call);

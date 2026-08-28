@@ -7,6 +7,7 @@
 #include "appicon.h"
 #include "ircbackend.h"
 #include "oscarbackend.h"
+#include "oscarvoice.h"
 #include "telnetbackend.h"
 #include "bbsdirectory.h"
 #include "transferwindow.h"
@@ -17,12 +18,16 @@
 #include "notificationmanager.h"
 #include "filetransport.h"
 #include "useractivity.h"
+#include "core/capabilityregistry.h"
+#include "core/contactstore.h"
+#include "core/historystore.h"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QCheckBox>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDateTime>
 #include <QDir>
@@ -51,10 +56,12 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QRadioButton>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QShortcut>
 #include <QTextBrowser>
 #include <QTabWidget>
+#include <QTextCursor>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QSettings>
@@ -74,6 +81,27 @@
 #include <algorithm>
 
 namespace {
+
+QString historyProtocolKey(ConnectionSettings::Protocol protocol)
+{
+    switch (protocol) {
+    case ConnectionSettings::Protocol::Oscar: return QStringLiteral("aim");
+    case ConnectionSettings::Protocol::Irc: return QStringLiteral("irc");
+    case ConnectionSettings::Protocol::Telnet: return QStringLiteral("telnet");
+    case ConnectionSettings::Protocol::Sip: return QStringLiteral("sip");
+    case ConnectionSettings::Protocol::Unknown: break;
+    }
+    return QStringLiteral("unknown");
+}
+
+void appendGuiHistory(ChatBackend *backend, const QString &kind, const QString &target,
+                      const QString &direction, const QString &text)
+{
+    if (!backend || text.trimmed().isEmpty()) return;
+    HistoryStore::append({QDateTime::currentDateTime(),
+                          historyProtocolKey(backend->settings().protocol),
+                          backend->id(), kind, target, direction, text});
+}
 
 QString takeGuiArgument(QString &rest)
 {
@@ -112,6 +140,166 @@ QString takeGuiArgument(QString &rest)
     const QString value = rest.left(split);
     rest = rest.mid(split + 1).trimmed();
     return value;
+}
+
+QString formatEpochSeconds(qint64 seconds)
+{
+    if (seconds <= 0) return QStringLiteral("Not supplied");
+    return QDateTime::fromSecsSinceEpoch(seconds).toLocalTime()
+        .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+}
+
+QString formatElapsedSeconds(qint64 seconds)
+{
+    if (seconds < 0) return QStringLiteral("Not supplied");
+    const qint64 days = seconds / 86400;
+    seconds %= 86400;
+    const qint64 hours = seconds / 3600;
+    seconds %= 3600;
+    const qint64 minutes = seconds / 60;
+    QStringList parts;
+    if (days) parts << QStringLiteral("%1d").arg(days);
+    if (hours || days) parts << QStringLiteral("%1h").arg(hours);
+    parts << QStringLiteral("%1m").arg(minutes);
+    return parts.join(QLatin1Char(' '));
+}
+
+QStringList aimUserFlagNames(quint64 flags)
+{
+    struct FlagName { quint64 bit; const char *name; };
+    static const FlagName known[] = {
+        {0x00000001ULL, "Unconfirmed account"},
+        {0x00000002ULL, "Server administrator"},
+        {0x00000004ULL, "AOL client/account"},
+        {0x00000008ULL, "Commercial OSCAR account"},
+        {0x00000010ULL, "AIM / OSCAR free account"},
+        {0x00000020ULL, "Away / unavailable"},
+        {0x00000040ULL, "ICQ user"},
+        {0x00000080ULL, "Wireless / mobile user"},
+        {0x00000100ULL, "Internal account"},
+        {0x00000200ULL, "IM forwarding"},
+        {0x00000400ULL, "Bot user"},
+        {0x00000800ULL, "Extended/legacy user flag 0x0800"},
+        {0x00001000ULL, "One-way wireless device"},
+        {0x00002000ULL, "Official/legacy user flag 0x2000"},
+        {0x00010000ULL, "Buddy-match direct"},
+        {0x00020000ULL, "Buddy-match indirect"},
+        {0x00040000ULL, "Trusted/no knock-knock"},
+        {0x00080000ULL, "Forward to mobile when offline"},
+    };
+    QStringList names;
+    for (const auto &item : known) if ((flags & item.bit) != 0) names << QString::fromLatin1(item.name);
+    return names;
+}
+
+QStringList aimStatusDetails(qint64 rawValue)
+{
+    if (rawValue < 0) return {QStringLiteral("Not supplied by server")};
+    const quint32 raw = static_cast<quint32>(rawValue);
+    const quint16 state = static_cast<quint16>(raw & 0xffffU);
+    const quint16 flags = static_cast<quint16>((raw >> 16) & 0xffffU);
+
+    QString stateText;
+    switch (state) {
+    case 0x0000: stateText = QStringLiteral("Online / available"); break;
+    case 0x0001: stateText = QStringLiteral("Away"); break;
+    case 0x0002: stateText = QStringLiteral("Do not disturb"); break;
+    case 0x0004: stateText = QStringLiteral("Not available"); break;
+    case 0x0010: stateText = QStringLiteral("Busy / occupied"); break;
+    case 0x0020: stateText = QStringLiteral("Free for chat"); break;
+    case 0x0100: stateText = QStringLiteral("Invisible"); break;
+    default: stateText = QStringLiteral("Server-specific state 0x%1").arg(state, 4, 16, QLatin1Char('0')); break;
+    }
+
+    QStringList result{stateText};
+    QStringList flagNames;
+    if (flags & 0x0001) flagNames << QStringLiteral("Web-aware");
+    if (flags & 0x0002) flagNames << QStringLiteral("IP visibility flag");
+    if (flags & 0x0008) flagNames << QStringLiteral("Birthday");
+    if (flags & 0x0020) flagNames << QStringLiteral("Web-front active");
+    if (flags & 0x0100) flagNames << QStringLiteral("Direct connection disabled");
+    if (flags & 0x1000) flagNames << QStringLiteral("Direct connection requires authorization");
+    if (flags & 0x2000) flagNames << QStringLiteral("Direct connection limited to contacts");
+    if (!flagNames.isEmpty()) result << QStringLiteral("Flags: %1").arg(flagNames.join(QStringLiteral(", ")));
+    result << QStringLiteral("Raw: 0x%1").arg(raw, 8, 16, QLatin1Char('0'));
+    return result;
+}
+
+void appendCapabilityGroup(QStringList &lines, const QString &heading, const QStringList &entries)
+{
+    lines << heading;
+    if (entries.isEmpty()) lines << QStringLiteral("  (none advertised)");
+    else for (const QString &entry : entries) lines << QStringLiteral("  %1").arg(entry);
+}
+
+QString aimUserInfoText(const QVariantMap &info, bool profileFocus)
+{
+    const QString name = info.value(QStringLiteral("screenName")).toString();
+    const QString profile = info.value(QStringLiteral("profile")).toString();
+    const QString away = info.value(QStringLiteral("awayMessage")).toString();
+    const int idleMinutes = info.value(QStringLiteral("idleMinutes"), -1).toInt();
+    const qint64 onlineSeconds = info.value(QStringLiteral("onlineSeconds"), -1).toLongLong();
+    const bool flagsSupplied = info.value(QStringLiteral("userFlagsSupplied")).toBool();
+    const quint64 userFlags = info.value(QStringLiteral("userFlags")).toULongLong();
+    const QStringList flagNames = aimUserFlagNames(userFlags);
+    const qint64 statusRaw = info.value(QStringLiteral("statusRaw"), -1).toLongLong();
+
+    QStringList lines;
+    lines << QStringLiteral("Screen Name: %1").arg(name)
+          << QStringLiteral("Presence: %1").arg(info.value(QStringLiteral("presence"), QStringLiteral("Unknown")).toString())
+          << QStringLiteral("Warning Level: %1%").arg(info.value(QStringLiteral("warningPercent")).toDouble(), 0, 'f', 1)
+          << QStringLiteral("Idle: %1").arg(idleMinutes >= 0 ? QStringLiteral("%1 minute(s)").arg(idleMinutes)
+                                                           : QStringLiteral("Not supplied by server"))
+          << QStringLiteral("Online For: %1").arg(onlineSeconds >= 0 ? formatElapsedSeconds(onlineSeconds)
+                                                                      : QStringLiteral("Not supplied by server"))
+          << QStringLiteral("Signed On: %1").arg(formatEpochSeconds(info.value(QStringLiteral("signonTime"), -1).toLongLong()))
+          << QStringLiteral("Member Since: %1").arg(formatEpochSeconds(info.value(QStringLiteral("memberSince"), -1).toLongLong()));
+
+    if (!flagsSupplied) {
+        lines << QStringLiteral("User Flags: Not supplied by server");
+    } else {
+        lines << QStringLiteral("User Flags: %1").arg(flagNames.isEmpty() ? QStringLiteral("No recognized flags")
+                                                                          : flagNames.join(QStringLiteral("; ")))
+              << QStringLiteral("User Flags Raw: 0x%1").arg(userFlags, userFlags > 0xffffULL ? 8 : 4, 16, QLatin1Char('0'));
+    }
+
+    const QStringList statusDetails = aimStatusDetails(statusRaw);
+    lines << QStringLiteral("OSCAR/ICQ Status: %1").arg(statusDetails.value(0));
+    for (int i = 1; i < statusDetails.size(); ++i) lines << QStringLiteral("  %1").arg(statusDetails.at(i));
+    lines << QStringLiteral("Last Updated: %1").arg(info.value(QStringLiteral("updatedAt")).toString())
+          << QString();
+
+    if (profileFocus) lines << QStringLiteral("=== AIM PROFILE ===");
+    else lines << QStringLiteral("AIM PROFILE");
+    lines << (profile.trimmed().isEmpty() ? QStringLiteral("(No profile text returned.)") : profile)
+          << QString()
+          << QStringLiteral("AWAY MESSAGE")
+          << (away.trimmed().isEmpty() ? QStringLiteral("(Not away / no away message returned.)") : away)
+          << QString()
+          << QStringLiteral("OSCAR USER CAPABILITIES")
+          << QStringLiteral("Capability UUIDs: %1 unique (%2 raw entries received)")
+                 .arg(info.value(QStringLiteral("capabilityCount")).toInt())
+                 .arg(info.value(QStringLiteral("rawCapabilityEntries")).toInt())
+          << QString();
+
+    appendCapabilityGroup(lines, QStringLiteral("Standard OSCAR"), info.value(QStringLiteral("standardCapabilities")).toStringList());
+    lines << QString();
+    appendCapabilityGroup(lines, QStringLiteral("Legacy AIM / Rendezvous"), info.value(QStringLiteral("legacyCapabilities")).toStringList());
+    lines << QString();
+    appendCapabilityGroup(lines, QStringLiteral("WaffleHouse Extensions"), info.value(QStringLiteral("waffleCapabilities")).toStringList());
+    const QStringList unknownCaps = info.value(QStringLiteral("unknownCapabilities")).toStringList();
+    if (!unknownCaps.isEmpty()) {
+        lines << QString();
+        appendCapabilityGroup(lines, QStringLiteral("Unknown / Client-specific"), unknownCaps);
+    }
+
+    lines << QString()
+          << QStringLiteral("WaffleHouse OSCAR Voice: %1").arg(info.value(QStringLiteral("waffleVoice")).toBool() ? QStringLiteral("SUPPORTED") : QStringLiteral("not advertised"))
+          << QStringLiteral("Legacy AIM Voice/Talk: %1").arg(info.value(QStringLiteral("legacyVoice")).toBool() ? QStringLiteral("advertised") : QStringLiteral("not advertised"))
+          << QStringLiteral("Direct IM: %1").arg(info.value(QStringLiteral("directIm")).toBool() ? QStringLiteral("advertised") : QStringLiteral("not advertised"))
+          << QStringLiteral("OSCAR File Transfer: %1").arg(info.value(QStringLiteral("fileTransfer")).toBool() ? QStringLiteral("advertised") : QStringLiteral("not advertised"))
+          << QStringLiteral("Buddy Icon: %1").arg(info.value(QStringLiteral("buddyIcon")).toBool() ? QStringLiteral("advertised") : QStringLiteral("not advertised"));
+    return lines.join(QLatin1Char('\n'));
 }
 
 class ConnectionDialog final : public QDialog {
@@ -521,6 +709,71 @@ QString statusWord(bool connected)
     return connected ? QStringLiteral("Online") : QStringLiteral("Offline");
 }
 
+void showPlainTextDialog(QWidget *parent, const QString &title, const QString &text)
+{
+    auto *dialog = new QDialog(parent);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(title);
+    dialog->resize(680, 520);
+    auto *layout = new QVBoxLayout(dialog);
+    auto *view = new QPlainTextEdit(dialog);
+    view->setReadOnly(true);
+    view->setPlainText(text);
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    layout->addWidget(buttons);
+    dialog->show();
+}
+
+QString oscarFeatureCenterText(OscarBackend *oscar)
+{
+    if (!oscar) return QStringLiteral("No AIM/OSCAR backend is selected.");
+    struct Family { quint16 id; const char *name; const char *use; };
+    static const Family families[] = {
+        {Oscar::FAM_OSERVICE, "Generic Service / BOS", "presence, idle, server notices, privacy flags"},
+        {Oscar::FAM_LOCATE, "Locate", "profiles, away text, rich user info, directory, email lookup"},
+        {Oscar::FAM_BUDDY, "Buddy", "presence watches, temporary buddies, reverse watcher list"},
+        {Oscar::FAM_ICBM, "ICBM", "IM, typing, stored messages, rendezvous/voice"},
+        {Oscar::FAM_ADVERT, "Advertising", "legacy infrastructure (detected only)"},
+        {Oscar::FAM_INVITE, "Invite", "AIM service invitations by email"},
+        {Oscar::FAM_ADMIN, "Account Administration", "account info, email/name/password, confirm/delete"},
+        {Oscar::FAM_POPUP, "Popup", "legacy server popup infrastructure (detected only)"},
+        {Oscar::FAM_PERMIT_DENY, "Permit/Deny", "allow/block/temporary allow privacy lists"},
+        {Oscar::FAM_USER_LOOKUP, "User Lookup", "legacy user search service"},
+        {Oscar::FAM_STATS, "Statistics", "legacy infrastructure (detected only)"},
+        {Oscar::FAM_TRANSLATE, "Translate", "legacy infrastructure (detected only)"},
+        {Oscar::FAM_CHATNAV, "Chat Navigation", "discover/create/join AIM chat rooms"},
+        {Oscar::FAM_CHAT, "Chat", "AIM room messaging and membership"},
+        {Oscar::FAM_ODIR, "Online Directory", "legacy directory service"},
+        {Oscar::FAM_BART, "BART / Buddy Art", "buddy icon service (detected; transfer interoperability not yet implemented)"},
+        {Oscar::FAM_FEEDBAG, "Feedbag / SSI", "persistent buddy list and authorization workflow"},
+        {Oscar::FAM_ICQ, "ICQ extensions", "ICQ-specific features when server/client support them"},
+        {Oscar::FAM_BUCP, "BUCP", "authentication service"},
+        {Oscar::FAM_ALERT, "Alerts", "server alert infrastructure"},
+        {Oscar::FAM_PLUGIN, "Plugins", "legacy plugin infrastructure (detected only)"},
+        {Oscar::FAM_UNNAMED_24, "Family 0x0024", "server/client-specific"},
+        {Oscar::FAM_MDIR, "MDIR", "modern directory service"},
+        {Oscar::FAM_ARS, "ARS", "AOL rendezvous relay service"},
+    };
+    QStringList lines;
+    lines << QStringLiteral("OSCAR Feature Center")
+          << QStringLiteral("====================")
+          << QStringLiteral("Features are enabled only when the connected host advertises the required OSCAR foodgroup.")
+          << QStringLiteral("");
+    for (const Family &family : families) {
+        lines << QStringLiteral("[%1] 0x%2  %3")
+                     .arg(oscar->supportsFamily(family.id) ? QStringLiteral("YES") : QStringLiteral(" --"))
+                     .arg(family.id, 4, 16, QLatin1Char('0'))
+                     .arg(QString::fromLatin1(family.name));
+        lines << QStringLiteral("      %1").arg(QString::fromLatin1(family.use));
+    }
+    lines << QStringLiteral("")
+          << QStringLiteral("Peer-specific rendezvous features are additionally gated by the target user's advertised capability UUIDs.")
+          << QStringLiteral("Legacy AIM Talk/File Transfer/Direct IM/Buddy Icon capabilities are reported when detected; WaffleHouse does not claim legacy wire compatibility until those transports are implemented.");
+    return lines.join(QLatin1Char('\n'));
+}
+
 } // namespace
 
 MainWindow::MainWindow(const ConnectionSettings &defaults, QWidget *parent)
@@ -751,7 +1004,7 @@ void MainWindow::requestClientVersion(BackendState *state, const QString &target
     QTimer::singleShot(3500, this, [this, key, clean, protocol] {
         if (!m_pendingVersionQueries.remove(key)) return;
         const QString report = protocol == ConnectionSettings::Protocol::Oscar
-            ? QStringLiteral("[version] %1: no 3.3r1 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(clean)
+            ? QStringLiteral("[version] %1: no %2 reply; peer may be an older WaffleHouse/CPX client or another AIM client (exact version unavailable)").arg(clean, appVersionString())
             : QStringLiteral("[version] %1: no CTCP VERSION reply received").arg(clean);
         statusBar()->showMessage(report, 7000);
     });
@@ -933,7 +1186,21 @@ void MainWindow::buildMenus()
     m_connectAction = new QAction(QStringLiteral("&Connect Selected"), this);
     m_disconnectAction = new QAction(QStringLiteral("&Disconnect Selected"), this);
     m_showConnectionsAction = new QAction(QStringLiteral("Show &Connections/Accounts Window"), this);
-    m_quitAction = new QAction(QStringLiteral("&Quit"), this);
+#ifdef Q_OS_MACOS
+    m_quitAction = new QAction(
+        QStringLiteral("&Quit %1").arg(appDisplayName()), this);
+#else
+    m_quitAction = new QAction(QStringLiteral("E&xit"), this);
+#endif
+    m_quitAction->setShortcut(QKeySequence::Quit);
+    m_quitAction->setMenuRole(QAction::QuitRole);
+    m_quitAction->setStatusTip(QStringLiteral("Exit WaffleHouse-Client cleanly"));
+
+    // 5.0r3: expose application shutdown in a conventional, easy-to-find
+    // location.  Closing the main window can intentionally minimize to the
+    // tray, so File -> Exit/Quit must always perform a real application exit.
+    QMenu *fileMenu = bar->addMenu(QStringLiteral("&File"));
+    fileMenu->addAction(m_quitAction);
 
     m_accountsMenu = bar->addMenu(QStringLiteral("&Accounts"));
     connect(m_accountsMenu, &QMenu::aboutToShow, this, &MainWindow::rebuildAccountsMenu);
@@ -990,6 +1257,12 @@ void MainWindow::buildMenus()
     toolsMenu->addAction(m_importBbsAction);
     m_transferWindowAction = toolsMenu->addAction(QStringLiteral("File Transfer &Log / Activity…"));
     toolsMenu->addSeparator();
+    QAction *commandPaletteAction = toolsMenu->addAction(QStringLiteral("Command &Palette…"));
+    commandPaletteAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
+    QAction *contactsAction = toolsMenu->addAction(QStringLiteral("Unified &Contacts…"));
+    QAction *historyAction = toolsMenu->addAction(QStringLiteral("Search &History…"));
+    QAction *capabilitiesAction = toolsMenu->addAction(QStringLiteral("Client &Capabilities…"));
+    toolsMenu->addSeparator();
     m_changePasswordAction = toolsMenu->addAction(QStringLiteral("Change AIM &Password…"));
     m_fingerprintAction = toolsMenu->addAction(QStringLiteral("Secure Identity &Fingerprint…"));
     toolsMenu->addSeparator();
@@ -1014,6 +1287,10 @@ void MainWindow::buildMenus()
     connect(m_showConnectionsAction, &QAction::triggered, this, &MainWindow::showConnectionsWindow);
     connect(m_phoneAction, &QAction::triggered,
             m_softphoneWindow, &SoftphoneWindow::showAndRaise);
+    connect(commandPaletteAction, &QAction::triggered, this, &MainWindow::showCommandPalette);
+    connect(contactsAction, &QAction::triggered, this, &MainWindow::showUnifiedContacts);
+    connect(historyAction, &QAction::triggered, this, &MainWindow::showHistory);
+    connect(capabilitiesAction, &QAction::triggered, this, &MainWindow::showClientCapabilities);
     connect(m_quitAction, &QAction::triggered, this, &MainWindow::quitApplication);
     connect(m_changePasswordAction, &QAction::triggered, this, &MainWindow::changePassword);
     connect(m_fingerprintAction, &QAction::triggered, this, &MainWindow::showSelectedFingerprint);
@@ -1085,7 +1362,8 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
         menu.addSeparator();
 
         QAction *startIm = menu.addAction(QStringLiteral("Start IM…"));
-        startIm->setEnabled(state->connected);
+        startIm->setEnabled(state->connected && (protocol != ConnectionSettings::Protocol::Oscar
+            || (qobject_cast<OscarBackend *>(state->backend) && qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_ICBM))));
         connect(startIm, &QAction::triggered, this, [this, backendId] {
             if (BackendState *target = stateById(backendId)) {
                 selectState(target);
@@ -1097,7 +1375,10 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
             protocol == ConnectionSettings::Protocol::Irc
                 ? QStringLiteral("Join IRC Channel…")
                 : QStringLiteral("Join AIM Chat…"));
-        joinChat->setEnabled(state->connected);
+        joinChat->setEnabled(state->connected && (protocol != ConnectionSettings::Protocol::Oscar
+            || (qobject_cast<OscarBackend *>(state->backend)
+                && qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_CHATNAV)
+                && qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_CHAT))));
         connect(joinChat, &QAction::triggered, this, [this, backendId] {
             if (BackendState *target = stateById(backendId)) {
                 selectState(target);
@@ -1106,6 +1387,10 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
         });
 
         QAction *buddies = menu.addAction(QStringLiteral("Add / Remove Buddies…"));
+        buddies->setEnabled(state->connected && (protocol != ConnectionSettings::Protocol::Oscar
+            || (qobject_cast<OscarBackend *>(state->backend)
+                && (qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_FEEDBAG)
+                    || qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_BUDDY)))));
         connect(buddies, &QAction::triggered, this, [this, backendId] {
             if (BackendState *target = stateById(backendId)) {
                 selectState(target);
@@ -1115,23 +1400,198 @@ void MainWindow::showAccountContextMenu(BackendState *state, const QPoint &globa
 
         menu.addSeparator();
         if (protocol == ConnectionSettings::Protocol::Oscar) {
-            QAction *profile = menu.addAction(QStringLiteral("Edit AIM Profile…"));
-            profile->setEnabled(state->connected);
+            auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+            const auto has = [state, oscar](quint16 family) {
+                return state && state->connected && oscar && oscar->supportsFamily(family);
+            };
+            const auto askTarget = [this](const QString &title, const QString &label) -> QString {
+                bool ok = false;
+                const QString value = QInputDialog::getText(this, title, label, QLineEdit::Normal,
+                                                            QString(), &ok).trimmed();
+                return ok ? value : QString();
+            };
+
+            QMenu *presence = menu.addMenu(QStringLiteral("OSCAR Presence / Profile"));
+            presence->setEnabled(state->connected);
+            QAction *away = presence->addAction(QStringLiteral("Set Away Message…"));
+            away->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(away, &QAction::triggered, this, [this, oscar] {
+                bool ok = false;
+                const QString text = QInputDialog::getMultiLineText(this, QStringLiteral("AIM Away Message"),
+                                                                    QStringLiteral("Away message:"), QString(), &ok);
+                if (ok && oscar) oscar->setAwayMessage(text);
+            });
+            QAction *afk = presence->addAction(QStringLiteral("Set AFK Message…"));
+            afk->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(afk, &QAction::triggered, this, [this, oscar] {
+                bool ok = false;
+                const QString text = QInputDialog::getMultiLineText(this, QStringLiteral("AIM AFK Message"),
+                                                                    QStringLiteral("AFK message:"), QString(), &ok);
+                if (ok && oscar) oscar->setAfkMessage(text);
+            });
+            QAction *available = presence->addAction(QStringLiteral("Return Available / Clear Away"));
+            available->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(available, &QAction::triggered, this, [oscar] { if (oscar) oscar->setBack(); });
+            QAction *idle = presence->addAction(QStringLiteral("Set Idle Seconds…"));
+            idle->setEnabled(has(Oscar::FAM_OSERVICE));
+            connect(idle, &QAction::triggered, this, [this, oscar] {
+                bool ok = false;
+                const int seconds = QInputDialog::getInt(this, QStringLiteral("AIM Idle Status"),
+                                                         QStringLiteral("Idle seconds (0 clears idle):"), 0, 0, 864000, 1, &ok);
+                if (ok && oscar) oscar->setIdleSeconds(static_cast<quint32>(seconds));
+            });
+            presence->addSeparator();
+            QAction *profile = presence->addAction(QStringLiteral("Edit AIM Profile…"));
+            profile->setEnabled(has(Oscar::FAM_LOCATE));
             connect(profile, &QAction::triggered, this, [this, backendId] {
-                if (BackendState *target = stateById(backendId)) {
-                    selectState(target);
-                    editAimProfile(target);
+                if (BackendState *target = stateById(backendId)) { selectState(target); editAimProfile(target); }
+            });
+            QAction *viewOwnProfile = presence->addAction(QStringLiteral("View My AIM Profile / User Info…"));
+            viewOwnProfile->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(viewOwnProfile, &QAction::triggered, this, [this, backendId] {
+                if (BackendState *target = stateById(backendId); target && target->backend)
+                    showAimUserInfo(target, target->backend->settings().username, true);
+            });
+            QAction *viewDir = presence->addAction(QStringLiteral("View My AIM Directory Info…"));
+            viewDir->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(viewDir, &QAction::triggered, this, [oscar, state] {
+                if (oscar && state && state->backend) oscar->requestDirectoryInfo(state->backend->settings().username);
+            });
+            QAction *editDir = presence->addAction(QStringLiteral("Edit My AIM Directory Info…"));
+            editDir->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(editDir, &QAction::triggered, this, [this, oscar] {
+                if (!oscar) return;
+                QDialog dialog(this);
+                dialog.setWindowTitle(QStringLiteral("Edit AIM Directory Information"));
+                auto *layout = new QVBoxLayout(&dialog);
+                auto *form = new QFormLayout;
+                QHash<QString, QLineEdit *> edits;
+                const QList<QPair<QString, QString>> fields = {
+                    {QStringLiteral("firstName"), QStringLiteral("First name")},
+                    {QStringLiteral("lastName"), QStringLiteral("Last name")},
+                    {QStringLiteral("middleName"), QStringLiteral("Middle name")},
+                    {QStringLiteral("maidenName"), QStringLiteral("Maiden name")},
+                    {QStringLiteral("nickname"), QStringLiteral("Nickname")},
+                    {QStringLiteral("street"), QStringLiteral("Street")},
+                    {QStringLiteral("city"), QStringLiteral("City")},
+                    {QStringLiteral("state"), QStringLiteral("State / region")},
+                    {QStringLiteral("zip"), QStringLiteral("ZIP / postal code")},
+                    {QStringLiteral("country"), QStringLiteral("Country")},
+                };
+                for (const auto &field : fields) {
+                    auto *edit = new QLineEdit(&dialog); edits.insert(field.first, edit); form->addRow(field.second + QLatin1Char(':'), edit);
+                }
+                layout->addLayout(form);
+                auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
+                connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+                connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+                layout->addWidget(buttons);
+                if (dialog.exec() == QDialog::Accepted) {
+                    QVariantMap values; for (auto it = edits.cbegin(); it != edits.cend(); ++it) values.insert(it.key(), it.value()->text());
+                    oscar->setDirectoryInfo(values);
                 }
             });
 
-            QAction *password = menu.addAction(QStringLiteral("Change OSCAR / AIM Password…"));
-            password->setEnabled(state->connected);
-            connect(password, &QAction::triggered, this, [this, backendId] {
-                if (BackendState *target = stateById(backendId)) {
-                    selectState(target);
-                    changePassword();
-                }
+            QMenu *privacy = menu.addMenu(QStringLiteral("OSCAR Privacy / Authorization"));
+            privacy->setEnabled(state->connected);
+            QAction *watchers = privacy->addAction(QStringLiteral("Who Has Me Listed? / Watcher List…"));
+            watchers->setEnabled(has(Oscar::FAM_BUDDY));
+            connect(watchers, &QAction::triggered, this, [oscar] { if (oscar) oscar->requestWatcherList(); });
+            privacy->addSeparator();
+            QAction *permit = privacy->addAction(QStringLiteral("Permit / Allow User…"));
+            permit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+            connect(permit, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Permit"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->addPermit(v); });
+            QAction *unpermit = privacy->addAction(QStringLiteral("Remove Permit…"));
+            unpermit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+            connect(unpermit, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Remove Permit"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->removePermit(v); });
+            QAction *block = privacy->addAction(QStringLiteral("Block / Deny User…"));
+            block->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+            connect(block, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Block"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->addDeny(v); });
+            QAction *unblock = privacy->addAction(QStringLiteral("Remove Block…"));
+            unblock->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+            connect(unblock, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Remove Block"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->removeDeny(v); });
+            QAction *tempPermit = privacy->addAction(QStringLiteral("Temporarily Permit User…"));
+            tempPermit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+            connect(tempPermit, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Temporary Permit"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->addTemporaryPermit(v); });
+            privacy->addSeparator();
+            QAction *authReq = privacy->addAction(QStringLiteral("Request Buddy Authorization…"));
+            authReq->setEnabled(has(Oscar::FAM_FEEDBAG));
+            connect(authReq, &QAction::triggered, this, [this, oscar, askTarget] {
+                const QString target=askTarget(QStringLiteral("AIM Authorization"), QStringLiteral("Screen name:")); if (target.isEmpty() || !oscar) return;
+                bool ok=false; const QString msg=QInputDialog::getText(this, QStringLiteral("Authorization Message"), QStringLiteral("Optional message:"), QLineEdit::Normal, QString(), &ok); if (ok) oscar->requestAuthorization(target,msg);
             });
+            QAction *preauth = privacy->addAction(QStringLiteral("Pre-authorize User…"));
+            preauth->setEnabled(has(Oscar::FAM_FEEDBAG));
+            connect(preauth, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Pre-authorize"), QStringLiteral("Screen name:")); if (!v.isEmpty() && oscar) oscar->preAuthorize(v); });
+            QAction *privacyFlags = privacy->addAction(QStringLiteral("Set Raw OSCAR Privacy Flags…"));
+            privacyFlags->setEnabled(has(Oscar::FAM_OSERVICE));
+            connect(privacyFlags, &QAction::triggered, this, [this, oscar] {
+                bool ok=false; const QString text=QInputDialog::getText(this, QStringLiteral("OSCAR Privacy Flags"), QStringLiteral("32-bit flags (hex, e.g. 0x00000001):"), QLineEdit::Normal, QStringLiteral("0x00000000"), &ok);
+                if (!ok || !oscar) return;
+                QString v = text.trimmed();
+                if (v.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) v = v.mid(2);
+                bool parsed = false;
+                const quint32 flags = v.toUInt(&parsed, 16);
+                if (!parsed) QMessageBox::warning(this, QStringLiteral("OSCAR Privacy Flags"), QStringLiteral("Invalid hexadecimal value."));
+                else oscar->setPrivacyFlags(flags);
+            });
+
+            QMenu *discovery = menu.addMenu(QStringLiteral("OSCAR Discovery / Invitations"));
+            discovery->setEnabled(state->connected);
+            QAction *emailLookup = discovery->addAction(QStringLiteral("Find AIM User by Email…"));
+            emailLookup->setEnabled(has(Oscar::FAM_LOCATE));
+            connect(emailLookup, &QAction::triggered, this, [oscar, askTarget] { const QString v=askTarget(QStringLiteral("AIM Email Lookup"), QStringLiteral("Email address:")); if (!v.isEmpty() && oscar) oscar->findByEmail(v); });
+            QAction *invite = discovery->addAction(QStringLiteral("Invite Someone to AIM by Email…"));
+            invite->setEnabled(has(Oscar::FAM_INVITE));
+            connect(invite, &QAction::triggered, this, [this, oscar, askTarget] {
+                const QString email=askTarget(QStringLiteral("AIM Invitation"), QStringLiteral("Email address:")); if (email.isEmpty() || !oscar) return;
+                bool ok=false; const QString msg=QInputDialog::getMultiLineText(this, QStringLiteral("AIM Invitation"), QStringLiteral("Personal message:"), QString(), &ok); if (ok) oscar->inviteByEmail(email,msg);
+            });
+            QAction *offline = discovery->addAction(QStringLiteral("Retrieve Stored / Offline Messages"));
+            offline->setEnabled(has(Oscar::FAM_ICBM));
+            connect(offline, &QAction::triggered, this, [oscar] { if (oscar) oscar->retrieveStoredMessages(); });
+
+            QMenu *admin = menu.addMenu(QStringLiteral("OSCAR Account Administration"));
+            admin->setEnabled(state->connected);
+            QAction *accountInfo = admin->addAction(QStringLiteral("View Account Information…"));
+            accountInfo->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(accountInfo, &QAction::triggered, this, [oscar] { if (oscar) oscar->requestAccountInfo(); });
+            QAction *email = admin->addAction(QStringLiteral("Change Account Email…"));
+            email->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(email, &QAction::triggered, this, [this, oscar] { bool ok=false; const QString v=QInputDialog::getText(this, QStringLiteral("Change AIM Email"), QStringLiteral("New email address:"), QLineEdit::Normal, QString(), &ok).trimmed(); if (ok && !v.isEmpty() && oscar) oscar->changeAccountEmail(v); });
+            QAction *formatted = admin->addAction(QStringLiteral("Change Formatted Screen Name…"));
+            formatted->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(formatted, &QAction::triggered, this, [this, oscar] { bool ok=false; const QString v=QInputDialog::getText(this, QStringLiteral("Formatted AIM Screen Name"), QStringLiteral("New formatting:"), QLineEdit::Normal, QString(), &ok).trimmed(); if (ok && !v.isEmpty() && oscar) oscar->changeFormattedScreenName(v); });
+            QAction *password = admin->addAction(QStringLiteral("Change OSCAR / AIM Password…"));
+            password->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(password, &QAction::triggered, this, [this, backendId] { if (BackendState *target = stateById(backendId)) { selectState(target); changePassword(); } });
+            QAction *confirm = admin->addAction(QStringLiteral("Request Account Confirmation Email"));
+            confirm->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(confirm, &QAction::triggered, this, [oscar] { if (oscar) oscar->confirmAccount(); });
+            admin->addSeparator();
+            QAction *deleteAccount = admin->addAction(QStringLiteral("Delete AIM Account from Server…"));
+            deleteAccount->setEnabled(has(Oscar::FAM_ADMIN));
+            connect(deleteAccount, &QAction::triggered, this, [this, oscar, state] {
+                if (!oscar || !state || !state->backend) return;
+                const QString name=state->backend->settings().username;
+                if (QMessageBox::warning(this, QStringLiteral("Delete AIM Account"),
+                    QStringLiteral("This asks the OSCAR server to DELETE the AIM account '%1'.\n\nThis is not the same as removing the saved connection from WaffleHouse-Client. Continue?").arg(name),
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes) oscar->deleteAccount();
+            });
+
+            menu.addSeparator();
+            QAction *featureCenter = menu.addAction(QStringLiteral("OSCAR Feature Center…"));
+            featureCenter->setEnabled(state->connected && oscar);
+            connect(featureCenter, &QAction::triggered, this, [this, oscar] { showPlainTextDialog(this, QStringLiteral("OSCAR Feature Center"), oscarFeatureCenterText(oscar)); });
+
+            QAction *rawOscar = menu.addAction(QStringLiteral("Advanced Raw OSCAR SNAC…"));
+            rawOscar->setEnabled(state->connected);
+            connect(rawOscar, &QAction::triggered, this, [this, backendId] { if (BackendState *target=stateById(backendId)) { selectState(target); rawProtocolCommand(); } });
+
+            if (m_oscarVoice && m_oscarVoice->isPrepared() && m_oscarVoiceBackendId == backendId) {
+                QAction *hangup = menu.addAction(QStringLiteral("Hang Up OSCAR Voice"));
+                connect(hangup, &QAction::triggered, this, [this] { hangupOscarVoice(true); });
+            }
         } else {
             QAction *nick = menu.addAction(QStringLiteral("Change IRC Nick / Nickname…"));
             nick->setEnabled(state->connected);
@@ -1181,7 +1641,8 @@ void MainWindow::showBuddyContextMenu(BackendState *state,
     QMenu menu(this);
 
     QAction *sendIm = menu.addAction(QStringLiteral("Send IM"));
-    sendIm->setEnabled(state->connected);
+    sendIm->setEnabled(state->connected && (protocol != ConnectionSettings::Protocol::Oscar
+        || (qobject_cast<OscarBackend *>(state->backend) && qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_ICBM))));
     connect(sendIm, &QAction::triggered, this, [this, backendId, target] {
         if (BackendState *current = stateById(backendId)) {
             selectState(current);
@@ -1190,7 +1651,8 @@ void MainWindow::showBuddyContextMenu(BackendState *state,
     });
 
     QAction *sendFileAction = menu.addAction(QStringLiteral("Send File"));
-    sendFileAction->setEnabled(state->connected);
+    sendFileAction->setEnabled(state->connected && (protocol != ConnectionSettings::Protocol::Oscar
+        || (qobject_cast<OscarBackend *>(state->backend) && qobject_cast<OscarBackend *>(state->backend)->supportsFamily(Oscar::FAM_ICBM))));
     connect(sendFileAction, &QAction::triggered, this, [this, backendId, target] {
         if (BackendState *current = stateById(backendId)) {
             selectState(current);
@@ -1200,6 +1662,201 @@ void MainWindow::showBuddyContextMenu(BackendState *state,
             }
         }
     });
+
+    menu.addSeparator();
+    QAction *linkContact = menu.addAction(QStringLiteral("Add / Link Unified Contact…"));
+    connect(linkContact, &QAction::triggered, this, [this, backendId, target, protocol] {
+        QString suggested = target;
+        bool ok = false;
+        const QString name = QInputDialog::getText(this, QStringLiteral("Unified Contact"),
+            QStringLiteral("Contact name:"), QLineEdit::Normal, suggested, &ok).trimmed();
+        if (!ok || name.isEmpty()) return;
+        ContactStore store;
+        const QString proto = protocol == ConnectionSettings::Protocol::Oscar ? QStringLiteral("aim") : QStringLiteral("irc");
+        QString error;
+        if (!store.addEndpoint(name, {proto, target, backendId, QString()}, &error))
+            QMessageBox::warning(this, QStringLiteral("Unified Contact"), error);
+        else statusBar()->showMessage(QStringLiteral("Linked %1 to unified contact %2.").arg(target, name), 4500);
+    });
+    ContactStore contactStore; bool linkedOk = false;
+    const UnifiedContact linked = contactStore.findByEndpoint(
+        protocol == ConnectionSettings::Protocol::Oscar ? QStringLiteral("aim") : QStringLiteral("irc"), target, &linkedOk);
+    UnifiedContactEndpoint sipEndpoint; bool hasSipEndpoint = false;
+    if (linkedOk) for (const auto &ep : linked.endpoints) {
+        if (ContactStore::normalizedProtocol(ep.protocol) == QStringLiteral("sip")) { sipEndpoint = ep; hasSipEndpoint = true; break; }
+    }
+    if (linkedOk && hasSipEndpoint) {
+        QAction *callContact = menu.addAction(QStringLiteral("Call %1 via SIP").arg(linked.displayName));
+        connect(callContact, &QAction::triggered, this, [this, sipEndpoint] {
+            QString accountId = sipEndpoint.accountId;
+            if (accountId.isEmpty()) accountId = m_sipController->selectedAccountId();
+            if (accountId.isEmpty() || !m_sipController->hasAccount(accountId)) {
+                QMessageBox::warning(this, QStringLiteral("SIP Call"),
+                    QStringLiteral("The contact does not have a usable SIP account selected."));
+                return;
+            }
+            QString error;
+            if (m_sipController->dial(accountId, sipEndpoint.address, QString(), &error) < 0)
+                QMessageBox::warning(this, QStringLiteral("SIP Call Failed"), error);
+            else m_softphoneWindow->showAndRaise();
+        });
+    }
+
+    menu.addSeparator();
+    if (protocol == ConnectionSettings::Protocol::Oscar) {
+        auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+        const auto has = [state, oscar](quint16 family) {
+            return state && state->connected && oscar && oscar->supportsFamily(family);
+        };
+        const auto peerCap = [oscar, target](const char *hex) {
+            return oscar && oscar->peerAdvertisesCapability(target, QByteArray::fromHex(hex));
+        };
+
+        QAction *profile = menu.addAction(QStringLiteral("View AIM Profile…"));
+        profile->setEnabled(has(Oscar::FAM_LOCATE));
+        connect(profile, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) showAimUserInfo(current, target, true);
+        });
+
+        QAction *userInfo = menu.addAction(QStringLiteral("Get AIM User Info…"));
+        userInfo->setEnabled(has(Oscar::FAM_LOCATE));
+        connect(userInfo, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) showAimUserInfo(current, target, false);
+        });
+
+        QAction *directory = menu.addAction(QStringLiteral("View AIM Directory Info…"));
+        directory->setEnabled(has(Oscar::FAM_LOCATE));
+        connect(directory, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->requestDirectoryInfo(target); });
+
+        menu.addSeparator();
+        QAction *voice = menu.addAction(QStringLiteral("Start OSCAR Voice Chat…"));
+        const bool whVoice = peerCap("574846564f4943458001574146464c45");
+        voice->setEnabled(has(Oscar::FAM_ICBM) && whVoice && (!m_oscarVoice || !m_oscarVoice->isActive()));
+        voice->setToolTip(whVoice ? QStringLiteral("Peer advertises WaffleHouse OSCAR Voice")
+                                  : QStringLiteral("Disabled until this buddy advertises the WaffleHouse OSCAR Voice capability; use Get AIM User Info first."));
+        connect(voice, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) startOscarVoice(current, target);
+        });
+
+        if (m_oscarVoice && m_oscarVoice->isPrepared() && m_oscarVoiceBackendId == backendId) {
+            QAction *hangup = menu.addAction(QStringLiteral("Hang Up OSCAR Voice"));
+            connect(hangup, &QAction::triggered, this, [this] { hangupOscarVoice(true); });
+        }
+
+        QMenu *legacy = menu.addMenu(QStringLiteral("Advertised Peer OSCAR Services"));
+        struct PeerFeature { const char *label; const char *hex; const char *note; };
+        static const PeerFeature peerFeatures[] = {
+            {"Legacy AIM Voice / Talk", "094613414c7f11d18222444553540000", "Detected only; proprietary legacy media framing is not implemented."},
+            {"Standard OSCAR File Transfer", "094613434c7f11d18222444553540000", "Detected only; WaffleHouse Secure File Transfer is a separate implementation."},
+            {"Standard OSCAR Direct IM", "094613454c7f11d18222444553540000", "Detected only; legacy direct-IM socket transport is not implemented."},
+            {"Buddy Icon / Avatar", "094613464c7f11d18222444553540000", "Detected only; BART/icon retrieval is not implemented in this revision."},
+            {"File Sharing / Receive File", "094613484c7f11d18222444553540000", "Detected only; legacy file-sharing transport is not implemented."},
+            {"UTF-8 Messaging", "0946134e4c7f11d18222444553540000", "Supported for WaffleHouse text messaging."},
+            {"Chat", "748f2420628711d18222444553540000", "Server chat features are available through AIM rooms."},
+        };
+        for (const PeerFeature &feature : peerFeatures) {
+            const bool advertised = peerCap(feature.hex);
+            QAction *action = legacy->addAction(QStringLiteral("%1: %2")
+                                                    .arg(QString::fromLatin1(feature.label),
+                                                         advertised ? QStringLiteral("ADVERTISED") : QStringLiteral("not advertised")));
+            action->setEnabled(false);
+            action->setToolTip(QString::fromLatin1(feature.note));
+        }
+
+        menu.addSeparator();
+        QMenu *watch = menu.addMenu(QStringLiteral("Buddy Presence / Watch"));
+        QAction *tempWatch = watch->addAction(QStringLiteral("Add Temporary Buddy Watch"));
+        tempWatch->setEnabled(has(Oscar::FAM_BUDDY));
+        connect(tempWatch, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->addTemporaryBuddy(target); });
+        QAction *unwatch = watch->addAction(QStringLiteral("Remove Temporary Buddy Watch"));
+        unwatch->setEnabled(has(Oscar::FAM_BUDDY));
+        connect(unwatch, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->removeTemporaryBuddy(target); });
+
+        QMenu *privacy = menu.addMenu(QStringLiteral("Privacy / Permit-Deny"));
+        QAction *permit = privacy->addAction(QStringLiteral("Permit / Allow This User"));
+        permit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(permit, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->addPermit(target); });
+        QAction *unpermit = privacy->addAction(QStringLiteral("Remove Permit for This User"));
+        unpermit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(unpermit, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->removePermit(target); });
+        QAction *block = privacy->addAction(QStringLiteral("Block / Deny This User"));
+        block->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(block, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->addDeny(target); });
+        QAction *unblock = privacy->addAction(QStringLiteral("Remove Block for This User"));
+        unblock->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(unblock, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->removeDeny(target); });
+        QAction *tempPermit = privacy->addAction(QStringLiteral("Temporarily Permit This User"));
+        tempPermit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(tempPermit, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->addTemporaryPermit(target); });
+        QAction *tempUnpermit = privacy->addAction(QStringLiteral("Remove Temporary Permit"));
+        tempUnpermit->setEnabled(has(Oscar::FAM_PERMIT_DENY));
+        connect(tempUnpermit, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->removeTemporaryPermit(target); });
+
+        QMenu *auth = menu.addMenu(QStringLiteral("Buddy Authorization"));
+        QAction *requestAuth = auth->addAction(QStringLiteral("Request Authorization…"));
+        requestAuth->setEnabled(has(Oscar::FAM_FEEDBAG));
+        connect(requestAuth, &QAction::triggered, this, [this, oscar, target] {
+            if (!oscar) return;
+            bool ok = false;
+            const QString msg=QInputDialog::getText(this, QStringLiteral("AIM Buddy Authorization"), QStringLiteral("Optional message:"), QLineEdit::Normal, QString(), &ok);
+            if (ok) oscar->requestAuthorization(target,msg);
+        });
+        QAction *acceptAuth = auth->addAction(QStringLiteral("Accept / Grant Authorization"));
+        acceptAuth->setEnabled(has(Oscar::FAM_FEEDBAG));
+        connect(acceptAuth, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->respondAuthorization(target,true); });
+        QAction *denyAuth = auth->addAction(QStringLiteral("Deny Authorization"));
+        denyAuth->setEnabled(has(Oscar::FAM_FEEDBAG));
+        connect(denyAuth, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->respondAuthorization(target,false); });
+        QAction *preauth = auth->addAction(QStringLiteral("Pre-authorize This User"));
+        preauth->setEnabled(has(Oscar::FAM_FEEDBAG));
+        connect(preauth, &QAction::triggered, this, [oscar, target] { if (oscar) oscar->preAuthorize(target); });
+        QAction *removeMe = auth->addAction(QStringLiteral("Remove Me from Their Buddy List"));
+        removeMe->setEnabled(has(Oscar::FAM_FEEDBAG));
+        connect(removeMe, &QAction::triggered, this, [this, oscar, target] {
+            if (!oscar) return;
+            if (QMessageBox::question(this, QStringLiteral("Remove Me"),
+                                      QStringLiteral("Ask the OSCAR server to remove you from %1's buddy list?").arg(target)) == QMessageBox::Yes)
+                oscar->removeMeFromBuddyList(target);
+        });
+
+        menu.addSeparator();
+        QAction *version = menu.addAction(QStringLiteral("Check Client Version…"));
+        version->setEnabled(has(Oscar::FAM_ICBM));
+        connect(version, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) requestClientVersion(current, target);
+        });
+
+        QAction *copy = menu.addAction(QStringLiteral("Copy Screen Name"));
+        connect(copy, &QAction::triggered, this, [target] { QApplication::clipboard()->setText(target); });
+
+        menu.addSeparator();
+        QAction *remove = menu.addAction(QStringLiteral("Remove from AIM Buddy List…"));
+        remove->setEnabled(state->connected && oscar
+                           && (oscar->supportsFamily(Oscar::FAM_FEEDBAG) || oscar->supportsFamily(Oscar::FAM_BUDDY)));
+        connect(remove, &QAction::triggered, this, [this, backendId, target] {
+            BackendState *current = stateById(backendId);
+            if (!current || !current->backend) return;
+            if (QMessageBox::question(this, QStringLiteral("Remove AIM Buddy"),
+                                      QStringLiteral("Remove %1 from the AIM buddy list?").arg(target))
+                == QMessageBox::Yes) {
+                current->backend->removeBuddy(target);
+                saveConnections();
+            }
+        });
+    } else {
+        QAction *whois = menu.addAction(QStringLiteral("WHOIS / User Info…"));
+        whois->setEnabled(state->connected);
+        connect(whois, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) showIrcWhois(current, target);
+        });
+        QAction *version = menu.addAction(QStringLiteral("Check Client Version…"));
+        version->setEnabled(state->connected);
+        connect(version, &QAction::triggered, this, [this, backendId, target] {
+            if (BackendState *current = stateById(backendId)) requestClientVersion(current, target);
+        });
+        QAction *copy = menu.addAction(QStringLiteral("Copy Nickname"));
+        connect(copy, &QAction::triggered, this, [target] { QApplication::clipboard()->setText(target); });
+    }
 
     menu.exec(globalPos);
 }
@@ -1538,57 +2195,90 @@ void MainWindow::showServerCapabilities(BackendState *state)
     }
 
     const auto protocol = state->backend->settings().protocol;
-    QString title;
-    QString text;
-    if (protocol == ConnectionSettings::Protocol::Oscar) {
-        title = QStringLiteral("AIM/OSCAR Server Capabilities");
-        text += QStringLiteral("Server: %1\nAccount: %2\n\nAdvertised OSCAR families:\n")
-                    .arg(state->backend->settings().server,
-                         state->identity.isEmpty() ? state->backend->settings().username : state->identity);
-        text += state->serverCapabilityDetails.isEmpty()
-            ? QStringLiteral("  (No family list has been received yet.)\n")
-            : QStringLiteral("  %1\n").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
-        text += QStringLiteral("\nAIM Profile support: %1")
-                    .arg(state->aimProfileSupported ? QStringLiteral("YES") : QStringLiteral("NO"));
-        if (state->aimProfileSupported && state->aimProfileMaxLength > 0) {
-            text += QStringLiteral("\nMaximum profile size: %1 bytes").arg(state->aimProfileMaxLength);
-        }
-        text += QStringLiteral("\n\nWaffleHouse-Client maps these families to:\n  %1")
-                    .arg(state->serverCapabilities.isEmpty()
-                             ? QStringLiteral("(none identified)")
-                             : state->serverCapabilities.join(QStringLiteral("\n  ")));
-
-        if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
-            oscar->refreshServerCapabilities();
-        }
-    } else if (protocol == ConnectionSettings::Protocol::Irc) {
-        title = QStringLiteral("IRC Server Capabilities");
-        text += QStringLiteral("Server: %1\nNick: %2\n\nIRCv3 CAP LS 302:\n")
-                    .arg(state->backend->settings().server,
-                         state->identity.isEmpty() ? state->backend->settings().username : state->identity);
-        text += state->serverCapabilities.isEmpty()
-            ? QStringLiteral("  (No IRCv3 capabilities advertised.)\n")
-            : QStringLiteral("  %1\n").arg(state->serverCapabilities.join(QStringLiteral("\n  ")));
-        text += QStringLiteral("\n005 / ISUPPORT tokens:\n");
-        text += state->serverCapabilityDetails.isEmpty()
-            ? QStringLiteral("  (No ISUPPORT tokens received yet.)")
-            : QStringLiteral("  %1").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
-    } else {
+    if (protocol != ConnectionSettings::Protocol::Oscar
+        && protocol != ConnectionSettings::Protocol::Irc) {
         QMessageBox::information(this, QStringLiteral("Server Capabilities"),
                                  QStringLiteral("Capability inspection is currently available for AIM/OSCAR and IRC accounts."));
         return;
     }
 
     QDialog dialog(this);
-    dialog.setWindowTitle(title);
-    dialog.resize(620, 500);
+    dialog.setWindowTitle(protocol == ConnectionSettings::Protocol::Oscar
+                              ? QStringLiteral("AIM/OSCAR Server Capabilities")
+                              : QStringLiteral("IRC Server Capabilities"));
+    dialog.resize(650, 520);
     auto *layout = new QVBoxLayout(&dialog);
     auto *view = new QPlainTextEdit(&dialog);
     view->setReadOnly(true);
-    view->setPlainText(text);
     layout->addWidget(view, 1);
+
+    auto render = [state, protocol, view] {
+        QString text;
+        if (protocol == ConnectionSettings::Protocol::Oscar) {
+            text += QStringLiteral("Server: %1\nAccount: %2\nLast Updated: %3\n\nAdvertised OSCAR families:\n")
+                        .arg(state->backend->settings().server,
+                             state->identity.isEmpty() ? state->backend->settings().username : state->identity,
+                             state->serverCapabilitiesUpdated.isEmpty() ? QStringLiteral("Not received yet")
+                                                                        : state->serverCapabilitiesUpdated);
+            text += state->serverCapabilityDetails.isEmpty()
+                ? QStringLiteral("  (No family list has been received yet.)\n")
+                : QStringLiteral("  %1\n").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
+            text += QStringLiteral("\nAIM Profile / User Info support: %1")
+                        .arg(state->aimProfileSupported ? QStringLiteral("YES") : QStringLiteral("NO"));
+            if (state->aimProfileSupported && state->aimProfileMaxLength > 0) {
+                text += QStringLiteral("\nMaximum profile size: %1 bytes").arg(state->aimProfileMaxLength);
+            }
+            text += QStringLiteral("\n\nWaffleHouse-Client maps these families to:\n  %1")
+                        .arg(state->serverCapabilities.isEmpty()
+                                 ? QStringLiteral("(none identified)")
+                                 : state->serverCapabilities.join(QStringLiteral("\n  ")));
+        } else {
+            text += QStringLiteral("Server: %1\nNick: %2\nLast Updated: %3\n\nIRCv3 CAP LS 302:\n")
+                        .arg(state->backend->settings().server,
+                             state->identity.isEmpty() ? state->backend->settings().username : state->identity,
+                             state->serverCapabilitiesUpdated.isEmpty() ? QStringLiteral("Not received yet")
+                                                                        : state->serverCapabilitiesUpdated);
+            text += state->serverCapabilities.isEmpty()
+                ? QStringLiteral("  (No IRCv3 capabilities advertised.)\n")
+                : QStringLiteral("  %1\n").arg(state->serverCapabilities.join(QStringLiteral("\n  ")));
+            text += QStringLiteral("\n005 / ISUPPORT tokens:\n");
+            text += state->serverCapabilityDetails.isEmpty()
+                ? QStringLiteral("  (No ISUPPORT tokens received yet.)")
+                : QStringLiteral("  %1").arg(state->serverCapabilityDetails.join(QStringLiteral("\n  ")));
+        }
+        view->setPlainText(text);
+    };
+    render();
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    auto *refresh = buttons->addButton(QStringLiteral("Refresh"), QDialogButtonBox::ActionRole);
     layout->addWidget(buttons);
+    connect(refresh, &QPushButton::clicked, &dialog, [state] {
+        if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) oscar->refreshServerCapabilities();
+        else if (auto *irc = qobject_cast<IrcBackend *>(state->backend)) irc->refreshServerCapabilities();
+    });
+    if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
+        connect(oscar, &OscarBackend::serverCapabilitiesChanged, &dialog,
+                [state, render](const QStringList &features, const QStringList &families,
+                                bool profileSupported, int maxProfileLength) {
+                    state->serverCapabilities = features;
+                    state->serverCapabilityDetails = families;
+                    state->aimProfileSupported = profileSupported;
+                    state->aimProfileMaxLength = maxProfileLength;
+                    state->serverCapabilitiesUpdated = QDateTime::currentDateTime().toString(Qt::ISODate);
+                    render();
+                });
+        oscar->refreshServerCapabilities();
+    } else if (auto *irc = qobject_cast<IrcBackend *>(state->backend)) {
+        connect(irc, &IrcBackend::serverCapabilitiesChanged, &dialog,
+                [state, render](const QStringList &caps, const QStringList &isupport) {
+                    state->serverCapabilities = caps;
+                    state->serverCapabilityDetails = isupport;
+                    state->serverCapabilitiesUpdated = QDateTime::currentDateTime().toString(Qt::ISODate);
+                    render();
+                });
+        irc->refreshServerCapabilities();
+    }
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     dialog.exec();
@@ -1652,6 +2342,155 @@ void MainWindow::editAimProfile(BackendState *state)
         dialog.accept();
     });
     dialog.exec();
+}
+
+void MainWindow::showAimUserInfo(BackendState *state, const QString &target, bool profileFocus)
+{
+    if (!state || !state->backend || !state->connected
+        || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) return;
+    auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+    if (!oscar) return;
+    if (!state->aimProfileSupported) {
+        QMessageBox::information(this, QStringLiteral("AIM User Info"),
+                                 QStringLiteral("This OSCAR server did not advertise Locate/user-info support."));
+        return;
+    }
+
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    auto *dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(profileFocus
+                               ? QStringLiteral("AIM Profile — %1").arg(clean)
+                               : QStringLiteral("AIM User Information — %1").arg(clean));
+    dialog->resize(680, 590);
+    auto *layout = new QVBoxLayout(dialog);
+    auto *view = new QPlainTextEdit(dialog);
+    view->setReadOnly(true);
+    view->setPlainText(QStringLiteral("Requesting OSCAR user information for %1…").arg(clean));
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    auto *refresh = buttons->addButton(QStringLiteral("Refresh"), QDialogButtonBox::ActionRole);
+    auto *copy = buttons->addButton(QStringLiteral("Copy Screen Name"), QDialogButtonBox::ActionRole);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    connect(refresh, &QPushButton::clicked, dialog, [oscar, clean, view] {
+        view->setPlainText(QStringLiteral("Refreshing OSCAR user information for %1…").arg(clean));
+        oscar->requestUserInfo(clean);
+    });
+    connect(copy, &QPushButton::clicked, dialog, [clean] { QApplication::clipboard()->setText(clean); });
+    connect(oscar, &OscarBackend::userInfoReceived, dialog,
+            [clean, view, profileFocus](const QString &replyTarget, const QVariantMap &info) {
+                const QString screenName = info.value(QStringLiteral("screenName")).toString();
+                if (replyTarget.compare(clean, Qt::CaseInsensitive) != 0
+                    && screenName.compare(clean, Qt::CaseInsensitive) != 0) return;
+                view->setPlainText(aimUserInfoText(info, profileFocus));
+                view->moveCursor(QTextCursor::Start);
+            });
+    dialog->show();
+    oscar->requestUserInfo(clean);
+}
+
+void MainWindow::showIrcWhois(BackendState *state, const QString &target)
+{
+    if (!state || !state->backend || !state->connected
+        || state->backend->settings().protocol != ConnectionSettings::Protocol::Irc) return;
+    auto *irc = qobject_cast<IrcBackend *>(state->backend);
+    if (!irc) return;
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+
+    auto *dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(QStringLiteral("IRC WHOIS / User Info — %1").arg(clean));
+    dialog->resize(650, 430);
+    auto *layout = new QVBoxLayout(dialog);
+    auto *view = new QPlainTextEdit(dialog);
+    view->setReadOnly(true);
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    auto *refresh = buttons->addButton(QStringLiteral("Refresh"), QDialogButtonBox::ActionRole);
+    auto *copy = buttons->addButton(QStringLiteral("Copy Nickname"), QDialogButtonBox::ActionRole);
+    layout->addWidget(buttons);
+    const auto beginRequest = [irc, clean, view] {
+        view->setPlainText(QStringLiteral("WHOIS %1\nLast requested: %2\n")
+                               .arg(clean, QDateTime::currentDateTime().toString(Qt::ISODate)));
+        irc->requestWhois(clean);
+    };
+    connect(refresh, &QPushButton::clicked, dialog, beginRequest);
+    connect(copy, &QPushButton::clicked, dialog, [clean] { QApplication::clipboard()->setText(clean); });
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    connect(irc, &IrcBackend::whoisReply, dialog,
+            [clean, view](const QString &nick, const QString &line, bool complete) {
+                if (nick.compare(clean, Qt::CaseInsensitive) != 0) return;
+                view->appendPlainText(line);
+                if (complete) view->appendPlainText(QStringLiteral("--- End of WHOIS ---"));
+            });
+    dialog->show();
+    beginRequest();
+}
+
+OscarVoiceSession *MainWindow::ensureOscarVoiceSession()
+{
+    if (m_oscarVoice) return m_oscarVoice;
+    m_oscarVoice = new OscarVoiceSession(this);
+    connect(m_oscarVoice, &OscarVoiceSession::statusChanged, this,
+            [this](const QString &message) {
+                statusBar()->showMessage(message, 6000);
+                if (BackendState *state = stateById(m_oscarVoiceBackendId)) appendActivity(state->backend, message);
+            });
+    connect(m_oscarVoice, &OscarVoiceSession::errorOccurred, this,
+            [this](const QString &message) {
+                statusBar()->showMessage(message, 8000);
+                if (BackendState *state = stateById(m_oscarVoiceBackendId)) appendActivity(state->backend, QStringLiteral("[voice error] %1").arg(message));
+            });
+    return m_oscarVoice;
+}
+
+void MainWindow::startOscarVoice(BackendState *state, const QString &target)
+{
+    if (!state || !state->connected || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) return;
+    auto *oscar = qobject_cast<OscarBackend *>(state->backend);
+    if (!oscar) return;
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+
+    OscarVoiceSession *voice = ensureOscarVoiceSession();
+    if (voice->isPrepared()) {
+        QMessageBox::information(this, QStringLiteral("OSCAR Voice"),
+                                 QStringLiteral("An OSCAR voice session is already active or ringing. Hang it up before starting another."));
+        return;
+    }
+    QString error;
+    if (!voice->prepare(0, &error)) {
+        QMessageBox::warning(this, QStringLiteral("OSCAR Voice"), error);
+        return;
+    }
+    m_oscarVoiceBackendId = state->backend->id();
+    m_oscarVoicePeer = clean;
+    m_oscarVoiceCookie = QStringLiteral("%1").arg(QRandomGenerator::global()->generate64(), 16, 16, QLatin1Char('0'));
+    oscar->proposeVoice(clean, m_oscarVoiceCookie, voice->localAddress(), voice->localPort(), voice->sampleRate());
+    appendActivity(state->backend,
+                   QStringLiteral("[OSCAR voice] Calling %1 over OSCAR rendezvous; unencrypted direct UDP audio from %2:%3 at %4 Hz.")
+                       .arg(clean, voice->localAddress()).arg(voice->localPort()).arg(voice->sampleRate()));
+    statusBar()->showMessage(QStringLiteral("OSCAR voice: calling %1…").arg(clean), 6000);
+}
+
+void MainWindow::hangupOscarVoice(bool notifyPeer)
+{
+    if (!m_oscarVoice || !m_oscarVoice->isPrepared()) return;
+    BackendState *state = stateById(m_oscarVoiceBackendId);
+    if (notifyPeer && state && state->backend) {
+        if (auto *oscar = qobject_cast<OscarBackend *>(state->backend)) {
+            oscar->cancelVoice(m_oscarVoicePeer, m_oscarVoiceCookie, 0x0001);
+        }
+    }
+    const QString peer = m_oscarVoicePeer;
+    m_oscarVoice->stop();
+    m_oscarVoiceBackendId.clear();
+    m_oscarVoicePeer.clear();
+    m_oscarVoiceCookie.clear();
+    statusBar()->showMessage(QStringLiteral("OSCAR voice call with %1 ended.").arg(peer), 5000);
 }
 
 void MainWindow::setMediaWindow(MediaWindow *window)
@@ -2102,6 +2941,139 @@ void MainWindow::applyConversationOptions()
     }
 }
 
+void MainWindow::showCommandPalette()
+{
+    const QStringList commands = {
+        QStringLiteral("/features"), QStringLiteral("/contacts"), QStringLiteral("/history"),
+        QStringLiteral("/callinfo"), QStringLiteral("/phone"), QStringLiteral("/newim"),
+        QStringLiteral("/join "), QStringLiteral("/msg "), QStringLiteral("/transfers"),
+        QStringLiteral("/notifications"), QStringLiteral("/env"), QStringLiteral("/help")
+    };
+    bool ok = false;
+    const QString command = QInputDialog::getItem(this, QStringLiteral("WaffleHouse Command Palette"),
+        QStringLiteral("Run command:"), commands, 0, true, &ok).trimmed();
+    if (ok && !command.isEmpty()) executeGuiCommand(command);
+}
+
+void MainWindow::showClientCapabilities()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("%1 %2 — Client Capabilities").arg(appDisplayName(), appVersionString()));
+    dialog.resize(720, 500);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *view = new QPlainTextEdit(&dialog);
+    view->setReadOnly(true);
+    view->setLineWrapMode(QPlainTextEdit::NoWrap);
+    view->setPlainText(CapabilityRegistry::displayLines().join(QLatin1Char('\n')));
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    dialog.exec();
+}
+
+void MainWindow::showHistory()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("%1 — Search History").arg(appDisplayName()));
+    dialog.resize(780, 540);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *searchRow = new QHBoxLayout;
+    auto *query = new QLineEdit(&dialog);
+    query->setPlaceholderText(QStringLiteral("Search AIM, IRC, SIP call history, rooms, contacts, text…"));
+    auto *search = new QPushButton(QStringLiteral("Search"), &dialog);
+    auto *clear = new QPushButton(QStringLiteral("Clear History"), &dialog);
+    searchRow->addWidget(query, 1); searchRow->addWidget(search); searchRow->addWidget(clear);
+    layout->addLayout(searchRow);
+    auto *view = new QPlainTextEdit(&dialog);
+    view->setReadOnly(true); view->setLineWrapMode(QPlainTextEdit::NoWrap);
+    layout->addWidget(view, 1);
+    auto refresh = [query, view] {
+        const auto records = HistoryStore::search(query->text().trimmed(), 500);
+        QStringList lines = HistoryStore::displayLines(records);
+        if (lines.isEmpty()) lines << QStringLiteral("No matching history entries.");
+        view->setPlainText(lines.join(QLatin1Char('\n')));
+    };
+    connect(search, &QPushButton::clicked, &dialog, refresh);
+    connect(query, &QLineEdit::returnPressed, &dialog, refresh);
+    connect(clear, &QPushButton::clicked, &dialog, [this, &dialog, refresh] {
+        if (QMessageBox::question(&dialog, QStringLiteral("Clear History"),
+                QStringLiteral("Delete the local WaffleHouse message and call history?")) != QMessageBox::Yes) return;
+        QString error;
+        if (!HistoryStore::clear(&error)) QMessageBox::warning(&dialog, QStringLiteral("Clear History"), error);
+        else refresh();
+    });
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    refresh();
+    dialog.exec();
+}
+
+void MainWindow::showUnifiedContacts()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("%1 — Unified Contacts").arg(appDisplayName()));
+    dialog.resize(760, 520);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *view = new QPlainTextEdit(&dialog);
+    view->setReadOnly(true); view->setLineWrapMode(QPlainTextEdit::NoWrap);
+    layout->addWidget(view, 1);
+    auto *row = new QHBoxLayout;
+    auto *add = new QPushButton(QStringLiteral("Add Endpoint…"), &dialog);
+    auto *notes = new QPushButton(QStringLiteral("Notes…"), &dialog);
+    auto *remove = new QPushButton(QStringLiteral("Delete…"), &dialog);
+    auto *call = new QPushButton(QStringLiteral("Call…"), &dialog);
+    row->addWidget(add); row->addWidget(notes); row->addWidget(remove); row->addWidget(call); row->addStretch(1);
+    layout->addLayout(row);
+    auto refresh = [view] {
+        ContactStore store;
+        QStringList lines;
+        for (const auto &contact : store.contacts()) {
+            lines << QStringLiteral("%1").arg(contact.displayName);
+            for (const auto &ep : contact.endpoints) {
+                lines << QStringLiteral("    %-6s %1%2")
+                    .arg(ep.address, ep.accountId.isEmpty() ? QString() : QStringLiteral("  [account %1]").arg(ep.accountId))
+                    .replace(QStringLiteral("%-6s"), ep.protocol.toUpper().leftJustified(6, QLatin1Char(' ')));
+            }
+            if (!contact.notes.isEmpty()) lines << QStringLiteral("    notes: %1").arg(contact.notes);
+            lines << QString();
+        }
+        if (lines.isEmpty()) lines << QStringLiteral("No unified contacts yet.\n\nAdd an AIM/IRC buddy from its right-click menu, or use Add Endpoint here.");
+        view->setPlainText(lines.join(QLatin1Char('\n')));
+    };
+    connect(add, &QPushButton::clicked, &dialog, [&dialog, refresh] {
+        bool ok=false;
+        const QString name=QInputDialog::getText(&dialog,QStringLiteral("Unified Contact"),QStringLiteral("Contact name:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok||name.isEmpty())return;
+        const QString protocol=QInputDialog::getItem(&dialog,QStringLiteral("Unified Contact"),QStringLiteral("Protocol:"),{QStringLiteral("aim"),QStringLiteral("irc"),QStringLiteral("sip"),QStringLiteral("telnet")},0,false,&ok).trimmed(); if(!ok||protocol.isEmpty())return;
+        const QString address=QInputDialog::getText(&dialog,QStringLiteral("Unified Contact"),QStringLiteral("Address / screen name / SIP URI:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok||address.isEmpty())return;
+        const QString account=QInputDialog::getText(&dialog,QStringLiteral("Unified Contact"),QStringLiteral("Optional WaffleHouse account ID:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok)return;
+        ContactStore store; QString error; if(!store.addEndpoint(name,{protocol,address,account,QString()},&error)) QMessageBox::warning(&dialog,QStringLiteral("Unified Contact"),error); else refresh();
+    });
+    connect(notes, &QPushButton::clicked, &dialog, [&dialog, refresh] {
+        bool ok=false; const QString name=QInputDialog::getText(&dialog,QStringLiteral("Contact Notes"),QStringLiteral("Contact name:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok||name.isEmpty())return;
+        ContactStore store; bool found=false; const auto c=store.findByName(name,&found); if(!found){QMessageBox::warning(&dialog,QStringLiteral("Contact Notes"),QStringLiteral("Contact not found."));return;}
+        const QString text=QInputDialog::getMultiLineText(&dialog,QStringLiteral("Contact Notes"),QStringLiteral("Private notes:"),c.notes,&ok); if(!ok)return;
+        QString error; if(!store.setNotes(name,text,&error)) QMessageBox::warning(&dialog,QStringLiteral("Contact Notes"),error); else refresh();
+    });
+    connect(remove, &QPushButton::clicked, &dialog, [&dialog, refresh] {
+        bool ok=false; const QString name=QInputDialog::getText(&dialog,QStringLiteral("Delete Contact"),QStringLiteral("Contact name:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok||name.isEmpty())return;
+        if(QMessageBox::question(&dialog,QStringLiteral("Delete Contact"),QStringLiteral("Delete unified contact %1?").arg(name))!=QMessageBox::Yes)return;
+        ContactStore store; QString error; if(!store.remove(name,&error)) QMessageBox::warning(&dialog,QStringLiteral("Delete Contact"),error); else refresh();
+    });
+    connect(call, &QPushButton::clicked, &dialog, [this, &dialog] {
+        bool ok=false; const QString name=QInputDialog::getText(&dialog,QStringLiteral("Call Contact"),QStringLiteral("Contact name:"),QLineEdit::Normal,{},&ok).trimmed(); if(!ok||name.isEmpty())return;
+        ContactStore store; bool found=false; const auto c=store.findByName(name,&found); if(!found){QMessageBox::warning(&dialog,QStringLiteral("Call Contact"),QStringLiteral("Contact not found."));return;}
+        UnifiedContactEndpoint sip; bool have=false; for(const auto &ep:c.endpoints) if(ContactStore::normalizedProtocol(ep.protocol)==QStringLiteral("sip")){sip=ep;have=true;break;}
+        if(!have){QMessageBox::warning(&dialog,QStringLiteral("Call Contact"),QStringLiteral("This contact has no SIP endpoint."));return;}
+        QString account=sip.accountId; if(account.isEmpty()) account=m_sipController->selectedAccountId();
+        if(account.isEmpty()||!m_sipController->hasAccount(account)){QMessageBox::warning(&dialog,QStringLiteral("Call Contact"),QStringLiteral("Select a SIP account or store one on the contact endpoint."));return;}
+        QString error; if(m_sipController->dial(account,sip.address,QString(),&error)<0) QMessageBox::warning(&dialog,QStringLiteral("Call Failed"),error); else m_softphoneWindow->showAndRaise();
+    });
+    auto *buttons=new QDialogButtonBox(QDialogButtonBox::Close,&dialog); layout->addWidget(buttons); connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    refresh(); dialog.exec();
+}
+
 void MainWindow::showOptionsDialog()
 {
     QDialog dialog(this);
@@ -2365,7 +3337,18 @@ void MainWindow::showHelpDialog()
         "MAIN-WINDOW /COMMAND BAR\n"
         "  The command box below the Accounts tree accepts CLI-style /commands and invokes GUI actions.\n"
         "  Examples: /add, /connect, /query USER, /joinprivate ROOM, /nick NEWNICK, /media, /phone, /transfers.\n"
+        "  Server/user inspection: /capabilities, /oscarfeatures, /profile USER, /getinfo USER, /userinfo USER, /whois NICK.\n"
+        "  OSCAR account/user controls include /setprofile, /aimdir, /aimsetdir, /aimsearch, /aiminvite, privacy/authorization, temporary watches, offline-message retrieval, account administration, and typing controls.\n"
+        "  OSCAR voice: /voicecall USER, /voicehangup, /voicemute, /voiceunmute, /voicestatus.\n"
         "  Commands that need a peer use the selected AIM/IRC buddy when no peer is supplied.\n\n"
+        "AIM / OSCAR USER FEATURES\n"
+        "  Right-click an AIM account for capability-gated Presence/Profile, Privacy/Authorization, Discovery/Invitations, Account Administration, Feature Center, and advanced raw OSCAR controls.\n"
+        "  Right-click an AIM buddy for profile/user/directory info, temporary watch, permit/deny, authorization, IM/file, client-version, copy/remove, and OSCAR voice actions.\n"
+        "  Unsupported server foodgroups remain visible but disabled; peer-specific rendezvous actions are additionally gated by the buddy's advertised capability UUIDs.\n"
+        "  Native OSCAR typing notifications are sent from AIM IM windows and displayed in the conversation header.\n"
+        "  User Info displays profile, away message, warning level, sign-on/member/idle/online data and advertised capability UUIDs.\n"
+        "  WaffleHouse OSCAR Voice uses OSCAR channel-2 rendezvous signaling plus an open, unencrypted WaffleHouse PCM/UDP media payload.\n"
+        "  Legacy AIM Talk/Voice, standard Direct IM/File Transfer, Buddy Icon, and other peer capabilities are detected; unsupported legacy transports are not falsely advertised as interoperable.\n\n"
         "SLASH ALIASES INSIDE CONVERSATION WINDOWS\n"
         "  Tab          complete/cycle matching slash commands\n"
         "  Shift+Tab    cycle matching commands backward\n"
@@ -2722,11 +3705,180 @@ void MainWindow::wireBackend(ChatBackend *backend)
                         state->serverCapabilityDetails = families;
                         state->aimProfileSupported = profileSupported;
                         state->aimProfileMaxLength = maxProfileLength;
+                        state->serverCapabilitiesUpdated = QDateTime::currentDateTime().toString(Qt::ISODate);
                     }
                 }, Qt::QueuedConnection);
         connect(oscar, &OscarBackend::profileChanged, this,
                 [this, backend](const QString &profile) {
                     if (BackendState *state = stateFor(backend)) state->aimProfile = profile;
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::directoryInfoReceived, this,
+                [this, backend](const QString &target, const QVariantMap &info) {
+                    if (!stateFor(backend)) return;
+                    QStringList lines;
+                    lines << QStringLiteral("Screen Name: %1").arg(target)
+                          << QStringLiteral("Last Updated: %1").arg(info.value(QStringLiteral("updatedAt")).toString())
+                          << QString();
+                    const QList<QPair<QString, QString>> fields = {
+                        {QStringLiteral("firstName"), QStringLiteral("First name")},
+                        {QStringLiteral("lastName"), QStringLiteral("Last name")},
+                        {QStringLiteral("middleName"), QStringLiteral("Middle name")},
+                        {QStringLiteral("maidenName"), QStringLiteral("Maiden name")},
+                        {QStringLiteral("nickname"), QStringLiteral("Nickname")},
+                        {QStringLiteral("street"), QStringLiteral("Street")},
+                        {QStringLiteral("city"), QStringLiteral("City")},
+                        {QStringLiteral("state"), QStringLiteral("State / region")},
+                        {QStringLiteral("zip"), QStringLiteral("ZIP / postal code")},
+                        {QStringLiteral("country"), QStringLiteral("Country")},
+                    };
+                    bool any=false;
+                    for (const auto &field : fields) {
+                        const QString value=info.value(field.first).toString();
+                        if (!value.isEmpty()) { lines << QStringLiteral("%1: %2").arg(field.second, value); any=true; }
+                    }
+                    if (!any) lines << QStringLiteral("(The server returned no directory fields for this user.)");
+                    showPlainTextDialog(this, QStringLiteral("AIM Directory Information — %1").arg(target), lines.join(QLatin1Char('\n')));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::lookupResultsReceived, this,
+                [this, backend](const QString &query, const QStringList &results) {
+                    if (!stateFor(backend)) return;
+                    QStringList lines{QStringLiteral("Email: %1").arg(query), QString()};
+                    lines << (results.isEmpty() ? QStringLiteral("No matching AIM users were returned by the server.")
+                                                : results.join(QLatin1Char('\n')));
+                    showPlainTextDialog(this, QStringLiteral("AIM User Lookup"), lines.join(QLatin1Char('\n')));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::accountInfoReceived, this,
+                [this, backend](const QVariantMap &info) {
+                    if (!stateFor(backend)) return;
+                    QStringList lines;
+                    lines << QStringLiteral("Screen Name: %1").arg(info.value(QStringLiteral("screenName"), QStringLiteral("Not supplied by server")).toString())
+                          << QStringLiteral("Email: %1").arg(info.value(QStringLiteral("email"), QStringLiteral("Not supplied by server")).toString())
+                          << QStringLiteral("Registration Status: %1").arg(info.contains(QStringLiteral("registrationStatus")) ? info.value(QStringLiteral("registrationStatus")).toString() : QStringLiteral("Not supplied by server"))
+                          << QStringLiteral("Last Updated: %1").arg(info.value(QStringLiteral("updatedAt")).toString());
+                    if (info.contains(QStringLiteral("errorCode"))) lines << QStringLiteral("Server Error Code: %1").arg(info.value(QStringLiteral("errorCode")).toString());
+                    showPlainTextDialog(this, QStringLiteral("AIM Account Information"), lines.join(QLatin1Char('\n')));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::watcherListReceived, this,
+                [this, backend](const QStringList &users) {
+                    if (!stateFor(backend)) return;
+                    showPlainTextDialog(this, QStringLiteral("AIM Watcher / Reverse Buddy List"),
+                        users.isEmpty() ? QStringLiteral("The server returned no users watching/listing this account.")
+                                        : users.join(QLatin1Char('\n')));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::authorizationRequestReceived, this,
+                [this, backend, oscar](const QString &from, const QString &message) {
+                    if (!stateFor(backend)) return;
+                    const QString question = QStringLiteral("%1 is requesting permission to add/keep you on their AIM buddy list.%2\n\nAllow?")
+                        .arg(from, message.isEmpty() ? QString() : QStringLiteral("\n\nMessage: %1").arg(message));
+                    const bool accept = QMessageBox::question(this, QStringLiteral("AIM Buddy Authorization"), question,
+                                                               QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes;
+                    oscar->respondAuthorization(from, accept);
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::authorizationResponseReceived, this,
+                [this, backend](const QString &from, bool accepted, const QString &message) {
+                    appendActivity(backend, QStringLiteral("[AIM authorization] %1 %2 your request%3")
+                        .arg(from, accepted ? QStringLiteral("accepted") : QStringLiteral("denied"),
+                             message.isEmpty() ? QString() : QStringLiteral(": %1").arg(message)));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::buddyAddedYou, this,
+                [this, backend](const QString &from) { appendActivity(backend, QStringLiteral("[AIM buddy] %1 added you to their buddy list.").arg(from)); }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::typingNotificationReceived, this,
+                [this, backend](const QString &from, quint16 event) {
+                    ChatWindow *window=m_windows.value(conversationKey(backend, QStringLiteral("im"), from), nullptr);
+                    if (!window) return;
+                    if (event == Oscar::ICBM_EVENT_TYPING) window->setPeerTypingState(QStringLiteral("%1 is typing…").arg(from));
+                    else if (event == Oscar::ICBM_EVENT_TYPED) window->setPeerTypingState(QStringLiteral("%1 paused typing").arg(from));
+                    else window->setPeerTypingState(QString());
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::oscarNoticeReceived, this,
+                [this, backend](const QString &kind, const QString &text) { appendActivity(backend, QStringLiteral("[OSCAR %1] %2").arg(kind, text)); }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::featureOperationResult, this,
+                [this, backend](const QString &operation, bool success, const QString &message) {
+                    appendActivity(backend, QStringLiteral("[%1] %2: %3").arg(success ? QStringLiteral("ok") : QStringLiteral("error"), operation, message));
+                    statusBar()->showMessage(QStringLiteral("%1: %2").arg(operation, message), 5000);
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::voiceInviteReceived, this,
+                [this, backend, oscar](const QString &from, const QString &cookieHex,
+                                       const QString &remoteAddress, quint16 remotePort,
+                                       int sampleRate, int channels, const QString &invitation) {
+                    BackendState *state = stateFor(backend);
+                    if (!state || !state->connected) return;
+                    if (channels != 1 || sampleRate <= 0 || remoteAddress.isEmpty() || remotePort == 0) {
+                        oscar->cancelVoice(from, cookieHex, 0x0003);
+                        appendActivity(backend, QStringLiteral("[OSCAR voice] Rejected malformed/incompatible invitation from %1.").arg(from));
+                        return;
+                    }
+                    if (m_oscarVoice && m_oscarVoice->isPrepared()) {
+                        oscar->cancelVoice(from, cookieHex, 0x0002);
+                        appendActivity(backend, QStringLiteral("[OSCAR voice] Busy; declined invitation from %1.").arg(from));
+                        return;
+                    }
+                    QString question = QStringLiteral("%1 is inviting you to an OSCAR voice chat.\n\n%2\n\nAccept?")
+                                           .arg(from, invitation.isEmpty()
+                                                          ? QStringLiteral("WaffleHouse-Client peer voice")
+                                                          : invitation);
+                    if (QMessageBox::question(this, QStringLiteral("Incoming OSCAR Voice"), question,
+                                              QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes) {
+                        oscar->cancelVoice(from, cookieHex, 0x0001);
+                        return;
+                    }
+                    OscarVoiceSession *voice = ensureOscarVoiceSession();
+                    QString error;
+                    if (!voice->prepare(sampleRate, &error)) {
+                        oscar->cancelVoice(from, cookieHex, 0x0003);
+                        QMessageBox::warning(this, QStringLiteral("OSCAR Voice"), error);
+                        return;
+                    }
+                    if (!voice->start(from, remoteAddress, remotePort, &error)) {
+                        oscar->cancelVoice(from, cookieHex, 0x0003);
+                        voice->stop();
+                        QMessageBox::warning(this, QStringLiteral("OSCAR Voice"), error);
+                        return;
+                    }
+                    m_oscarVoiceBackendId = backend->id();
+                    m_oscarVoicePeer = from;
+                    m_oscarVoiceCookie = cookieHex;
+                    oscar->acceptVoice(from, cookieHex, voice->localAddress(), voice->localPort(), voice->sampleRate());
+                    appendActivity(backend, QStringLiteral("[OSCAR voice] Accepted voice chat with %1 (%2:%3, %4 Hz).")
+                                               .arg(from, remoteAddress).arg(remotePort).arg(sampleRate));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::voiceInviteAccepted, this,
+                [this, backend](const QString &from, const QString &cookieHex,
+                                const QString &remoteAddress, quint16 remotePort,
+                                int sampleRate, int channels) {
+                    if (!m_oscarVoice || !m_oscarVoice->isPrepared()
+                        || m_oscarVoiceBackendId != backend->id()
+                        || m_oscarVoiceCookie.compare(cookieHex, Qt::CaseInsensitive) != 0) return;
+                    if (channels != 1 || sampleRate != m_oscarVoice->sampleRate()) {
+                        QMessageBox::warning(this, QStringLiteral("OSCAR Voice"),
+                                             QStringLiteral("%1 accepted with an incompatible audio format.").arg(from));
+                        hangupOscarVoice(true);
+                        return;
+                    }
+                    QString error;
+                    if (!m_oscarVoice->start(from, remoteAddress, remotePort, &error)) {
+                        QMessageBox::warning(this, QStringLiteral("OSCAR Voice"), error);
+                        hangupOscarVoice(true);
+                        return;
+                    }
+                    m_oscarVoicePeer = from;
+                    appendActivity(backend, QStringLiteral("[OSCAR voice] %1 accepted; voice audio is active.").arg(from));
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::voiceInviteCancelled, this,
+                [this, backend](const QString &from, const QString &cookieHex, quint16 reason) {
+                    if (!m_oscarVoice || m_oscarVoiceBackendId != backend->id()
+                        || m_oscarVoiceCookie.compare(cookieHex, Qt::CaseInsensitive) != 0) return;
+                    appendActivity(backend, QStringLiteral("[OSCAR voice] %1 ended/declined the voice request (reason 0x%2).")
+                                               .arg(from).arg(reason, 4, 16, QLatin1Char('0')));
+                    hangupOscarVoice(false);
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::legacyVoiceInviteReceived, this,
+                [this, backend](const QString &from, const QString &) {
+                    appendActivity(backend, QStringLiteral("[OSCAR voice] %1 sent a legacy AIM Talk invitation. "
+                                                           "WaffleHouse identifies it, but does not claim compatibility with the proprietary legacy media framing.")
+                                               .arg(from));
+                    QMessageBox::information(this, QStringLiteral("Legacy AIM Voice"),
+                                             QStringLiteral("%1 sent a legacy AIM Voice/Talk invitation. This build can identify legacy voice capability, but WaffleHouse OSCAR Voice uses its own open media payload.").arg(from));
                 }, Qt::QueuedConnection);
     }
     if (auto *irc = qobject_cast<IrcBackend *>(backend)) {
@@ -2735,6 +3887,7 @@ void MainWindow::wireBackend(ChatBackend *backend)
                     if (BackendState *state = stateFor(backend)) {
                         state->serverCapabilities = caps;
                         state->serverCapabilityDetails = isupport;
+                        state->serverCapabilitiesUpdated = QDateTime::currentDateTime().toString(Qt::ISODate);
                     }
                 }, Qt::QueuedConnection);
     }
@@ -3204,6 +4357,15 @@ ChatWindow *MainWindow::ensureConversationWindow(ChatBackend *backend,
             this, &MainWindow::handleConversationClosing);
     connect(window, &ChatWindow::messageSubmitted,
             this, &MainWindow::handleConversationMessage);
+    connect(window, &ChatWindow::inputActivity, this, [this](ChatWindow *w, bool hasText) {
+        if (!w || w->kind() != QStringLiteral("im")) return;
+        BackendState *current = stateById(w->backendId());
+        if (!current || !current->connected || !current->backend
+            || current->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) return;
+        if (auto *oscar = qobject_cast<OscarBackend *>(current->backend);
+            oscar && oscar->supportsFamily(Oscar::FAM_ICBM))
+            oscar->sendTypingNotification(w->target(), hasText ? Oscar::ICBM_EVENT_TYPING : Oscar::ICBM_EVENT_FINISHED);
+    });
     connect(window, &ChatWindow::terminalBytesSubmitted, this,
             [this](ChatWindow *w, const QByteArray &bytes) {
                 if (!w) return;
@@ -3678,6 +4840,40 @@ void MainWindow::executeGuiCommand(const QString &input)
                           info.terminal.isEmpty() ? QStringLiteral("not detected") : info.terminal));
         return;
     }
+    if (command == QStringLiteral("features") || command == QStringLiteral("clientcaps")) { showClientCapabilities(); return; }
+    if (command == QStringLiteral("history")) {
+        const auto records = HistoryStore::search(rest.trimmed(), 200);
+        showText(QStringLiteral("WaffleHouse History"), HistoryStore::displayLines(records).join(QLatin1Char('\n')));
+        return;
+    }
+    if (command == QStringLiteral("historyclear")) {
+        QString error;
+        if (!HistoryStore::clear(&error)) report(QStringLiteral("History clear failed: %1").arg(error));
+        else report(QStringLiteral("Local WaffleHouse history cleared."));
+        return;
+    }
+    if (command == QStringLiteral("contacts")) { showUnifiedContacts(); return; }
+    if (command == QStringLiteral("callinfo")) {
+        bool ok = false; int id = rest.trimmed().toInt(&ok);
+        if (!ok) id = m_sipController->foregroundOrOnlyLiveCall();
+        if (id < 0) { report(QStringLiteral("Usage: /callinfo CALL-ID (or have one foreground/live call)")); return; }
+        showText(QStringLiteral("SIP Call Diagnostics"), m_sipController->callDiagnosticsText(id));
+        return;
+    }
+    if (command == QStringLiteral("transfer")) {
+        QString args = rest; bool ok = false; const int id = takeGuiArgument(args).toInt(&ok); const QString destination = args.trimmed();
+        if (!ok || destination.isEmpty()) { report(QStringLiteral("Usage: /transfer CALL-ID DESTINATION")); return; }
+        QString error; if (!m_sipController->blindTransfer(id, destination, &error)) report(QStringLiteral("Transfer failed: %1").arg(error));
+        else report(QStringLiteral("Blind transfer requested."));
+        return;
+    }
+    if (command == QStringLiteral("atransfer")) {
+        QString args = rest; bool ok1=false, ok2=false; const int id=takeGuiArgument(args).toInt(&ok1); const int other=takeGuiArgument(args).toInt(&ok2);
+        if (!ok1 || !ok2) { report(QStringLiteral("Usage: /atransfer CALL-ID CONSULT-CALL-ID")); return; }
+        QString error; if (!m_sipController->attendedTransfer(id, other, &error)) report(QStringLiteral("Attended transfer failed: %1").arg(error));
+        else report(QStringLiteral("Attended transfer requested."));
+        return;
+    }
 
     if (command == QStringLiteral("autopresence")) {
         QString args = rest;
@@ -3864,6 +5060,133 @@ void MainWindow::executeGuiCommand(const QString &input)
     }
 
     BackendState *state = selectedState();
+
+    if (command == QStringLiteral("capabilities") || command == QStringLiteral("servercaps")) {
+        const QString account = takeGuiArgument(rest);
+        BackendState *targetState = account.isEmpty() ? state : resolveGuiAccount(account);
+        if (!targetState || !targetState->connected) {
+            report(QStringLiteral("/capabilities requires an online AIM/OSCAR or IRC account."));
+            return;
+        }
+        showServerCapabilities(targetState);
+        return;
+    }
+    if (command == QStringLiteral("oscarfeatures") || command == QStringLiteral("aimfeatures")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+            report(QStringLiteral("/%1 requires an online AIM/OSCAR account.").arg(command)); return;
+        }
+        if (auto *oscar=qobject_cast<OscarBackend *>(state->backend)) showPlainTextDialog(this,QStringLiteral("OSCAR Feature Center"),oscarFeatureCenterText(oscar));
+        return;
+    }
+    if (command == QStringLiteral("setprofile")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;
+        if(!state||!state->connected||!oscar){report(QStringLiteral("/setprofile requires an online AIM account."));return;}
+        oscar->setProfile(rest);return;
+    }
+    if (command == QStringLiteral("aimdir")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr; if(!state||!state->connected||!oscar){report(QStringLiteral("/aimdir requires an online AIM account."));return;}
+        QString target=takeGuiArgument(rest);if(target.isEmpty())target=state->backend->settings().username;oscar->requestDirectoryInfo(target);return;
+    }
+    if (command == QStringLiteral("aimsetdir")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;if(!state||!state->connected||!oscar){report(QStringLiteral("/aimsetdir requires an online AIM account."));return;}
+        QVariantMap fields;for(QString pair:rest.split(QLatin1Char(';'),Qt::SkipEmptyParts)){int eq=pair.indexOf(QLatin1Char('='));if(eq>0)fields.insert(pair.left(eq).trimmed(),pair.mid(eq+1).trimmed());}
+        if(fields.isEmpty()){report(QStringLiteral("Usage: /aimsetdir firstName=Bob;lastName=Smith;city=Youngstown"));return;}oscar->setDirectoryInfo(fields);return;
+    }
+    if (command == QStringLiteral("aimsearch")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString email=takeGuiArgument(rest);if(!state||!state->connected||!oscar||email.isEmpty()){report(QStringLiteral("Usage: /aimsearch EMAIL"));return;}oscar->findByEmail(email);return;
+    }
+    if (command == QStringLiteral("aiminvite")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString email=takeGuiArgument(rest);if(!state||!state->connected||!oscar||email.isEmpty()){report(QStringLiteral("Usage: /aiminvite EMAIL [MESSAGE]"));return;}oscar->inviteByEmail(email,rest.trimmed());return;
+    }
+    if (command == QStringLiteral("aimpermit") || command == QStringLiteral("aimunpermit")
+        || command == QStringLiteral("aimblock") || command == QStringLiteral("aimunblock")
+        || command == QStringLiteral("aimtemppermit") || command == QStringLiteral("aimtempunpermit")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString user=takeGuiArgument(rest);if(!state||!state->connected||!oscar||user.isEmpty()){report(QStringLiteral("Usage: /%1 SCREENNAME").arg(command));return;}
+        if(command==QStringLiteral("aimpermit"))oscar->addPermit(user);else if(command==QStringLiteral("aimunpermit"))oscar->removePermit(user);else if(command==QStringLiteral("aimblock"))oscar->addDeny(user);else if(command==QStringLiteral("aimunblock"))oscar->removeDeny(user);else if(command==QStringLiteral("aimtemppermit"))oscar->addTemporaryPermit(user);else oscar->removeTemporaryPermit(user);return;
+    }
+    if (command == QStringLiteral("aimauth") || command == QStringLiteral("aimauthaccept") || command == QStringLiteral("aimauthdeny") || command == QStringLiteral("aimpreauth") || command == QStringLiteral("aimremoveme")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString user=takeGuiArgument(rest);if(!state||!state->connected||!oscar||user.isEmpty()){report(QStringLiteral("Usage: /%1 SCREENNAME [MESSAGE]").arg(command));return;}
+        if(command==QStringLiteral("aimauth"))oscar->requestAuthorization(user,rest.trimmed());else if(command==QStringLiteral("aimauthaccept"))oscar->respondAuthorization(user,true,rest.trimmed());else if(command==QStringLiteral("aimauthdeny"))oscar->respondAuthorization(user,false,rest.trimmed());else if(command==QStringLiteral("aimpreauth"))oscar->preAuthorize(user,rest.trimmed());else oscar->removeMeFromBuddyList(user);return;
+    }
+    if (command == QStringLiteral("aimwatch") || command == QStringLiteral("aimunwatch")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString user=takeGuiArgument(rest);if(!state||!state->connected||!oscar||user.isEmpty()){report(QStringLiteral("Usage: /%1 SCREENNAME").arg(command));return;}if(command==QStringLiteral("aimwatch"))oscar->addTemporaryBuddy(user);else oscar->removeTemporaryBuddy(user);return;
+    }
+    if (command == QStringLiteral("aimwatchers") || command == QStringLiteral("aimoffline") || command == QStringLiteral("aimaccountinfo") || command == QStringLiteral("aimconfirm")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;if(!state||!state->connected||!oscar){report(QStringLiteral("/%1 requires an online AIM account.").arg(command));return;}
+        if(command==QStringLiteral("aimwatchers"))oscar->requestWatcherList();else if(command==QStringLiteral("aimoffline"))oscar->retrieveStoredMessages();else if(command==QStringLiteral("aimaccountinfo"))oscar->requestAccountInfo();else oscar->confirmAccount();return;
+    }
+    if (command == QStringLiteral("aimemail") || command == QStringLiteral("aimformat")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString value=rest.trimmed();if(!state||!state->connected||!oscar||value.isEmpty()){report(QStringLiteral("Usage: /%1 VALUE").arg(command));return;}if(command==QStringLiteral("aimemail"))oscar->changeAccountEmail(value);else oscar->changeFormattedScreenName(value);return;
+    }
+    if (command == QStringLiteral("aimdeleteaccount")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;if(!state||!state->connected||!oscar){report(QStringLiteral("/aimdeleteaccount requires an online AIM account."));return;}if(rest.trimmed()!=QStringLiteral("YES")){report(QStringLiteral("DANGER: run /aimdeleteaccount YES to confirm server-side account deletion."));return;}oscar->deleteAccount();return;
+    }
+    if (command == QStringLiteral("aimprivacy")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;QString v=takeGuiArgument(rest);if(!state||!state->connected||!oscar||v.isEmpty()){report(QStringLiteral("Usage: /aimprivacy HEX32"));return;}if(v.startsWith(QStringLiteral("0x"),Qt::CaseInsensitive))v=v.mid(2);bool ok=false;const quint32 f=v.toUInt(&ok,16);if(!ok){report(QStringLiteral("Invalid hexadecimal privacy flags."));return;}oscar->setPrivacyFlags(f);return;
+    }
+    if (command == QStringLiteral("aimtyping")) {
+        auto *oscar=state&&state->backend?qobject_cast<OscarBackend *>(state->backend):nullptr;const QString user=takeGuiArgument(rest);const QString mode=takeGuiArgument(rest).toCaseFolded();if(!state||!state->connected||!oscar||user.isEmpty()||mode.isEmpty()){report(QStringLiteral("Usage: /aimtyping SCREENNAME typing|paused|finished"));return;}quint16 ev=Oscar::ICBM_EVENT_FINISHED;if(mode==QStringLiteral("typing")||mode==QStringLiteral("on"))ev=Oscar::ICBM_EVENT_TYPING;else if(mode==QStringLiteral("paused")||mode==QStringLiteral("typed"))ev=Oscar::ICBM_EVENT_TYPED;oscar->sendTypingNotification(user,ev);return;
+    }
+
+    if (command == QStringLiteral("profile") || command == QStringLiteral("getinfo")
+        || command == QStringLiteral("userinfo") || command == QStringLiteral("viewprofile")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+            report(QStringLiteral("/%1 requires an online AIM/OSCAR account.").arg(command));
+            return;
+        }
+        QString target = takeGuiArgument(rest);
+        if (target.isEmpty()) target = selectedBuddyName();
+        if (target.isEmpty()) { report(QStringLiteral("Usage: /%1 SCREENNAME").arg(command)); return; }
+        showAimUserInfo(state, target, command == QStringLiteral("profile") || command == QStringLiteral("viewprofile"));
+        return;
+    }
+    if (command == QStringLiteral("whois")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Irc) {
+            report(QStringLiteral("/whois requires an online IRC account."));
+            return;
+        }
+        QString target = takeGuiArgument(rest);
+        if (target.isEmpty()) target = selectedBuddyName();
+        if (target.isEmpty()) { report(QStringLiteral("Usage: /whois NICK")); return; }
+        showIrcWhois(state, target);
+        return;
+    }
+    if (command == QStringLiteral("voicecall") || command == QStringLiteral("aimvoice")) {
+        if (!state || !state->connected || !state->backend
+            || state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar) {
+            report(QStringLiteral("/voicecall requires an online AIM/OSCAR account."));
+            return;
+        }
+        QString target = takeGuiArgument(rest);
+        if (target.isEmpty()) target = selectedBuddyName();
+        if (target.isEmpty()) { report(QStringLiteral("Usage: /voicecall SCREENNAME")); return; }
+        startOscarVoice(state, target);
+        return;
+    }
+    if (command == QStringLiteral("voicehangup")) {
+        if (!m_oscarVoice || !m_oscarVoice->isPrepared()) report(QStringLiteral("No OSCAR voice session is active."));
+        else hangupOscarVoice(true);
+        return;
+    }
+    if (command == QStringLiteral("voicemute") || command == QStringLiteral("voiceunmute")) {
+        if (!m_oscarVoice || !m_oscarVoice->isPrepared()) { report(QStringLiteral("No OSCAR voice session is active.")); return; }
+        m_oscarVoice->setMuted(command == QStringLiteral("voicemute"));
+        return;
+    }
+    if (command == QStringLiteral("voicestatus")) {
+        if (!m_oscarVoice || !m_oscarVoice->isPrepared()) report(QStringLiteral("OSCAR voice: idle"));
+        else report(QStringLiteral("OSCAR voice: %1 | peer %2 | remote %3:%4 | %5 Hz | mic %6")
+                        .arg(m_oscarVoice->isActive() ? QStringLiteral("ACTIVE") : QStringLiteral("RINGING"),
+                             m_oscarVoicePeer,
+                             m_oscarVoice->remoteAddress().isEmpty() ? QStringLiteral("pending") : m_oscarVoice->remoteAddress())
+                        .arg(m_oscarVoice->remotePort())
+                        .arg(m_oscarVoice->sampleRate())
+                        .arg(m_oscarVoice->muted() ? QStringLiteral("MUTED") : QStringLiteral("live")));
+        return;
+    }
 
     // SIP/softphone command family.
     if (command == QStringLiteral("phone") || command == QStringLiteral("phoneprofile")
@@ -5481,6 +6804,7 @@ bool MainWindow::sendPrivateText(BackendState *state,
         m_outgoingSecureFrames.insert(state->profileId + QChar(0x1f)
             + target.toCaseFolded() + QChar(0x1f) + frame);
         state->backend->sendPrivateMessage(target, frame);
+        appendGuiHistory(state->backend, QStringLiteral("im"), target, QStringLiteral("out"), text);
         if (window) {
             const QString me = state->identity.isEmpty()
                 ? (state->backend->settings().username.isEmpty()
@@ -5493,6 +6817,7 @@ bool MainWindow::sendPrivateText(BackendState *state,
     }
 
     state->backend->sendPrivateMessage(target, text);
+    appendGuiHistory(state->backend, QStringLiteral("im"), target, QStringLiteral("out"), text);
     return true;
 }
 
@@ -5560,6 +6885,7 @@ void MainWindow::handleConversationMessage(ChatWindow *window, const QString &te
         } else {
             state->backend->sendRoomMessage(window->target(), text);
         }
+        appendGuiHistory(state->backend, QStringLiteral("chat"), window->target(), QStringLiteral("out"), text);
     } else if (window->kind() == QStringLiteral("terminal")) {
         state->backend->sendPrivateMessage(window->target(), text);
     } else {
@@ -5669,6 +6995,9 @@ void MainWindow::handleDisconnected(ChatBackend *backend, const QString &reason)
         if (it->startsWith(roomPrefix)) it = m_closedRoomKeys.erase(it);
         else ++it;
     }
+    if (m_oscarVoice && m_oscarVoice->isPrepared() && m_oscarVoiceBackendId == backend->id()) {
+        hangupOscarVoice(false);
+    }
     closeBackendWindows(backend);
     updateConnectionItem(state);
     appendActivity(backend, QStringLiteral("Disconnected: %1").arg(reason));
@@ -5705,6 +7034,24 @@ void MainWindow::handleEvent(ChatBackend *backend,
         if (versionWindow) versionWindow->appendMessage(line);
         else appendActivity(backend, line);
         statusBar()->showMessage(line, 7000);
+        return;
+    }
+
+    // OSCAR typing notifications are transient UI state, not conversation
+    // messages.  Keep them attached to the existing IM window instead of
+    // letting the generic event path create a separate "typing" window.
+    if (kind == QStringLiteral("typing")) {
+        ChatWindow *window = m_windows.value(
+            conversationKey(backend, QStringLiteral("im"), target), nullptr);
+        if (window) {
+            const QString stateText = text.trimmed().toCaseFolded();
+            if (stateText == QStringLiteral("typing"))
+                window->setPeerTypingState(QStringLiteral("%1 is typing…").arg(target));
+            else if (stateText == QStringLiteral("paused"))
+                window->setPeerTypingState(QStringLiteral("%1 paused typing").arg(target));
+            else
+                window->setPeerTypingState(QString());
+        }
         return;
     }
 
@@ -5779,6 +7126,7 @@ void MainWindow::handleEvent(ChatBackend *backend,
                     prefix = QStringLiteral("<%1> ").arg(targetDisplayName(state, kind, target));
                 }
                 window->appendMessage(prefix + QStringLiteral("[secure] ") + result.plaintext);
+                appendGuiHistory(backend, kind, target, QStringLiteral("in"), result.plaintext);
                 if (const auto event = NotificationManager::classifyIncoming(
                         state->backend->settings(), state->identity, kind, text)) {
                     if (!NotificationManager::play(*event, false)) QApplication::beep();
@@ -5840,6 +7188,7 @@ void MainWindow::handleEvent(ChatBackend *backend,
                 QString prefix = imSpeakerPrefix(text);
                 if (prefix.isEmpty()) prefix = QStringLiteral("<room> ");
                 window->appendMessage(prefix + QStringLiteral("[secure-room] ") + result.plaintext);
+                appendGuiHistory(backend, kind, target, QStringLiteral("in"), result.plaintext);
                 updateConversationSecurity(window);
                 if (const auto event = NotificationManager::classifyIncoming(
                         state->backend->settings(), state->identity, kind, text)) {
@@ -5867,6 +7216,7 @@ void MainWindow::handleEvent(ChatBackend *backend,
 
     ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
     if (window) window->appendMessage(text);
+    appendGuiHistory(backend, kind, target, QStringLiteral("in"), text);
     if (const auto event = NotificationManager::classifyIncoming(
             state->backend->settings(), state->identity, kind, text)) {
         if (!NotificationManager::play(*event, false)) QApplication::beep();

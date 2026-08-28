@@ -32,12 +32,23 @@ AUX_GXX=
 MISSING_DEPS=
 CHECK_FAILURES=0
 
+# Dedicated Unix/Linux bundle. Android/Termux and macOS are intentionally
+# shipped as separate release archives with their own builders.
+if [ -n "${TERMUX_VERSION:-}" ] || [ "${PREFIX:-}" = "/data/data/com.termux/files/usr" ]; then
+  echo "This is the Unix/Linux WaffleHouse bundle. Use WaffleHouse-Client-Termux-Build-0.9 on Termux." >&2
+  exit 2
+fi
+
 HOST_OS=$(uname -s)
 case "$HOST_OS" in
   Linux) OS_FAMILY=linux ;;
   FreeBSD) OS_FAMILY=freebsd ;;
+  Darwin)
+    echo "This is the Unix/Linux WaffleHouse bundle. Use the WaffleHouse-Client-5.0r4-macOS bundle on macOS." >&2
+    exit 2
+    ;;
   *)
-    echo "Unsupported OS: $HOST_OS (supported: Linux, FreeBSD)" >&2
+    echo "Unsupported OS: $HOST_OS (this bundle supports Linux and FreeBSD)" >&2
     exit 2
     ;;
 esac
@@ -46,7 +57,7 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 3.3r1, the unified C++ GUI/CLI executable.
+Build WaffleHouse-Client 5.0r4 for Linux or FreeBSD (GUI + CLI).
 The Media Center adds local media/video, SHOUTcast/Icecast/HTTP/HLS streams, internet radio, and playlists.
 
 The builder performs a full dependency preflight. Missing dependencies are
@@ -169,7 +180,7 @@ LEGACY_CLI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-cli.desktop"
 show_header() {
   cat <<EOF2
 ============================================================
-                    WAFFLEHOUSE-CLIENT 3.3r1
+                    WAFFLEHOUSE-CLIENT 5.0r4
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
@@ -185,7 +196,7 @@ The dependency preflight checks:
   - C/C++17 compiler compatible with the installed Qt 6 ABI
   - GCC/G++ availability (explicitly required on FreeBSD as an auxiliary toolchain)
   - GNU Make (make on Linux, gmake on FreeBSD)
-  - Qt 6 Core, Gui, Widgets, and Network development modules
+  - Qt 6 Core, Gui, Widgets, Network, and Multimedia development modules
   - libsodium development files
   - wide-character ncurses (ncursesw) development files
   - xkbcommon development files used by the Qt GUI platform integration
@@ -473,6 +484,7 @@ scan_dependencies() {
   check_pkg_module Qt6Gui     "Qt 6 Gui development"     "Qt6 Gui" || true
   check_pkg_module Qt6Widgets "Qt 6 Widgets development" "Qt6 Widgets" || true
   check_pkg_module Qt6Network "Qt 6 Network development" "Qt6 Network" || true
+  check_pkg_module Qt6Multimedia "Qt 6 Multimedia development (OSCAR voice)" "Qt6 Multimedia" || true
   check_pkg_module libsodium  "libsodium development"    libsodium || true
   check_pkg_module ncursesw   "ncursesw development"     ncursesw || true
   check_pkg_module xkbcommon  "xkbcommon development"    xkbcommon || true
@@ -1101,33 +1113,33 @@ install_linux_dependencies() {
       run_as_root apt-get update
       run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y \
         build-essential gcc g++ make cmake pkg-config \
-        qt6-base-dev qt6-base-dev-tools qt6-qpa-plugins \
+        qt6-base-dev qt6-base-dev-tools qt6-qpa-plugins qt6-multimedia-dev \
         libsodium-dev libncurses-dev libxkbcommon-dev ca-certificates git curl unzip \
         libasound2-dev libssl-dev uuid-dev pulseaudio-utils mpv ffmpeg
       ;;
     dnf)
       echo "Installing complete dnf dependency set..."
       run_as_root dnf install -y \
-        gcc gcc-c++ make cmake pkgconf-pkg-config qt6-qtbase-devel \
+        gcc gcc-c++ make cmake pkgconf-pkg-config qt6-qtbase-devel qt6-qtmultimedia-devel \
         libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip \
         alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
       ;;
     yum)
       echo "Installing complete yum dependency set..."
       run_as_root yum install -y \
-        gcc gcc-c++ make cmake pkgconfig qt6-qtbase-devel \
+        gcc gcc-c++ make cmake pkgconfig qt6-qtbase-devel qt6-qtmultimedia-devel \
         libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip alsa-lib-devel openssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
       ;;
     pacman)
       echo "Installing complete pacman dependency set..."
       run_as_root pacman -S --needed --noconfirm \
-        base-devel gcc make cmake pkgconf qt6-base libsodium ncurses libxkbcommon ca-certificates \
+        base-devel gcc make cmake pkgconf qt6-base qt6-multimedia libsodium ncurses libxkbcommon ca-certificates \
         git curl unzip alsa-lib openssl util-linux-libs libpulse mpv ffmpeg
       ;;
     zypper)
       echo "Installing complete zypper dependency set..."
       run_as_root zypper --non-interactive install \
-        gcc gcc-c++ make cmake pkgconf-pkg-config qt6-base-devel \
+        gcc gcc-c++ make cmake pkgconf-pkg-config qt6-base-devel qt6-multimedia-devel \
         libsodium-devel ncurses-devel libxkbcommon-devel ca-certificates git curl unzip \
         alsa-devel libopenssl-devel libuuid-devel pulseaudio-utils mpv ffmpeg
       ;;
@@ -1161,7 +1173,7 @@ install_freebsd_dependencies() {
   command -v pkg >/dev/null 2>&1 || { echo "FreeBSD pkg(8) was not found." >&2; exit 1; }
   echo "Installing complete FreeBSD dependency set..."
   run_as_root env ASSUME_ALWAYS_YES=yes pkg install -y \
-    cmake pkgconf qt6-base libsodium ncurses libxkbcommon gcc gmake ca_root_nss \
+    cmake pkgconf qt6-base qt6-multimedia libsodium ncurses libxkbcommon gcc gmake ca_root_nss \
     git curl unzip portaudio opus bcg729 libuuid pulseaudio mpv ffmpeg
 
   # FreeBSD normally supplies Clang in the base system. If this installation
@@ -1456,7 +1468,7 @@ else
 fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 3.3r1"
+echo "==> Configuring WaffleHouse-Client 5.0r4"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1467,7 +1479,7 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE"
 
 echo
-echo "==> Building WaffleHouse-Client 3.3r1"
+echo "==> Building WaffleHouse-Client 5.0r4"
 run_cmd cmake --build build --parallel "$JOBS"
 
 # A normal test build never writes the application into PREFIX/bin unless the
@@ -1476,7 +1488,7 @@ ask_install
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 3.3r1"
+  echo "==> Installing WaffleHouse-Client 5.0r4"
   prepare_privileges
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
     echo "Existing WaffleHouse-Client detected; performing in-place upgrade after successful build."
@@ -1501,4 +1513,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 3.3r1 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 5.0r4 build complete."; fi

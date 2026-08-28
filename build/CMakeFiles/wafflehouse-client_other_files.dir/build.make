@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta/build
 
 # Utility rule file for wafflehouse-client_other_files.
 
@@ -78,6 +78,6 @@ CMakeFiles/wafflehouse-client_other_files.dir/clean:
 .PHONY : CMakeFiles/wafflehouse-client_other_files.dir/clean
 
 CMakeFiles/wafflehouse-client_other_files.dir/depend:
-	cd /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse-client_other_files.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/gitsc/Coding/WaffleHouse-Client-Beta/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/wafflehouse-client_other_files.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/wafflehouse-client_other_files.dir/depend
 

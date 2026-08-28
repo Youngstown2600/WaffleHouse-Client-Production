@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta/build
 
 # Utility rule file for wafflehouse-client_autogen.
 
@@ -70,9 +70,9 @@ CMakeFiles/wafflehouse-client_autogen: wafflehouse-client_autogen/timestamp
 
 wafflehouse-client_autogen/timestamp: /usr/lib/qt6/libexec/moc
 wafflehouse-client_autogen/timestamp: CMakeFiles/wafflehouse-client_autogen.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target wafflehouse-client"
-	/usr/bin/cmake -E cmake_autogen /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse-client_autogen.dir/AutogenInfo.json Release
-	/usr/bin/cmake -E touch /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/timestamp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target wafflehouse-client"
+	/usr/bin/cmake -E cmake_autogen /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/wafflehouse-client_autogen.dir/AutogenInfo.json Release
+	/usr/bin/cmake -E touch /home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse-client_autogen/timestamp
 
 wafflehouse-client_autogen: CMakeFiles/wafflehouse-client_autogen
 wafflehouse-client_autogen: wafflehouse-client_autogen/timestamp
@@ -88,6 +88,6 @@ CMakeFiles/wafflehouse-client_autogen.dir/clean:
 .PHONY : CMakeFiles/wafflehouse-client_autogen.dir/clean
 
 CMakeFiles/wafflehouse-client_autogen.dir/depend:
-	cd /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse-client_autogen.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/gitsc/Coding/WaffleHouse-Client-Beta/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/wafflehouse-client_autogen.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/wafflehouse-client_autogen.dir/depend
 

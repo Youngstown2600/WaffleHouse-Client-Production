@@ -1,63 +1,71 @@
 wafflehouse-client_autogen/timestamp: \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/CMakeLists.txt \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/moc_predefs.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/bbsdirectory.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/bbsdirectory.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/directtransfer.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/directtransfer.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/filetransfer.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/filetransfer.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/main.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mainwindow.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mainwindow.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediacontroller.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediacontroller.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediawindow.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediawindow.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/modernstyle.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/modernstyle.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/notificationmanager.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/notificationmanager.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/platforminfo.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/platforminfo.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/securechannel.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/secureroom.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipbackend.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipbackend.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcontroller.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/softphonewindow.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/softphonewindow.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/telnetbackend.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/telnetbackend.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/terminalui.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/terminalui.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/transferwindow.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/transferwindow.h \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/useractivity.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/useractivity.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/CMakeLists.txt \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse-client_autogen/moc_predefs.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSnapshot.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Profile.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipTrace.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminal.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminal.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminalwidget.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminalwidget.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/bbsdirectory.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/bbsdirectory.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/chatwindow.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/chatwindow.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/capabilityregistry.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/capabilityregistry.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/contactstore.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/contactstore.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/historystore.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/core/historystore.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/directtransfer.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/directtransfer.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/filetransfer.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/filetransfer.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ircbackend.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/ircbackend.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/main.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mainwindow.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mainwindow.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediacontroller.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediacontroller.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediawindow.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediawindow.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/modernstyle.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/modernstyle.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/notificationmanager.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/notificationmanager.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarbackend.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarbackend.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarprotocol.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarprotocol.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarvoice.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarvoice.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/platforminfo.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/platforminfo.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/securechannel.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/securechannel.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/secureroom.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/secureroom.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipbackend.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipbackend.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcontroller.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcontroller.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/softphonewindow.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/softphonewindow.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/telnetbackend.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/telnetbackend.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/terminalui.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/terminalui.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/transferwindow.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/transferwindow.h \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/useractivity.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/useractivity.h \
 	/usr/include/alloca.h \
 	/usr/include/asm-generic/errno-base.h \
 	/usr/include/asm-generic/errno.h \
@@ -410,6 +418,7 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QMap \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QPointer \
@@ -420,6 +429,8 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QThread \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QTimer \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QVariant \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QVariantMap \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qalgorithms.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qanystringview.h \
@@ -513,6 +524,7 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qutf8stringview.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvariant.h \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvariantmap.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvarlengtharray.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qvector.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qversiontagging.h \
@@ -641,6 +653,19 @@ wafflehouse-client_autogen/timestamp: \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsTargets-none.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsTargets.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsVersionlessTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaAdditionalTargetInfo.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfig.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfigVersion.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfigVersionImpl.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaDependencies.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaPlugins.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaTargets-none.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaVersionlessTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginAdditionalTargetInfo.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginConfig.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginTargets-none.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginTargets.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkAdditionalTargetInfo.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkConfig.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkConfigVersion.cmake \

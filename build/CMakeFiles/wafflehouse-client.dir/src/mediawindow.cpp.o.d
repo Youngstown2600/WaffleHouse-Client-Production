@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediawindow.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediawindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediawindow.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediawindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtwidgetsglobal.h \
@@ -351,7 +351,7 @@ CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/mediacontroller.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/mediacontroller.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
@@ -362,7 +362,7 @@ CMakeFiles/wafflehouse-client.dir/src/mediawindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvector.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QAbstractItemView \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qabstractitemview.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qabstractscrollarea.h \

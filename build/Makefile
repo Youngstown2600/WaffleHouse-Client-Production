@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -132,9 +132,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles /home/gitsc/Coding/WaffleHouse-Client-Beta/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -420,6 +420,78 @@ src/chatwindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.s
 .PHONY : src/chatwindow.cpp.s
 
+src/core/capabilityregistry.o: src/core/capabilityregistry.cpp.o
+.PHONY : src/core/capabilityregistry.o
+
+# target to build an object file
+src/core/capabilityregistry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/capabilityregistry.cpp.o
+.PHONY : src/core/capabilityregistry.cpp.o
+
+src/core/capabilityregistry.i: src/core/capabilityregistry.cpp.i
+.PHONY : src/core/capabilityregistry.i
+
+# target to preprocess a source file
+src/core/capabilityregistry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/capabilityregistry.cpp.i
+.PHONY : src/core/capabilityregistry.cpp.i
+
+src/core/capabilityregistry.s: src/core/capabilityregistry.cpp.s
+.PHONY : src/core/capabilityregistry.s
+
+# target to generate assembly for a file
+src/core/capabilityregistry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/capabilityregistry.cpp.s
+.PHONY : src/core/capabilityregistry.cpp.s
+
+src/core/contactstore.o: src/core/contactstore.cpp.o
+.PHONY : src/core/contactstore.o
+
+# target to build an object file
+src/core/contactstore.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/contactstore.cpp.o
+.PHONY : src/core/contactstore.cpp.o
+
+src/core/contactstore.i: src/core/contactstore.cpp.i
+.PHONY : src/core/contactstore.i
+
+# target to preprocess a source file
+src/core/contactstore.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/contactstore.cpp.i
+.PHONY : src/core/contactstore.cpp.i
+
+src/core/contactstore.s: src/core/contactstore.cpp.s
+.PHONY : src/core/contactstore.s
+
+# target to generate assembly for a file
+src/core/contactstore.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/contactstore.cpp.s
+.PHONY : src/core/contactstore.cpp.s
+
+src/core/historystore.o: src/core/historystore.cpp.o
+.PHONY : src/core/historystore.o
+
+# target to build an object file
+src/core/historystore.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/historystore.cpp.o
+.PHONY : src/core/historystore.cpp.o
+
+src/core/historystore.i: src/core/historystore.cpp.i
+.PHONY : src/core/historystore.i
+
+# target to preprocess a source file
+src/core/historystore.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/historystore.cpp.i
+.PHONY : src/core/historystore.cpp.i
+
+src/core/historystore.s: src/core/historystore.cpp.s
+.PHONY : src/core/historystore.s
+
+# target to generate assembly for a file
+src/core/historystore.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/core/historystore.cpp.s
+.PHONY : src/core/historystore.cpp.s
+
 src/directtransfer.o: src/directtransfer.cpp.o
 .PHONY : src/directtransfer.o
 
@@ -684,6 +756,30 @@ src/oscarprotocol.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/oscarprotocol.cpp.s
 .PHONY : src/oscarprotocol.cpp.s
 
+src/oscarvoice.o: src/oscarvoice.cpp.o
+.PHONY : src/oscarvoice.o
+
+# target to build an object file
+src/oscarvoice.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/oscarvoice.cpp.o
+.PHONY : src/oscarvoice.cpp.o
+
+src/oscarvoice.i: src/oscarvoice.cpp.i
+.PHONY : src/oscarvoice.i
+
+# target to preprocess a source file
+src/oscarvoice.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/oscarvoice.cpp.i
+.PHONY : src/oscarvoice.cpp.i
+
+src/oscarvoice.s: src/oscarvoice.cpp.s
+.PHONY : src/oscarvoice.s
+
+# target to generate assembly for a file
+src/oscarvoice.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse-client.dir/build.make CMakeFiles/wafflehouse-client.dir/src/oscarvoice.cpp.s
+.PHONY : src/oscarvoice.cpp.s
+
 src/platforminfo.o: src/platforminfo.cpp.o
 .PHONY : src/platforminfo.o
 
@@ -875,6 +971,30 @@ src/sipcore/Profile.s: src/sipcore/Profile.cpp.s
 src/sipcore/Profile.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse_sipcore.dir/build.make CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.s
 .PHONY : src/sipcore/Profile.cpp.s
+
+src/sipcore/RemoteSipAudio.o: src/sipcore/RemoteSipAudio.cpp.o
+.PHONY : src/sipcore/RemoteSipAudio.o
+
+# target to build an object file
+src/sipcore/RemoteSipAudio.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse_sipcore.dir/build.make CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o
+.PHONY : src/sipcore/RemoteSipAudio.cpp.o
+
+src/sipcore/RemoteSipAudio.i: src/sipcore/RemoteSipAudio.cpp.i
+.PHONY : src/sipcore/RemoteSipAudio.i
+
+# target to preprocess a source file
+src/sipcore/RemoteSipAudio.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse_sipcore.dir/build.make CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.i
+.PHONY : src/sipcore/RemoteSipAudio.cpp.i
+
+src/sipcore/RemoteSipAudio.s: src/sipcore/RemoteSipAudio.cpp.s
+.PHONY : src/sipcore/RemoteSipAudio.s
+
+# target to generate assembly for a file
+src/sipcore/RemoteSipAudio.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wafflehouse_sipcore.dir/build.make CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.s
+.PHONY : src/sipcore/RemoteSipAudio.cpp.s
 
 src/sipcore/RuntimePaths.o: src/sipcore/RuntimePaths.cpp.o
 .PHONY : src/sipcore/RuntimePaths.o
@@ -1228,6 +1348,15 @@ help:
 	@echo "... src/chatwindow.o"
 	@echo "... src/chatwindow.i"
 	@echo "... src/chatwindow.s"
+	@echo "... src/core/capabilityregistry.o"
+	@echo "... src/core/capabilityregistry.i"
+	@echo "... src/core/capabilityregistry.s"
+	@echo "... src/core/contactstore.o"
+	@echo "... src/core/contactstore.i"
+	@echo "... src/core/contactstore.s"
+	@echo "... src/core/historystore.o"
+	@echo "... src/core/historystore.i"
+	@echo "... src/core/historystore.s"
 	@echo "... src/directtransfer.o"
 	@echo "... src/directtransfer.i"
 	@echo "... src/directtransfer.s"
@@ -1261,6 +1390,9 @@ help:
 	@echo "... src/oscarprotocol.o"
 	@echo "... src/oscarprotocol.i"
 	@echo "... src/oscarprotocol.s"
+	@echo "... src/oscarvoice.o"
+	@echo "... src/oscarvoice.i"
+	@echo "... src/oscarvoice.s"
 	@echo "... src/platforminfo.o"
 	@echo "... src/platforminfo.i"
 	@echo "... src/platforminfo.s"
@@ -1285,6 +1417,9 @@ help:
 	@echo "... src/sipcore/Profile.o"
 	@echo "... src/sipcore/Profile.i"
 	@echo "... src/sipcore/Profile.s"
+	@echo "... src/sipcore/RemoteSipAudio.o"
+	@echo "... src/sipcore/RemoteSipAudio.i"
+	@echo "... src/sipcore/RemoteSipAudio.s"
 	@echo "... src/sipcore/RuntimePaths.o"
 	@echo "... src/sipcore/RuntimePaths.i"
 	@echo "... src/sipcore/RuntimePaths.s"

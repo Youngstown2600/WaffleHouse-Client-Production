@@ -1,2 +1,0 @@
-WaffleHouse-Client 3.3r1 validation
-See VALIDATION-3.3r1.txt.

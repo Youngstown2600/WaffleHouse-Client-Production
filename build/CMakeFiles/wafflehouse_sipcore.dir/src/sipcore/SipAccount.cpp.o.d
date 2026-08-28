@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipAccount.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipAccount.h \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/endpoint.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/persistent.hpp \
@@ -472,7 +472,7 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/presence.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/call.hpp \
  /home/gitsc/.local/wafflehouse-pjsip/include/pjsua2/json.hpp \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Logger.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Logger.h \
  /usr/include/c++/13/fstream /usr/include/c++/13/istream \
  /usr/include/c++/13/ios /usr/include/c++/13/exception \
  /usr/include/c++/13/bits/exception_ptr.h \
@@ -515,10 +515,10 @@ CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: \
  /usr/include/c++/13/bits/parse_numbers.h \
  /usr/include/c++/13/bits/std_mutex.h \
  /usr/include/c++/13/bits/unique_lock.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipEngine.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/CallSnapshot.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Profile.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/SipTrace.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipEngine.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/CallSnapshot.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Profile.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/SipTrace.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h /usr/include/c++/13/atomic \
  /usr/include/c++/13/bits/atomic_base.h \

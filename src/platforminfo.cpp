@@ -21,8 +21,12 @@ QString firstEnvironmentValue(const QProcessEnvironment &env,
 RuntimeEnvironment RuntimeEnvironment::detect()
 {
     RuntimeEnvironment info;
-#if defined(Q_OS_FREEBSD)
+#if defined(WAFFLEHOUSE_TERMUX)
+    info.osName = QStringLiteral("Android / Termux");
+#elif defined(Q_OS_FREEBSD)
     info.osName = QStringLiteral("FreeBSD");
+#elif defined(Q_OS_MACOS)
+    info.osName = QStringLiteral("macOS");
 #elif defined(Q_OS_LINUX)
     info.osName = QStringLiteral("Linux");
 #else
@@ -37,8 +41,16 @@ RuntimeEnvironment RuntimeEnvironment::detect()
 
     info.graphicalSession = !display.isEmpty() || !wayland.isEmpty()
         || xdgSession == QStringLiteral("x11") || xdgSession == QStringLiteral("wayland");
+#if defined(Q_OS_MACOS)
+    // Cocoa sessions do not export DISPLAY/WAYLAND_DISPLAY. A normal macOS
+    // user launch is graphical even when started from Terminal.
+    info.graphicalSession = true;
+#endif
     info.ttyAttached = ::isatty(STDIN_FILENO) || ::isatty(STDOUT_FILENO);
 
+#if defined(Q_OS_MACOS)
+    info.sessionType = QStringLiteral("cocoa");
+#else
     if (!xdgSession.isEmpty() && xdgSession != QStringLiteral("tty")) {
         info.sessionType = xdgSession;
     } else if (!wayland.isEmpty()) {
@@ -50,6 +62,7 @@ RuntimeEnvironment RuntimeEnvironment::detect()
     } else {
         info.sessionType = QStringLiteral("headless");
     }
+#endif
 
     info.desktop = firstEnvironmentValue(env, {
         "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION", "GDMSESSION"

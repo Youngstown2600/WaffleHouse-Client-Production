@@ -8,6 +8,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o.d"
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o"
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o.d"
+  "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o"
+  "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o.d"
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o"
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o.d"
   "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o"

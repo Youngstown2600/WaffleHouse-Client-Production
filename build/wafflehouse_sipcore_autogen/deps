@@ -1,16 +1,17 @@
 wafflehouse_sipcore_autogen/timestamp: \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/CMakeLists.txt \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp \
-	/home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/CMakeLists.txt \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/3.28.3/CMakeSystem.cmake \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Profile.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RemoteSipAudio.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipEngine.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipTrace.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp \
+	/home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/TextPool.cpp \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/3rdparty/kwin/FindXKB.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/FindWrapAtomic.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6/FindWrapOpenGL.cmake \
@@ -87,6 +88,19 @@ wafflehouse_sipcore_autogen/timestamp: \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsTargets-none.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsTargets.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools/Qt6GuiToolsVersionlessTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaAdditionalTargetInfo.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfig.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfigVersion.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaConfigVersionImpl.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaDependencies.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaPlugins.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaTargets-none.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6MultimediaVersionlessTargets.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginAdditionalTargetInfo.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginConfig.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginTargets-none.cmake \
+	/usr/lib/x86_64-linux-gnu/cmake/Qt6Multimedia/Qt6QGstreamerMediaPluginTargets.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkAdditionalTargetInfo.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkConfig.cmake \
 	/usr/lib/x86_64-linux-gnu/cmake/Qt6Network/Qt6NetworkConfigVersion.cmake \

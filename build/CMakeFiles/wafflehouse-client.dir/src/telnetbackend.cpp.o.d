@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/telnetbackend.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/telnetbackend.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/telnetbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/telnetbackend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/telnetbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \

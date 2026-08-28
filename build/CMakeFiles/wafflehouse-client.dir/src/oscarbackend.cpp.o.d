@@ -1,9 +1,9 @@
 CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarbackend.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qchar.h \
@@ -300,7 +300,7 @@ CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarprotocol.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qlist.h \
  /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \
@@ -352,8 +352,21 @@ CMakeFiles/wafflehouse-client.dir/src/oscarbackend.cpp.o: \
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/atomic_futex.h \
  /usr/include/c++/13/bits/std_thread.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QVariantMap \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qvariantmap.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QMap \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qmap.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QVariant \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qvariant.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QDateTime \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qdatetime.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qcalendar.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qlocale.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QElapsedTimer \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qelapsedtimer.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QHostAddress \
+ /usr/include/x86_64-linux-gnu/qt6/QtNetwork/qhostaddress.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutexLocker \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QRandomGenerator \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrandom.h \

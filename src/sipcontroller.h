@@ -69,6 +69,8 @@ public:
     bool hold(int id, QString *error = nullptr);
     bool resume(int id, QString *error = nullptr);
     bool sendDtmf(int id, const QString &digits, QString *error = nullptr);
+    bool blindTransfer(int id, const QString &destination, QString *error = nullptr);
+    bool attendedTransfer(int id, int consultationCallId, QString *error = nullptr);
     bool setMuted(int id, bool muted, QString *error = nullptr);
     bool setForeground(int id, QString *error = nullptr);
 
@@ -76,6 +78,8 @@ public:
     trunkmonkey::CallSnapshot call(int id, bool *ok = nullptr) const;
     QString sipLogText(int id = -1) const;
     QString ladderText(int id) const;
+    QString callDiagnosticsText(int id) const;
+    int foregroundOrOnlyLiveCall() const;
     QString activityText() const { return m_activity.join('\n'); }
 
     QString audioSummary() const;
@@ -112,6 +116,7 @@ private:
     QSet<QString> m_registrationWanted;
     QString m_selectedAccountId;
     QSet<int> m_seenCalls;
+    QSet<int> m_historyLoggedCalls;
     QHash<int, QString> m_lastCallStates;
     QHash<QString, QString> m_lastRegistrationStates;
     int m_lastTraceCount = 0;

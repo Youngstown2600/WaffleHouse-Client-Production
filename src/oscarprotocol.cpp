@@ -283,7 +283,7 @@ UserInfo parseUserInfo(const QByteArray &data, qsizetype &offset)
     info.name = QString::fromUtf8(data.mid(offset, nameLength));
     offset += nameLength;
 
-    // warning level
+    info.warningLevel = readU16(data, offset);
     offset += 2;
     const quint16 count = readU16(data, offset);
     offset += 2;

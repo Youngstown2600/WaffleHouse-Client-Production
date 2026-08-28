@@ -58,6 +58,7 @@ private:
     SipController *m_controller = nullptr;
     QTabWidget *m_tabs = nullptr;
 
+    QComboBox *m_phoneAccount = nullptr;
     QComboBox *m_account = nullptr;
     QComboBox *m_profileAccount = nullptr;
     QLabel *m_registration = nullptr;

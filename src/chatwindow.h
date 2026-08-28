@@ -40,6 +40,7 @@ public:
     void updateMembers(const QString &action, const QStringList &names);
     void setDisplayName(const QString &displayName);
     void setBackendOnline(bool online);
+    void setPeerTypingState(const QString &state);
     void setShowTimestamps(bool enabled) { m_showTimestamps = enabled; }
     void setShowSidePane(bool enabled);
     void clearTranscript();
@@ -51,6 +52,7 @@ public:
 signals:
     void conversationClosing(ChatWindow *window);
     void messageSubmitted(ChatWindow *window, const QString &message);
+    void inputActivity(ChatWindow *window, bool hasText);
     void terminalBytesSubmitted(ChatWindow *window, const QByteArray &bytes);
     void secureRequested(ChatWindow *window);
     void secureStatusRequested(ChatWindow *window);
@@ -93,6 +95,7 @@ private:
     bool m_showTimestamps = true;
     bool m_showSidePane = true;
     bool m_secureActive = false;
+    QString m_peerTypingState;
     double m_opacity = 1.0;
 
     QLabel *m_heading = nullptr;

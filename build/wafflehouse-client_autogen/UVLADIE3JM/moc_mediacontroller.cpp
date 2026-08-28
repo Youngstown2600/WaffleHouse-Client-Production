@@ -26,7 +26,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 namespace {
 struct qt_meta_stringdata_MediaController_t {
-    uint offsetsAndSizes[124];
+    uint offsetsAndSizes[128];
     char stringdata0[16];
     char stringdata1[13];
     char stringdata2[1];
@@ -89,6 +89,8 @@ struct qt_meta_stringdata_MediaController_t {
     char stringdata59[9];
     char stringdata60[26];
     char stringdata61[19];
+    char stringdata62[22];
+    char stringdata63[22];
 };
 #define QT_MOC_LITERAL(ofs, len) \
     uint(sizeof(qt_meta_stringdata_MediaController_t::offsetsAndSizes) + ofs), len 
@@ -155,7 +157,9 @@ Q_CONSTINIT static const qt_meta_stringdata_MediaController_t qt_meta_stringdata
         QT_MOC_LITERAL(613, 15),  // "processFinished"
         QT_MOC_LITERAL(629, 8),  // "exitCode"
         QT_MOC_LITERAL(638, 25),  // "refreshObservedProperties"
-        QT_MOC_LITERAL(664, 18)   // "drainBackendOutput"
+        QT_MOC_LITERAL(664, 18),  // "drainBackendOutput"
+        QT_MOC_LITERAL(683, 21),  // "remoteProcessFinished"
+        QT_MOC_LITERAL(705, 21)   // "refreshRemotePosition"
     },
     "MediaController",
     "readyChanged",
@@ -218,7 +222,9 @@ Q_CONSTINIT static const qt_meta_stringdata_MediaController_t qt_meta_stringdata
     "processFinished",
     "exitCode",
     "refreshObservedProperties",
-    "drainBackendOutput"
+    "drainBackendOutput",
+    "remoteProcessFinished",
+    "refreshRemotePosition"
 };
 #undef QT_MOC_LITERAL
 } // unnamed namespace
@@ -229,7 +235,7 @@ Q_CONSTINIT static const uint qt_meta_data_MediaController[] = {
       10,       // revision
        0,       // classname
        0,    0, // classinfo
-      41,   14, // methods
+      43,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -237,49 +243,51 @@ Q_CONSTINIT static const uint qt_meta_data_MediaController[] = {
       13,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,  260,    2, 0x06,    1 /* Public */,
-       4,    1,  263,    2, 0x06,    3 /* Public */,
-       6,    1,  266,    2, 0x06,    5 /* Public */,
-       8,    1,  269,    2, 0x06,    7 /* Public */,
-      10,    1,  272,    2, 0x06,    9 /* Public */,
-      11,    1,  275,    2, 0x06,   11 /* Public */,
-      13,    1,  278,    2, 0x06,   13 /* Public */,
-      15,    1,  281,    2, 0x06,   15 /* Public */,
-      17,    1,  284,    2, 0x06,   17 /* Public */,
-      19,    0,  287,    2, 0x06,   19 /* Public */,
-      20,    3,  288,    2, 0x06,   20 /* Public */,
-      24,    1,  295,    2, 0x06,   24 /* Public */,
-      26,    1,  298,    2, 0x06,   26 /* Public */,
+       1,    1,  272,    2, 0x06,    1 /* Public */,
+       4,    1,  275,    2, 0x06,    3 /* Public */,
+       6,    1,  278,    2, 0x06,    5 /* Public */,
+       8,    1,  281,    2, 0x06,    7 /* Public */,
+      10,    1,  284,    2, 0x06,    9 /* Public */,
+      11,    1,  287,    2, 0x06,   11 /* Public */,
+      13,    1,  290,    2, 0x06,   13 /* Public */,
+      15,    1,  293,    2, 0x06,   15 /* Public */,
+      17,    1,  296,    2, 0x06,   17 /* Public */,
+      19,    0,  299,    2, 0x06,   19 /* Public */,
+      20,    3,  300,    2, 0x06,   20 /* Public */,
+      24,    1,  307,    2, 0x06,   24 /* Public */,
+      26,    1,  310,    2, 0x06,   26 /* Public */,
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-      27,    1,  301,    2, 0x0a,   28 /* Public */,
-      28,    1,  304,    2, 0x0a,   30 /* Public */,
-      29,    2,  307,    2, 0x0a,   32 /* Public */,
-      29,    1,  312,    2, 0x2a,   35 /* Public | MethodCloned */,
-      32,    1,  315,    2, 0x0a,   37 /* Public */,
-      34,    1,  318,    2, 0x0a,   39 /* Public */,
-      35,    0,  321,    2, 0x0a,   41 /* Public */,
-      36,    0,  322,    2, 0x0a,   42 /* Public */,
-      37,    0,  323,    2, 0x0a,   43 /* Public */,
-      38,    0,  324,    2, 0x0a,   44 /* Public */,
-      39,    0,  325,    2, 0x0a,   45 /* Public */,
-      40,    0,  326,    2, 0x0a,   46 /* Public */,
-      41,    0,  327,    2, 0x0a,   47 /* Public */,
-      42,    1,  328,    2, 0x0a,   48 /* Public */,
-      43,    1,  331,    2, 0x0a,   50 /* Public */,
-      44,    1,  334,    2, 0x0a,   52 /* Public */,
-      45,    1,  337,    2, 0x0a,   54 /* Public */,
-      46,    0,  340,    2, 0x0a,   56 /* Public */,
-      47,    1,  341,    2, 0x0a,   57 /* Public */,
-      49,    1,  344,    2, 0x0a,   59 /* Public */,
-      51,    2,  347,    2, 0x0a,   61 /* Public */,
-      54,    0,  352,    2, 0x0a,   64 /* Public */,
-      55,    0,  353,    2, 0x0a,   65 /* Public */,
-      56,    0,  354,    2, 0x08,   66 /* Private */,
-      57,    0,  355,    2, 0x08,   67 /* Private */,
-      58,    1,  356,    2, 0x08,   68 /* Private */,
-      60,    0,  359,    2, 0x08,   70 /* Private */,
-      61,    0,  360,    2, 0x08,   71 /* Private */,
+      27,    1,  313,    2, 0x0a,   28 /* Public */,
+      28,    1,  316,    2, 0x0a,   30 /* Public */,
+      29,    2,  319,    2, 0x0a,   32 /* Public */,
+      29,    1,  324,    2, 0x2a,   35 /* Public | MethodCloned */,
+      32,    1,  327,    2, 0x0a,   37 /* Public */,
+      34,    1,  330,    2, 0x0a,   39 /* Public */,
+      35,    0,  333,    2, 0x0a,   41 /* Public */,
+      36,    0,  334,    2, 0x0a,   42 /* Public */,
+      37,    0,  335,    2, 0x0a,   43 /* Public */,
+      38,    0,  336,    2, 0x0a,   44 /* Public */,
+      39,    0,  337,    2, 0x0a,   45 /* Public */,
+      40,    0,  338,    2, 0x0a,   46 /* Public */,
+      41,    0,  339,    2, 0x0a,   47 /* Public */,
+      42,    1,  340,    2, 0x0a,   48 /* Public */,
+      43,    1,  343,    2, 0x0a,   50 /* Public */,
+      44,    1,  346,    2, 0x0a,   52 /* Public */,
+      45,    1,  349,    2, 0x0a,   54 /* Public */,
+      46,    0,  352,    2, 0x0a,   56 /* Public */,
+      47,    1,  353,    2, 0x0a,   57 /* Public */,
+      49,    1,  356,    2, 0x0a,   59 /* Public */,
+      51,    2,  359,    2, 0x0a,   61 /* Public */,
+      54,    0,  364,    2, 0x0a,   64 /* Public */,
+      55,    0,  365,    2, 0x0a,   65 /* Public */,
+      56,    0,  366,    2, 0x08,   66 /* Private */,
+      57,    0,  367,    2, 0x08,   67 /* Private */,
+      58,    1,  368,    2, 0x08,   68 /* Private */,
+      60,    0,  371,    2, 0x08,   70 /* Private */,
+      61,    0,  372,    2, 0x08,   71 /* Private */,
+      62,    1,  373,    2, 0x08,   72 /* Private */,
+      63,    0,  376,    2, 0x08,   74 /* Private */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::Bool,    3,
@@ -324,6 +332,8 @@ Q_CONSTINIT static const uint qt_meta_data_MediaController[] = {
     QMetaType::Void,
     QMetaType::Void, QMetaType::Int,   59,
     QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void, QMetaType::Int,   59,
     QMetaType::Void,
 
        0        // eod
@@ -449,6 +459,11 @@ Q_CONSTINIT const QMetaObject MediaController::staticMetaObject = { {
         // method 'refreshObservedProperties'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'drainBackendOutput'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'remoteProcessFinished'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<int, std::false_type>,
+        // method 'refreshRemotePosition'
         QtPrivate::TypeAndForceComplete<void, std::false_type>
     >,
     nullptr
@@ -505,6 +520,8 @@ void MediaController::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int 
         case 38: _t->processFinished((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
         case 39: _t->refreshObservedProperties(); break;
         case 40: _t->drainBackendOutput(); break;
+        case 41: _t->remoteProcessFinished((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 42: _t->refreshRemotePosition(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -622,13 +639,13 @@ int MediaController::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 41)
+        if (_id < 43)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 41;
+        _id -= 43;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 41)
+        if (_id < 43)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 41;
+        _id -= 43;
     }
     return _id;
 }

@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/include/trunkmonkey/Logger.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/include/trunkmonkey/Logger.h \
  /usr/include/c++/13/fstream /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

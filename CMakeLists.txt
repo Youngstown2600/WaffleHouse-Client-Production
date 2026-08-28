@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 3.3.1 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 5.0.4 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -14,20 +14,21 @@ set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC OFF)
 
 find_package(Threads REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
 pkg_check_modules(NCURSESW REQUIRED IMPORTED_TARGET ncursesw)
+# Linux/FreeBSD Qt platform integration package.
 pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
 
-# The integrated softphone uses the r14-synchronized PJSIP 2.17/PJSUA2 engine (r12 live audio + r13 prefix behavior). Static PJSIP needs its complete pkg-config --static link
-# chain (audio, codecs, SRTP, crypto, UUID, etc.) on the final link line.
+# The integrated softphone uses the 3.5/r14 synchronized PJSIP 2.17 engine.
+# 5.0 keeps the same tested PJSIP ABI while exposing more controls in both UIs.
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     set(ENV{PKG_CONFIG_ALLOW_SYSTEM_LIBS} "1")
 endif()
 pkg_check_modules(PJPROJECT REQUIRED libpjproject)
 if(NOT PJPROJECT_VERSION VERSION_EQUAL "2.17")
-    message(FATAL_ERROR "WaffleHouse-Client softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
+    message(FATAL_ERROR "WaffleHouse-Client 5.0 softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
 endif()
 if(NOT PJPROJECT_STATIC_LDFLAGS)
     message(FATAL_ERROR "pkg-config did not return static PJSIP flags. Check: pkg-config --cflags --libs --static libpjproject")
@@ -61,6 +62,7 @@ add_library(wafflehouse_sipcore
     src/sipcore/SipEngine.cpp
     src/sipcore/SipWireMonitor.cpp
     src/sipcore/RuntimePaths.cpp
+    src/sipcore/RemoteSipAudio.cpp
 )
 target_include_directories(wafflehouse_sipcore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -79,42 +81,48 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 endif()
 target_link_libraries(wafflehouse_sipcore PUBLIC ${PJPROJECT_STATIC_LDFLAGS} Threads::Threads)
 
-qt_add_executable(${APP_EXECUTABLE}
-    src/main.cpp
+set(WAFFLEHOUSE_SHARED_SOURCES
     src/mediacontroller.cpp
-    src/mediawindow.cpp
     src/backend.cpp
     src/ircbackend.cpp
     src/oscarprotocol.cpp
     src/oscarbackend.cpp
+    src/oscarvoice.cpp
     src/telnetbackend.cpp
     src/ansiterminal.cpp
-    src/ansiterminalwidget.cpp
     src/bbsdirectory.cpp
     src/securechannel.cpp
     src/secureroom.cpp
     src/filetransfer.cpp
     src/directtransfer.cpp
-    src/transferwindow.cpp
     src/platforminfo.cpp
-    src/chatwindow.cpp
-    src/mainwindow.cpp
-    src/modernstyle.cpp
     src/notificationmanager.cpp
     src/useractivity.cpp
     src/terminalui.cpp
     src/sipcontroller.cpp
     src/sipbackend.cpp
+    src/core/capabilityregistry.cpp
+    src/core/contactstore.cpp
+    src/core/historystore.cpp
+)
+
+qt_add_executable(${APP_EXECUTABLE}
+    src/main.cpp
+    ${WAFFLEHOUSE_SHARED_SOURCES}
+    src/ansiterminalwidget.cpp
+    src/chatwindow.cpp
+    src/mainwindow.cpp
+    src/modernstyle.cpp
+    src/mediawindow.cpp
+    src/transferwindow.cpp
     src/softphonewindow.cpp
 )
 
 qt_add_resources(${APP_EXECUTABLE} wafflehouse_branding
     PREFIX "/branding"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding"
-    FILES
-        assets/branding/wafflehouse-client-logo.png
+    FILES assets/branding/wafflehouse-client-logo.png
 )
-
 qt_add_resources(${APP_EXECUTABLE} wafflehouse_icons
     PREFIX "/icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons"
@@ -130,50 +138,53 @@ qt_add_resources(${APP_EXECUTABLE} wafflehouse_icons
         assets/icons/512x512/wafflehouse-client.png
 )
 
-target_include_directories(${APP_EXECUTABLE} PRIVATE src include)
-
+target_include_directories(${APP_EXECUTABLE} PRIVATE src include ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="3.3r1"
+    APP_VERSION_STRING="5.0r4"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
+    WAFFLEHOUSE_OSCAR_VOICE=1
 )
+target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_GUI=1)
 
 target_link_libraries(${APP_EXECUTABLE} PRIVATE
     wafflehouse_sipcore
     Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
     Qt6::Network
+    Qt6::Multimedia
     PkgConfig::SODIUM
     PkgConfig::NCURSESW
-    PkgConfig::XKBCOMMON
 )
-
-if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_FREEBSD=1)
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_LINUX=1)
+target_link_libraries(${APP_EXECUTABLE} PRIVATE Qt6::Gui Qt6::Widgets)
+if(TARGET PkgConfig::XKBCOMMON)
+    target_link_libraries(${APP_EXECUTABLE} PRIVATE PkgConfig::XKBCOMMON)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_FREEBSD=1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_LINUX=1)
+else()
+    message(FATAL_ERROR "This release bundle supports Linux and FreeBSD only")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     target_compile_options(${APP_EXECUTABLE} PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(wafflehouse_sipcore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 install(TARGETS ${APP_EXECUTABLE}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    BUNDLE DESTINATION .
 )
 
-install(FILES data/wafflehouse-client.desktop
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
-)
-
+install(PROGRAMS scripts/wafflehouse-shell DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES data/wafflehouse-client.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 foreach(_wh_icon_size IN ITEMS 16 22 24 32 48 64 128 256 512)
     install(FILES assets/icons/${_wh_icon_size}x${_wh_icon_size}/wafflehouse-client.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_wh_icon_size}x${_wh_icon_size}/apps
-    )
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_wh_icon_size}x${_wh_icon_size}/apps)
 endforeach()
 
 install(DIRECTORY sounds/

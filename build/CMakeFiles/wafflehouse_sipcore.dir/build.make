@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1
+CMAKE_SOURCE_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build
+CMAKE_BINARY_DIR = /home/gitsc/Coding/WaffleHouse-Client-Beta/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/wafflehouse_sipcore.dir/depend.make
@@ -72,142 +72,156 @@ include CMakeFiles/wafflehouse_sipcore.dir/flags.make
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o: wafflehouse_sipcore_autogen/mocs_compilation.cpp
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp > CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp > CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp -o CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse_sipcore_autogen/mocs_compilation.cpp -o CMakeFiles/wafflehouse_sipcore.dir/wafflehouse_sipcore_autogen/mocs_compilation.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Profile.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Profile.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Profile.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Profile.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Profile.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Profile.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/TextPool.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/TextPool.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/TextPool.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/TextPool.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/TextPool.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/TextPool.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/Logger.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/Logger.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/Logger.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipTrace.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipTrace.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipTrace.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipTrace.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipTrace.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipTrace.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/CallSession.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/CallSession.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/CallSession.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipAccount.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipAccount.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipEngine.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipEngine.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipEngine.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipEngine.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipEngine.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/SipWireMonitor.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/SipWireMonitor.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.s
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
-CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.i
 
 CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/sipcore/RuntimePaths.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RuntimePaths.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.s
+
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/flags.make
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RemoteSipAudio.cpp
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o: CMakeFiles/wafflehouse_sipcore.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o -MF CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o.d -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o -c /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RemoteSipAudio.cpp
+
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RemoteSipAudio.cpp > CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.i
+
+CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gitsc/Coding/WaffleHouse-Client-Beta/src/sipcore/RemoteSipAudio.cpp -o CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.s
 
 # Object files for target wafflehouse_sipcore
 wafflehouse_sipcore_OBJECTS = \
@@ -220,7 +234,8 @@ wafflehouse_sipcore_OBJECTS = \
 "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAccount.cpp.o" \
 "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o" \
 "CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o" \
-"CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o"
+"CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o" \
+"CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o"
 
 # External object files for target wafflehouse_sipcore
 wafflehouse_sipcore_EXTERNAL_OBJECTS =
@@ -235,9 +250,10 @@ libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipAcco
 libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipEngine.cpp.o
 libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/SipWireMonitor.cpp.o
 libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RuntimePaths.cpp.o
+libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/src/sipcore/RemoteSipAudio.cpp.o
 libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/build.make
 libwafflehouse_sipcore.a: CMakeFiles/wafflehouse_sipcore.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX static library libwafflehouse_sipcore.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX static library libwafflehouse_sipcore.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/wafflehouse_sipcore.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/wafflehouse_sipcore.dir/link.txt --verbose=$(VERBOSE)
 
@@ -250,6 +266,6 @@ CMakeFiles/wafflehouse_sipcore.dir/clean:
 .PHONY : CMakeFiles/wafflehouse_sipcore.dir/clean
 
 CMakeFiles/wafflehouse_sipcore.dir/depend:
-	cd /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1 /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/CMakeFiles/wafflehouse_sipcore.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/gitsc/Coding/WaffleHouse-Client-Beta/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build /home/gitsc/Coding/WaffleHouse-Client-Beta/build/CMakeFiles/wafflehouse_sipcore.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/wafflehouse_sipcore.dir/depend
 

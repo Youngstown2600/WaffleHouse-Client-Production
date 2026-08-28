@@ -1,5 +1,6 @@
 #include "trunkmonkey/CallSession.h"
 #include "trunkmonkey/Logger.h"
+#include "trunkmonkey/SipEngine.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -43,9 +44,9 @@ std::pair<double,double> estimateVoiceQuality(double rttMs,double jitterMs,doubl
 }
 }
 
-CallSession::CallSession(pj::Account& account, Logger& logger, CallDirection direction,
+CallSession::CallSession(pj::Account& account, Logger& logger, SipEngine& engine, CallDirection direction,
                          CallPurpose purpose, int id)
-    : pj::Call(account, id), logger_(logger)
+    : pj::Call(account, id), logger_(logger), engine_(engine)
 {
     snapshot_.id = id;
     snapshot_.direction = direction;
@@ -158,6 +159,21 @@ void CallSession::sendDtmfDigits(const std::string& digits,unsigned durationMs)
     pj::Call::sendDtmf(param);
 }
 
+void CallSession::blindTransfer(const std::string& destination)
+{
+    if(destination.empty()) throw std::runtime_error("Transfer destination is empty");
+    pj::CallOpParam prm(true);
+    xfer(destination, prm);
+}
+
+void CallSession::attendedTransfer(CallSession& replacementCall)
+{
+    if(replacementCall.getId()==PJSUA_INVALID_ID) throw std::runtime_error("Consultation call is not active");
+    pj::CallOpParam prm(true);
+    xferReplaces(replacementCall, prm);
+}
+
+
 void CallSession::setMicrophoneMuted(bool muted)
 {
     bool foreground=false;
@@ -170,14 +186,14 @@ void CallSession::setMicrophoneMuted(bool muted)
     if(!foreground){notify();return;}
     try{
         const auto info=getInfo();
-        auto& audio=pj::Endpoint::instance().audDevManager();
+        auto& capture=engine_.captureMedia();
         for(unsigned i=0;i<info.media.size();++i){
             if(info.media[i].type!=PJMEDIA_TYPE_AUDIO)continue;
             const auto status=info.media[i].status;
             if(status!=PJSUA_CALL_MEDIA_ACTIVE&&status!=PJSUA_CALL_MEDIA_REMOTE_HOLD)continue;
             auto media=getAudioMedia(static_cast<int>(i));
-            if(muted){try{audio.getCaptureDevMedia().stopTransmit(media);}catch(...){}}
-            else if(status==PJSUA_CALL_MEDIA_ACTIVE){audio.getCaptureDevMedia().startTransmit(media);}
+            if(muted){try{capture.stopTransmit(media);}catch(...){}}
+            else if(status==PJSUA_CALL_MEDIA_ACTIVE){capture.startTransmit(media);}
             break;
         }
         logger_.info(std::string("Foreground microphone ")+(muted?"muted":"unmuted")+" for call "+std::to_string(getId()));
@@ -193,7 +209,8 @@ void CallSession::attachAudio()
     detachAudio();
     try {
         const auto info = getInfo();
-        auto& audio = pj::Endpoint::instance().audDevManager();
+        auto& playback = engine_.playbackMedia();
+        auto& capture = engine_.captureMedia();
         for (unsigned i = 0; i < info.media.size(); ++i) {
             if (info.media[i].type != PJMEDIA_TYPE_AUDIO) {
                 continue;
@@ -204,10 +221,10 @@ void CallSession::attachAudio()
             }
 
             auto media = getAudioMedia(static_cast<int>(i));
-            media.startTransmit(audio.getPlaybackDevMedia());
+            media.startTransmit(playback);
             bool muted=false;{std::lock_guard<std::mutex> lock(mutex_);muted=microphoneMuted_;}
             if (status == PJSUA_CALL_MEDIA_ACTIVE && !muted) {
-                audio.getCaptureDevMedia().startTransmit(media);
+                capture.startTransmit(media);
             }
             logger_.info("Audio attached to foreground call " + std::to_string(getId()));
             break;
@@ -221,15 +238,16 @@ void CallSession::detachAudio()
 {
     try {
         const auto info = getInfo();
-        auto& audio = pj::Endpoint::instance().audDevManager();
+        auto& playback = engine_.playbackMedia();
+        auto& capture = engine_.captureMedia();
         for (unsigned i = 0; i < info.media.size(); ++i) {
             if (info.media[i].type != PJMEDIA_TYPE_AUDIO) {
                 continue;
             }
             try {
                 auto media = getAudioMedia(static_cast<int>(i));
-                audio.getCaptureDevMedia().stopTransmit(media);
-                media.stopTransmit(audio.getPlaybackDevMedia());
+                capture.stopTransmit(media);
+                media.stopTransmit(playback);
             } catch (...) {
             }
         }

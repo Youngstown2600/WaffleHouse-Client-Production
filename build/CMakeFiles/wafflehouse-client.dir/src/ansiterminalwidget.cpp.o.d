@@ -1,8 +1,8 @@
 CMakeFiles/wafflehouse-client.dir/src/ansiterminalwidget.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminalwidget.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminalwidget.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qbytearray.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qrefcount.h \

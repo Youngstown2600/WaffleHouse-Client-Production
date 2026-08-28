@@ -1,6 +1,6 @@
-# WaffleHouse-Client 3.3r1 — FreeBSD build notes
+# WaffleHouse-Client 3.4r1 — FreeBSD build notes
 
-WaffleHouse-Client 3.3r1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
+WaffleHouse-Client 3.4r1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 
@@ -18,7 +18,7 @@ pkg install cmake pkgconf qt6-base libsodium ncurses libxkbcommon \
 
 The builder then creates a managed **PJSIP/PJSUA2 2.17** installation under `~/.local/wafflehouse-pjsip`, configured for 32 SIP accounts and 64 call slots (50 active-call runtime ceiling). Use `./build.sh --pjsip` to force that dependency to be rebuilt.
 
-FreeBSD normally supplies Clang/C++ in the base system. The WaffleHouse executable and PJSUA2 are pinned to the FreeBSD base Clang/libc++ ABI because the packaged Qt 6 libraries use that ABI. GCC/G++ remain installed and verified as auxiliary project prerequisites, while GNU Make (`gmake`) is used for generated Makefiles and PJSIP.
+FreeBSD normally supplies Clang/C++ in the base system. The WaffleHouse executable and PJSUA2 are pinned to the FreeBSD base Clang/libc++ ABI because the packaged Qt 6 (including `qt6-multimedia` for OSCAR voice) libraries use that ABI. GCC/G++ remain installed and verified as auxiliary project prerequisites, while GNU Make (`gmake`) is used for generated Makefiles and PJSIP.
 
 For the SIP media stack, the managed FreeBSD PJSIP build uses external PortAudio and explicitly requires Opus, bcg729, and libuuid. The optional legacy WebRTC AEC, UPnP, AMR, SILK, and video helpers are disabled for a deterministic static link. The r12 PJSUA2 call-lifetime guard and live FreeBSD audio-route/headset hot-swap behavior are retained, together with r13 runtime per-account PBX dial prefixes and the r14 guarded `snd_hda` compatibility layer.
 

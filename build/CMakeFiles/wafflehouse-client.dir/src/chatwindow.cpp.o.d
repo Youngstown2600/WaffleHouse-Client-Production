@@ -1,7 +1,7 @@
 CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.cpp \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/chatwindow.cpp \
  /usr/include/stdc-predef.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/chatwindow.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/chatwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtwidgetsglobal.h \
@@ -355,13 +355,13 @@ CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qstringlist.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qobject.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ircbackend.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ircbackend.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
@@ -379,8 +379,8 @@ CMakeFiles/wafflehouse-client.dir/src/chatwindow.cpp.o: \
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/atomic_futex.h \
  /usr/include/c++/13/bits/std_thread.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminalwidget.h \
- /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/ansiterminal.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminalwidget.h \
+ /home/gitsc/Coding/WaffleHouse-Client-Beta/src/ansiterminal.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QColor \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/qcolor.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \

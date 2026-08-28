@@ -8,6 +8,7 @@
 #include "UVLADIE3JM/moc_mediacontroller.cpp"
 #include "UVLADIE3JM/moc_mediawindow.cpp"
 #include "UVLADIE3JM/moc_oscarbackend.cpp"
+#include "UVLADIE3JM/moc_oscarvoice.cpp"
 #include "UVLADIE3JM/moc_sipbackend.cpp"
 #include "UVLADIE3JM/moc_sipcontroller.cpp"
 #include "UVLADIE3JM/moc_softphonewindow.cpp"

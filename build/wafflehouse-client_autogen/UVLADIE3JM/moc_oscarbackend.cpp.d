@@ -1,8 +1,8 @@
-/home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp: /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarbackend.h \
-  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/build/wafflehouse-client_autogen/moc_predefs.h \
-  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/appbranding.h \
-  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/backend.h \
-  /home/gitsc/Coding/WaffleHouse-Client-3.3r1/src/oscarprotocol.h \
+/home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse-client_autogen/UVLADIE3JM/moc_oscarbackend.cpp: /home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarbackend.h \
+  /home/gitsc/Coding/WaffleHouse-Client-Beta/build/wafflehouse-client_autogen/moc_predefs.h \
+  /home/gitsc/Coding/WaffleHouse-Client-Beta/src/appbranding.h \
+  /home/gitsc/Coding/WaffleHouse-Client-Beta/src/backend.h \
+  /home/gitsc/Coding/WaffleHouse-Client-Beta/src/oscarprotocol.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -290,6 +290,7 @@
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QHash \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/QMap \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QMutex \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QQueue \
@@ -298,6 +299,8 @@
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QStringList \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QThread \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QUuid \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVariant \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/QVariantMap \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qalgorithms.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qanystringview.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qarraydata.h \
@@ -382,6 +385,7 @@
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qutf8stringview.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/quuid.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qvariant.h \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvariantmap.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qvarlengtharray.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qversiontagging.h \
   /usr/include/x86_64-linux-gnu/qt6/QtNetwork/QTcpSocket \

@@ -1,7 +1,9 @@
 #include "oscarbackend.h"
 #include "appbranding.h"
 
+#include <QDateTime>
 #include <QElapsedTimer>
+#include <QHostAddress>
 #include <QMutexLocker>
 #include <QRandomGenerator>
 #include <QRegularExpression>
@@ -18,16 +20,147 @@ QString oscarFamilyName(quint16 family)
     case FAM_OSERVICE: return QStringLiteral("Generic Service / BOS");
     case FAM_LOCATE: return QStringLiteral("Locate / Profiles / User Info");
     case FAM_BUDDY: return QStringLiteral("Buddy Presence");
-    case FAM_ICBM: return QStringLiteral("Instant Messaging (ICBM)");
+    case FAM_ICBM: return QStringLiteral("Instant Messaging / Rendezvous (ICBM)");
+    case FAM_ADVERT: return QStringLiteral("Legacy Advertising");
+    case FAM_INVITE: return QStringLiteral("AIM Service Invitations");
     case FAM_ADMIN: return QStringLiteral("Account Administration");
+    case FAM_POPUP: return QStringLiteral("Server Popups / Notices");
     case FAM_PERMIT_DENY: return QStringLiteral("Privacy / Permit-Deny");
+    case FAM_USER_LOOKUP: return QStringLiteral("User Lookup / Email Search");
+    case FAM_STATS: return QStringLiteral("Usage Statistics");
+    case FAM_TRANSLATE: return QStringLiteral("Legacy Translation Service");
     case FAM_CHATNAV: return QStringLiteral("Chat Navigation");
     case FAM_CHAT: return QStringLiteral("Chat Rooms");
-    case FAM_FEEDBAG: return QStringLiteral("SSI / Feedbag Buddy List");
+    case FAM_ODIR: return QStringLiteral("Legacy Online Directory");
+    case FAM_BART: return QStringLiteral("Buddy Art / Icons (BART)");
+    case FAM_FEEDBAG: return QStringLiteral("SSI / Feedbag Buddy List + Authorization");
+    case FAM_ICQ: return QStringLiteral("ICQ Extensions");
     case FAM_BUCP: return QStringLiteral("BUCP Authentication");
+    case FAM_ALERT: return QStringLiteral("Alerts / Notifications");
+    case FAM_PLUGIN: return QStringLiteral("Legacy Plugin Service");
+    case FAM_UNNAMED_24: return QStringLiteral("OSCAR Family 0x0024");
+    case FAM_MDIR: return QStringLiteral("Modern Directory (MDIR)");
+    case FAM_ARS: return QStringLiteral("AOL Rendezvous Relay Service (ARS)");
     default:
         return QStringLiteral("Unknown / server-specific family");
     }
+}
+
+const QByteArray &waffleVoiceCapability()
+{
+    // Private WaffleHouse capability UUID.  A private UUID keeps our open PCM/UDP
+    // media transport distinct from the proprietary legacy AIM Talk framing.
+    static const QByteArray value = QByteArray::fromHex("574846564f4943458001574146464c45");
+    return value;
+}
+
+const QByteArray &legacyAimVoiceCapability()
+{
+    static const QByteArray value = QByteArray::fromHex("094613414c7f11d18222444553540000");
+    return value;
+}
+
+QByteArray waffleAdvertisedCapabilities()
+{
+    QByteArray capabilities;
+    capabilities += waffleVoiceCapability();
+    capabilities += QByteArray::fromHex("0946134e4c7f11d18222444553540000"); // UTF-8 messaging
+    return capabilities;
+}
+
+QString capabilityName(const QByteArray &uuid)
+{
+    static const QHash<QByteArray, QString> names = {
+        {QByteArray::fromHex("094600004c7f11d18222444553540000"), QStringLiteral("Short capability blocks")},
+        {QByteArray::fromHex("094600014c7f11d18222444553540000"), QStringLiteral("Secure IM")},
+        {QByteArray::fromHex("094600024c7f11d18222444553540000"), QStringLiteral("XHTML IM")},
+        {QByteArray::fromHex("094601014c7f11d18222444553540000"), QStringLiteral("RTC video")},
+        {QByteArray::fromHex("094601024c7f11d18222444553540000"), QStringLiteral("Camera")},
+        {QByteArray::fromHex("094601034c7f11d18222444553540000"), QStringLiteral("Microphone")},
+        {QByteArray::fromHex("094601044c7f11d18222444553540000"), QStringLiteral("RTC audio")},
+        {legacyAimVoiceCapability(), QStringLiteral("Legacy AIM Voice / Talk")},
+        {QByteArray::fromHex("094613434c7f11d18222444553540000"), QStringLiteral("OSCAR file transfer")},
+        {QByteArray::fromHex("094613454c7f11d18222444553540000"), QStringLiteral("Direct IM")},
+        {QByteArray::fromHex("094613464c7f11d18222444553540000"), QStringLiteral("Buddy icon / avatar")},
+        {QByteArray::fromHex("094613484c7f11d18222444553540000"), QStringLiteral("File sharing / receive file")},
+        {QByteArray::fromHex("0946134d4c7f11d18222444553540000"), QStringLiteral("AIM/ICQ interoperability")},
+        {QByteArray::fromHex("0946134e4c7f11d18222444553540000"), QStringLiteral("UTF-8 messaging")},
+        {QByteArray::fromHex("748f2420628711d18222444553540000"), QStringLiteral("Chat")},
+        {waffleVoiceCapability(), QStringLiteral("WaffleHouse OSCAR Voice")},
+    };
+    return names.value(uuid, QStringLiteral("Unknown capability"));
+}
+
+
+QString capabilityCategory(const QByteArray &uuid)
+{
+    if (uuid == waffleVoiceCapability()) return QStringLiteral("WaffleHouse extensions");
+
+    static const QSet<QByteArray> legacyAim = {
+        legacyAimVoiceCapability(),
+        QByteArray::fromHex("094601014c7f11d18222444553540000"), // RTC video
+        QByteArray::fromHex("094601024c7f11d18222444553540000"), // camera
+        QByteArray::fromHex("094601034c7f11d18222444553540000"), // microphone
+        QByteArray::fromHex("094601044c7f11d18222444553540000"), // RTC audio
+        QByteArray::fromHex("094613434c7f11d18222444553540000"), // file transfer
+        QByteArray::fromHex("094613454c7f11d18222444553540000"), // Direct IM
+        QByteArray::fromHex("094613464c7f11d18222444553540000"), // buddy icon
+        QByteArray::fromHex("094613484c7f11d18222444553540000"), // file sharing
+    };
+    if (legacyAim.contains(uuid)) return QStringLiteral("Legacy AIM / rendezvous");
+
+    if (capabilityName(uuid) != QStringLiteral("Unknown capability"))
+        return QStringLiteral("Standard OSCAR");
+    return QStringLiteral("Unknown / client-specific");
+}
+
+QList<QByteArray> splitCapabilities(const QByteArray &raw)
+{
+    QList<QByteArray> result;
+    for (qsizetype i = 0; i + 16 <= raw.size(); i += 16) result.append(raw.mid(i, 16));
+    return result;
+}
+
+QList<QByteArray> shortCapabilities(const QByteArray &raw)
+{
+    QList<QByteArray> result;
+    const QByteArray suffix = QByteArray::fromHex("4c7f11d18222444553540000");
+    for (qsizetype i = 0; i + 2 <= raw.size(); i += 2) {
+        QByteArray full = QByteArray::fromHex("0946");
+        full += raw.mid(i, 2);
+        full += suffix;
+        result.append(full);
+    }
+    return result;
+}
+
+QStringList describeCapabilities(QList<QByteArray> caps)
+{
+    QStringList lines;
+    QSet<QByteArray> seen;
+    for (const QByteArray &cap : caps) {
+        if (cap.size() != 16 || seen.contains(cap)) continue;
+        seen.insert(cap);
+        lines.append(QStringLiteral("%1  %2")
+                         .arg(capabilityName(cap), QString::fromLatin1(cap.toHex())));
+    }
+    lines.sort(Qt::CaseInsensitive);
+    return lines;
+}
+
+QByteArray ipv4Bytes(const QString &text)
+{
+    QHostAddress address(text);
+    if (address.protocol() != QAbstractSocket::IPv4Protocol) return {};
+    QByteArray out;
+    appendU32(out, address.toIPv4Address());
+    return out;
+}
+
+QString ipv4Text(const QByteArray &raw)
+{
+    if (raw.size() < 4) return {};
+    return QHostAddress(readU32(raw, 0)).toString();
 }
 }
 
@@ -159,6 +292,145 @@ void OscarBackend::setProfile(const QString &profile)
 void OscarBackend::refreshServerCapabilities()
 {
     enqueue({CommandType::RefreshCapabilities, {}, {}, {}, false, 0});
+}
+
+void OscarBackend::requestUserInfo(const QString &target)
+{
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    enqueue({CommandType::RequestUserInfo, clean});
+}
+
+bool OscarBackend::supportsFamily(quint16 family) const
+{
+    QMutexLocker locker(&m_capabilityMutex);
+    return m_serverFamilies.contains(family);
+}
+
+bool OscarBackend::peerAdvertisesCapability(const QString &target, const QByteArray &capability) const
+{
+    QMutexLocker locker(&m_capabilityMutex);
+    return m_peerCapabilities.value(target.trimmed().toCaseFolded()).contains(capability);
+}
+
+void OscarBackend::requestDirectoryInfo(const QString &target)
+{
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    enqueue({CommandType::RequestDirectoryInfo, clean});
+}
+
+void OscarBackend::setDirectoryInfo(const QVariantMap &fields)
+{
+    Command command; command.type = CommandType::SetDirectoryInfo; command.map = fields; enqueue(std::move(command));
+}
+
+void OscarBackend::findByEmail(const QString &email)
+{
+    const QString clean = email.trimmed(); if (clean.isEmpty()) return;
+    enqueue({CommandType::FindByEmail, clean});
+}
+
+void OscarBackend::inviteByEmail(const QString &email, const QString &message)
+{
+    const QString clean = email.trimmed(); if (clean.isEmpty()) return;
+    enqueue({CommandType::InviteByEmail, clean, message.trimmed()});
+}
+
+void OscarBackend::addPermit(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("permit"), {}, false, PD_ADD_PERMIT}); }
+void OscarBackend::removePermit(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("unpermit"), {}, false, PD_REMOVE_PERMIT}); }
+void OscarBackend::addDeny(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("block"), {}, false, PD_ADD_DENY}); }
+void OscarBackend::removeDeny(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("unblock"), {}, false, PD_REMOVE_DENY}); }
+void OscarBackend::addTemporaryPermit(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("temporary permit"), {}, false, PD_ADD_TEMP_PERMIT}); }
+void OscarBackend::removeTemporaryPermit(const QString &target) { enqueue({CommandType::PrivacyListAction, target.trimmed(), QStringLiteral("remove temporary permit"), {}, false, PD_REMOVE_TEMP_PERMIT}); }
+
+void OscarBackend::requestAuthorization(const QString &target, const QString &message)
+{
+    enqueue({CommandType::AuthorizationRequest, target.trimmed(), message.trimmed()});
+}
+
+void OscarBackend::respondAuthorization(const QString &target, bool accept, const QString &message)
+{
+    enqueue({CommandType::AuthorizationResponse, target.trimmed(), message.trimmed(), {}, accept});
+}
+
+void OscarBackend::preAuthorize(const QString &target, const QString &message)
+{
+    enqueue({CommandType::PreAuthorize, target.trimmed(), message.trimmed()});
+}
+
+void OscarBackend::removeMeFromBuddyList(const QString &target)
+{
+    enqueue({CommandType::RemoveMe, target.trimmed()});
+}
+
+void OscarBackend::addTemporaryBuddy(const QString &target)
+{
+    enqueue({CommandType::TemporaryBuddy, target.trimmed(), {}, {}, true});
+}
+
+void OscarBackend::removeTemporaryBuddy(const QString &target)
+{
+    enqueue({CommandType::TemporaryBuddy, target.trimmed(), {}, {}, false});
+}
+
+void OscarBackend::requestWatcherList() { enqueue({CommandType::WatcherList}); }
+void OscarBackend::retrieveStoredMessages() { enqueue({CommandType::RetrieveStoredMessages}); }
+
+void OscarBackend::sendTypingNotification(const QString &target, quint16 event)
+{
+    enqueue({CommandType::TypingNotification, target.trimmed(), {}, {}, false, event});
+}
+
+void OscarBackend::requestAccountInfo() { enqueue({CommandType::RequestAccountInfo}); }
+void OscarBackend::changeAccountEmail(const QString &email) { enqueue({CommandType::ChangeAccountEmail, email.trimmed()}); }
+void OscarBackend::changeFormattedScreenName(const QString &formattedName) { enqueue({CommandType::ChangeFormattedName, formattedName.trimmed()}); }
+void OscarBackend::confirmAccount() { enqueue({CommandType::ConfirmAccount}); }
+void OscarBackend::deleteAccount() { enqueue({CommandType::DeleteAccount}); }
+void OscarBackend::setPrivacyFlags(quint32 flags) { enqueue({CommandType::SetPrivacyFlags, {}, {}, {}, false, flags}); }
+
+void OscarBackend::proposeVoice(const QString &target,
+                                const QString &cookieHex,
+                                const QString &localAddress,
+                                quint16 localPort,
+                                int sampleRate)
+{
+    Command command;
+    command.type = CommandType::VoicePropose;
+    command.a = target.trimmed();
+    command.b = cookieHex;
+    command.c = localAddress;
+    command.number = localPort;
+    command.number2 = static_cast<quint32>(sampleRate);
+    enqueue(std::move(command));
+}
+
+void OscarBackend::acceptVoice(const QString &target,
+                               const QString &cookieHex,
+                               const QString &localAddress,
+                               quint16 localPort,
+                               int sampleRate)
+{
+    Command command;
+    command.type = CommandType::VoiceAccept;
+    command.a = target.trimmed();
+    command.b = cookieHex;
+    command.c = localAddress;
+    command.number = localPort;
+    command.number2 = static_cast<quint32>(sampleRate);
+    enqueue(std::move(command));
+}
+
+void OscarBackend::cancelVoice(const QString &target,
+                               const QString &cookieHex,
+                               quint16 reason)
+{
+    Command command;
+    command.type = CommandType::VoiceCancel;
+    command.a = target.trimmed();
+    command.b = cookieHex;
+    command.number = reason;
+    enqueue(std::move(command));
 }
 
 void OscarBackend::protocolLog(const QString &text)
@@ -350,6 +622,18 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
         appendU16(params, 999);
         appendU32(params, 0);
         connection.sendSnac(FAM_ICBM, ICBM_ADD_PARAMS, params);
+
+        // Channel 2 is OSCAR's rendezvous channel (Direct IM, file transfer,
+        // voice and other peer services).  Register it separately so BOS can
+        // deliver WaffleHouse voice invitations alongside normal channel-1 IMs.
+        QByteArray rendezvousParams;
+        appendU16(rendezvousParams, ICBM_CHANNEL_RENDEZVOUS);
+        appendU32(rendezvousParams, 3);
+        appendU16(rendezvousParams, 8000);
+        appendU16(rendezvousParams, 999);
+        appendU16(rendezvousParams, 999);
+        appendU32(rendezvousParams, 0);
+        connection.sendSnac(FAM_ICBM, ICBM_ADD_PARAMS, rendezvousParams);
     }
 
     QByteArray online;
@@ -1162,6 +1446,11 @@ void OscarBackend::discoverBosCapabilities()
     QStringList features;
     QStringList familyIds;
     const QList<quint16> families = m_bos->families;
+    {
+        QMutexLocker locker(&m_capabilityMutex);
+        m_serverFamilies.clear();
+        for (const quint16 family : families) m_serverFamilies.insert(family);
+    }
     for (const quint16 family : families) {
         const QString name = oscarFamilyName(family);
         familyIds.append(QStringLiteral("0x%1 — %2")
@@ -1193,6 +1482,14 @@ void OscarBackend::discoverBosCapabilities()
     }
 
     features.removeDuplicates();
+    if (profileSupported) {
+        try {
+            advertiseClientCapabilities();
+        } catch (const std::exception &e) {
+            protocolLog(QStringLiteral("[OSCAR capabilities] Could not advertise WaffleHouse user capabilities: %1")
+                            .arg(QString::fromUtf8(e.what())));
+        }
+    }
     emit serverCapabilitiesChanged(features, familyIds, profileSupported, m_maxProfileLength);
 
     if (profileSupported) {
@@ -1247,10 +1544,532 @@ void OscarBackend::doSetProfile(const QString &profile)
     body += tlv(LOCATE_TLV_PROFILE_TYPE,
                 QByteArrayLiteral("text/x-aolrtf; charset=\"utf-8\""));
     body += tlv(LOCATE_TLV_PROFILE_DATA, profileBytes);
+    // Include our client capabilities in the same LOCATE_SET_INFO so profile
+    // edits cannot accidentally drop the WaffleHouse voice/UTF-8 advertisement
+    // on servers that treat SET_INFO as a replacement record.
+    body += tlv(LOCATE_TLV_CAPABILITIES, waffleAdvertisedCapabilities());
     m_bos->sendSnac(FAM_LOCATE, LOCATE_SET_INFO, body);
     emit profileChanged(profile);
     protocolLog(QStringLiteral("[AIM profile] Profile updated (%1 byte(s)).")
                     .arg(profileBytes.size()));
+}
+
+void OscarBackend::advertiseClientCapabilities()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE)) return;
+
+    // WaffleHouse messages are UTF-8 capable; advertise that standard OSCAR
+    // capability alongside our namespaced voice service.
+    m_bos->sendSnac(FAM_LOCATE,
+                    LOCATE_SET_INFO,
+                    tlv(LOCATE_TLV_CAPABILITIES, waffleAdvertisedCapabilities()));
+}
+
+void OscarBackend::doRequestUserInfo(const QString &target)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE)) {
+        fail(QStringLiteral("this OSCAR server does not advertise Locate/user-info support"));
+    }
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) fail(QStringLiteral("AIM screen name is empty"));
+
+    Snac reply;
+    bool gotReply = false;
+    try {
+        QByteArray body;
+        // Query2 flags: profile/signature + away message + capabilities + HTML info.
+        appendU32(body, 0x00000407);
+        body += lp8(clean);
+        reply = request(*m_bos, FAM_LOCATE, LOCATE_USER_INFO_QUERY2, body, 6000);
+        gotReply = reply.family == FAM_LOCATE && reply.subtype == LOCATE_USER_INFO_REPLY;
+    } catch (const std::exception &e) {
+        protocolLog(QStringLiteral("[AIM user info] Query2 unavailable for %1: %2")
+                        .arg(clean, QString::fromUtf8(e.what())));
+    }
+
+    if (!gotReply) {
+        QByteArray body;
+        appendU16(body, 0x0001);
+        body += lp8(clean);
+        reply = request(*m_bos, FAM_LOCATE, LOCATE_USER_INFO_QUERY, body, 6000);
+    }
+    if (reply.family == FAM_LOCATE && reply.subtype == 0x0001) {
+        fail(QStringLiteral("AIM user-info lookup for '%1' was rejected by the server").arg(clean));
+    }
+    if (reply.family != FAM_LOCATE || reply.subtype != LOCATE_USER_INFO_REPLY) {
+        fail(QStringLiteral("unexpected AIM user-info reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+    }
+
+    qsizetype offset = 0;
+    const UserInfo user = parseUserInfo(reply.body, offset);
+    const QList<Tlv> locateTlvs = parseTlvs(reply.body, offset);
+
+    auto generic = [&user](quint16 type) { return firstTlv(user.tlvs, type); };
+    auto u16Value = [](const QByteArray &raw) -> int {
+        return raw.size() >= 2 ? static_cast<int>(readU16(raw, 0)) : -1;
+    };
+    auto u32Value = [](const QByteArray &raw) -> qint64 {
+        return raw.size() >= 4 ? static_cast<qint64>(readU32(raw, 0)) : -1;
+    };
+
+    QVariantMap info;
+    info.insert(QStringLiteral("screenName"), user.name.isEmpty() ? clean : user.name);
+    info.insert(QStringLiteral("warningRaw"), static_cast<int>(user.warningLevel));
+    info.insert(QStringLiteral("warningPercent"), static_cast<double>(user.warningLevel) / 10.0);
+    const QByteArray flagsLowRaw = generic(USERINFO_TLV_FLAGS);
+    const QByteArray flagsHighRaw = generic(USERINFO_TLV_FLAGS2);
+    const int flagsLow = u16Value(flagsLowRaw);
+    quint64 userFlags = flagsLow >= 0 ? static_cast<quint64>(flagsLow) : 0;
+    if (!flagsHighRaw.isEmpty()) {
+        quint64 upper = 0;
+        for (const char byte : flagsHighRaw) upper = (upper << 8) | static_cast<quint8>(byte);
+        userFlags |= (upper << 16);
+    }
+    info.insert(QStringLiteral("userFlagsSupplied"), flagsLow >= 0);
+    info.insert(QStringLiteral("userFlags"), QVariant::fromValue<qulonglong>(userFlags));
+    info.insert(QStringLiteral("signonTime"), u32Value(generic(USERINFO_TLV_SIGNON_TIME)));
+    info.insert(QStringLiteral("idleMinutes"), u16Value(generic(USERINFO_TLV_IDLE_TIME)));
+    info.insert(QStringLiteral("memberSince"), u32Value(generic(USERINFO_TLV_MEMBER_SINCE)));
+    const qint64 statusRaw = u32Value(generic(USERINFO_TLV_STATUS));
+    info.insert(QStringLiteral("statusSupplied"), statusRaw >= 0);
+    info.insert(QStringLiteral("statusRaw"), statusRaw);
+    info.insert(QStringLiteral("onlineSeconds"), u32Value(generic(USERINFO_TLV_ONLINE_TIME)));
+
+    const QString profile = stripAimHtml(QString::fromUtf8(firstTlv(locateTlvs, LOCATE_TLV_PROFILE_DATA)));
+    const QString away = stripAimHtml(QString::fromUtf8(firstTlv(locateTlvs, LOCATE_TLV_UNAVAILABLE_DATA)));
+    info.insert(QStringLiteral("profile"), profile);
+    info.insert(QStringLiteral("awayMessage"), away);
+    const bool awayByClass = (userFlags & 0x0020ULL) != 0;
+    const quint32 statusBits = statusRaw >= 0 ? static_cast<quint32>(statusRaw) : 0;
+    const bool awayByStatus = statusRaw >= 0 && (statusBits & 0x00000117U) != 0U;
+    info.insert(QStringLiteral("presence"), (!away.trimmed().isEmpty() || awayByClass || awayByStatus)
+                                           ? QStringLiteral("Away / unavailable")
+                                           : QStringLiteral("Online"));
+
+    QList<QByteArray> caps = splitCapabilities(generic(USERINFO_TLV_CAPABILITIES));
+    caps += shortCapabilities(generic(USERINFO_TLV_SHORT_CAPABILITIES));
+    caps += splitCapabilities(firstTlv(locateTlvs, LOCATE_TLV_CAPABILITIES));
+    const QStringList capDescriptions = describeCapabilities(caps);
+    QStringList capHex;
+    QStringList standardCaps;
+    QStringList legacyCaps;
+    QStringList waffleCaps;
+    QStringList unknownCaps;
+    QSet<QByteArray> uniqueCaps;
+    int rawCapabilityEntries = 0;
+    bool legacyVoice = false;
+    bool waffleVoice = false;
+    bool directIm = false;
+    bool fileTransfer = false;
+    bool buddyIcon = false;
+    for (const QByteArray &cap : caps) {
+        if (cap.size() != 16) continue;
+        ++rawCapabilityEntries;
+        const QString hex = QString::fromLatin1(cap.toHex());
+        if (!capHex.contains(hex)) capHex.append(hex);
+        if (!uniqueCaps.contains(cap)) {
+            uniqueCaps.insert(cap);
+            const QString entry = QStringLiteral("%1  %2").arg(capabilityName(cap), hex);
+            const QString category = capabilityCategory(cap);
+            if (category == QStringLiteral("Standard OSCAR")) standardCaps.append(entry);
+            else if (category == QStringLiteral("Legacy AIM / rendezvous")) legacyCaps.append(entry);
+            else if (category == QStringLiteral("WaffleHouse extensions")) waffleCaps.append(entry);
+            else unknownCaps.append(entry);
+        }
+        legacyVoice = legacyVoice || cap == legacyAimVoiceCapability();
+        waffleVoice = waffleVoice || cap == waffleVoiceCapability();
+        directIm = directIm || cap == QByteArray::fromHex("094613454c7f11d18222444553540000");
+        fileTransfer = fileTransfer
+            || cap == QByteArray::fromHex("094613434c7f11d18222444553540000")
+            || cap == QByteArray::fromHex("094613484c7f11d18222444553540000");
+        buddyIcon = buddyIcon || cap == QByteArray::fromHex("094613464c7f11d18222444553540000");
+    }
+    standardCaps.sort(Qt::CaseInsensitive);
+    legacyCaps.sort(Qt::CaseInsensitive);
+    waffleCaps.sort(Qt::CaseInsensitive);
+    unknownCaps.sort(Qt::CaseInsensitive);
+    info.insert(QStringLiteral("capabilities"), capDescriptions);
+    info.insert(QStringLiteral("capabilityHex"), capHex);
+    info.insert(QStringLiteral("capabilityCount"), uniqueCaps.size());
+    info.insert(QStringLiteral("rawCapabilityEntries"), rawCapabilityEntries);
+    info.insert(QStringLiteral("standardCapabilities"), standardCaps);
+    info.insert(QStringLiteral("legacyCapabilities"), legacyCaps);
+    info.insert(QStringLiteral("waffleCapabilities"), waffleCaps);
+    info.insert(QStringLiteral("unknownCapabilities"), unknownCaps);
+    info.insert(QStringLiteral("legacyVoice"), legacyVoice);
+    info.insert(QStringLiteral("waffleVoice"), waffleVoice);
+    info.insert(QStringLiteral("directIm"), directIm);
+    info.insert(QStringLiteral("fileTransfer"), fileTransfer);
+    info.insert(QStringLiteral("buddyIcon"), buddyIcon);
+    info.insert(QStringLiteral("updatedAt"), QDateTime::currentDateTime().toString(Qt::ISODate));
+    {
+        QMutexLocker locker(&m_capabilityMutex);
+        m_peerCapabilities.insert(clean.toCaseFolded(), uniqueCaps);
+        if (!user.name.isEmpty()) m_peerCapabilities.insert(user.name.toCaseFolded(), uniqueCaps);
+    }
+    emit userInfoReceived(clean, info);
+}
+
+void OscarBackend::doRequestDirectoryInfo(const QString &target)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE))
+        fail(QStringLiteral("this OSCAR server does not advertise Locate/directory support"));
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) fail(QStringLiteral("AIM screen name is empty"));
+
+    const Snac reply = request(*m_bos, FAM_LOCATE, LOCATE_GET_DIR_INFO, lp8(clean), 6000);
+    if (reply.family == FAM_LOCATE && reply.subtype == 0x0001)
+        fail(QStringLiteral("directory lookup for '%1' was rejected by the server").arg(clean));
+    if (reply.family != FAM_LOCATE || reply.subtype != LOCATE_GET_DIR_REPLY)
+        fail(QStringLiteral("unexpected directory reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+
+    qsizetype offset = 0;
+    QVariantMap info;
+    if (reply.body.size() >= 2) {
+        info.insert(QStringLiteral("status"), static_cast<int>(readU16(reply.body, 0)));
+        offset = 2;
+    }
+    const QList<Tlv> items = parseTlvs(reply.body, offset);
+    const struct { quint16 id; const char *key; } fields[] = {
+        {0x0001, "firstName"}, {0x0002, "lastName"}, {0x0003, "middleName"},
+        {0x0004, "maidenName"}, {0x0006, "country"}, {0x0007, "state"},
+        {0x0008, "city"}, {0x000C, "nickname"}, {0x000D, "zip"},
+        {0x0021, "street"}
+    };
+    for (const auto &field : fields) {
+        const QByteArray raw = firstTlv(items, field.id);
+        if (!raw.isEmpty()) info.insert(QString::fromLatin1(field.key), QString::fromUtf8(raw));
+    }
+    info.insert(QStringLiteral("rawTlvCount"), items.size());
+    info.insert(QStringLiteral("updatedAt"), QDateTime::currentDateTime().toString(Qt::ISODate));
+    emit directoryInfoReceived(clean, info);
+}
+
+void OscarBackend::doSetDirectoryInfo(const QVariantMap &fields)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE))
+        fail(QStringLiteral("this OSCAR server does not advertise Locate/directory support"));
+    QByteArray body;
+    const struct { quint16 id; const char *key; } map[] = {
+        {0x0001, "firstName"}, {0x0002, "lastName"}, {0x0003, "middleName"},
+        {0x0004, "maidenName"}, {0x0006, "country"}, {0x0007, "state"},
+        {0x0008, "city"}, {0x000C, "nickname"}, {0x000D, "zip"},
+        {0x0021, "street"}
+    };
+    for (const auto &field : map) {
+        if (!fields.contains(QString::fromLatin1(field.key))) continue;
+        body += tlv(field.id, fields.value(QString::fromLatin1(field.key)).toString().trimmed());
+    }
+    const Snac reply = request(*m_bos, FAM_LOCATE, LOCATE_SET_DIR_INFO, body, 6000);
+    const bool ok = reply.family == FAM_LOCATE && reply.subtype == LOCATE_SET_DIR_REPLY
+                    && (reply.body.size() < 2 || readU16(reply.body, 0) == 0);
+    emit featureOperationResult(QStringLiteral("Set AIM directory information"), ok,
+                                ok ? QStringLiteral("Directory information updated.")
+                                   : QStringLiteral("The server rejected the directory update."));
+    if (!ok) fail(QStringLiteral("AIM directory update failed"));
+}
+
+void OscarBackend::doFindByEmail(const QString &email)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_LOCATE))
+        fail(QStringLiteral("this OSCAR server does not advertise Locate/email-search support"));
+    const QByteArray address = email.trimmed().toUtf8();
+    if (address.isEmpty()) fail(QStringLiteral("email address is empty"));
+    QByteArray body;
+    appendU16(body, static_cast<quint16>(std::min<qsizetype>(address.size(), 0xffff)));
+    body += address.left(0xffff);
+    const Snac reply = request(*m_bos, FAM_LOCATE, LOCATE_FIND_LIST_BY_EMAIL, body, 6000);
+    if (reply.family == FAM_LOCATE && reply.subtype == 0x0001)
+        fail(QStringLiteral("AIM email lookup was rejected by the server"));
+    if (reply.family != FAM_LOCATE || reply.subtype != LOCATE_FIND_LIST_REPLY)
+        fail(QStringLiteral("unexpected AIM email lookup reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+
+    QStringList names;
+    qsizetype offset = 0;
+    while (offset < reply.body.size()) {
+        const qsizetype before = offset;
+        try {
+            const UserInfo item = parseUserInfo(reply.body, offset);
+            if (!item.name.trimmed().isEmpty()) names.append(item.name.trimmed());
+        } catch (...) {
+            offset = before;
+            break;
+        }
+        if (offset <= before) break;
+    }
+    names.removeDuplicates();
+    emit lookupResultsReceived(email.trimmed(), names);
+}
+
+void OscarBackend::doInviteByEmail(const QString &email, const QString &message)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_INVITE))
+        fail(QStringLiteral("this OSCAR server does not advertise AIM invitation support"));
+    QByteArray body;
+    body += tlv(INVITE_TLV_EMAIL, email.trimmed());
+    body += tlv(INVITE_TLV_PERSONAL_TEXT, message);
+    const Snac reply = request(*m_bos, FAM_INVITE, INVITE_REQUEST_QUERY, body, 6000);
+    const bool ok = reply.family == FAM_INVITE && reply.subtype == INVITE_REQUEST_REPLY;
+    emit featureOperationResult(QStringLiteral("AIM service invitation"), ok,
+                                ok ? QStringLiteral("Invitation submitted to the OSCAR server.")
+                                   : QStringLiteral("The OSCAR server rejected the invitation."));
+    if (!ok) fail(QStringLiteral("AIM invitation failed"));
+}
+
+void OscarBackend::doPrivacyListAction(quint16 subtype, const QString &target, const QString &label)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_PERMIT_DENY))
+        fail(QStringLiteral("this OSCAR server does not advertise Permit/Deny privacy support"));
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) fail(QStringLiteral("AIM screen name is empty"));
+    m_bos->sendSnac(FAM_PERMIT_DENY, subtype, lp8(clean));
+    emit featureOperationResult(label, true, QStringLiteral("%1: %2").arg(label, clean));
+}
+
+void OscarBackend::doAuthorizationRequest(const QString &target, const QString &message)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_FEEDBAG))
+        fail(QStringLiteral("this OSCAR server does not advertise Feedbag authorization support"));
+    const QByteArray reason = message.toUtf8();
+    QByteArray body = lp8(target.trimmed());
+    appendU16(body, static_cast<quint16>(std::min<qsizetype>(reason.size(), 0xffff)));
+    body += reason.left(0xffff);
+    appendU16(body, 0);
+    m_bos->sendSnac(FAM_FEEDBAG, FEEDBAG_REQUEST_AUTHORIZE_TO_HOST, body);
+    emit featureOperationResult(QStringLiteral("Authorization request"), true,
+                                QStringLiteral("Authorization request sent to %1.").arg(target.trimmed()));
+}
+
+void OscarBackend::doAuthorizationResponse(const QString &target, bool accept, const QString &message)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_FEEDBAG))
+        fail(QStringLiteral("this OSCAR server does not advertise Feedbag authorization support"));
+    const QByteArray reason = message.toUtf8();
+    QByteArray body = lp8(target.trimmed());
+    appendU8(body, accept ? 1 : 0);
+    appendU16(body, static_cast<quint16>(std::min<qsizetype>(reason.size(), 0xffff)));
+    body += reason.left(0xffff);
+    appendU16(body, 0);
+    m_bos->sendSnac(FAM_FEEDBAG, FEEDBAG_RESPOND_AUTHORIZE_TO_HOST, body);
+    emit featureOperationResult(QStringLiteral("Authorization response"), true,
+                                QStringLiteral("Authorization %1 for %2.").arg(accept ? QStringLiteral("accepted") : QStringLiteral("denied"), target.trimmed()));
+}
+
+void OscarBackend::doPreAuthorize(const QString &target, const QString &message)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_FEEDBAG))
+        fail(QStringLiteral("this OSCAR server does not advertise Feedbag authorization support"));
+    const QByteArray reason = message.toUtf8();
+    QByteArray body = lp8(target.trimmed());
+    appendU16(body, static_cast<quint16>(std::min<qsizetype>(reason.size(), 0xffff)));
+    body += reason.left(0xffff);
+    appendU16(body, 0);
+    m_bos->sendSnac(FAM_FEEDBAG, FEEDBAG_PRE_AUTHORIZE_BUDDY, body);
+    emit featureOperationResult(QStringLiteral("Pre-authorize buddy"), true,
+                                QStringLiteral("Pre-authorized %1.").arg(target.trimmed()));
+}
+
+void OscarBackend::doRemoveMe(const QString &target)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_FEEDBAG))
+        fail(QStringLiteral("this OSCAR server does not advertise Feedbag support"));
+    m_bos->sendSnac(FAM_FEEDBAG, FEEDBAG_REMOVE_ME, lp8(target.trimmed()));
+    emit featureOperationResult(QStringLiteral("Remove me from buddy list"), true,
+                                QStringLiteral("Requested removal from %1's buddy list.").arg(target.trimmed()));
+}
+
+void OscarBackend::doTemporaryBuddy(const QString &target, bool add)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_BUDDY))
+        fail(QStringLiteral("this OSCAR server does not advertise Buddy service support"));
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) fail(QStringLiteral("AIM screen name is empty"));
+    m_bos->sendSnac(FAM_BUDDY, add ? BUDDY_ADD_TEMP : BUDDY_REMOVE_TEMP, lp8(clean));
+    emit featureOperationResult(add ? QStringLiteral("Temporary buddy watch") : QStringLiteral("Remove temporary buddy watch"),
+                                true, clean);
+}
+
+void OscarBackend::doRequestWatcherList()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_BUDDY))
+        fail(QStringLiteral("this OSCAR server does not advertise Buddy watcher-list support"));
+    const Snac reply = request(*m_bos, FAM_BUDDY, BUDDY_WATCHER_LIST_QUERY, QByteArray(), 6000);
+    if (reply.family != FAM_BUDDY || reply.subtype != BUDDY_WATCHER_LIST_RESPONSE)
+        fail(QStringLiteral("unexpected watcher-list reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+    QStringList users;
+    qsizetype offset = 0;
+    while (offset < reply.body.size()) {
+        const quint8 len = static_cast<quint8>(reply.body.at(offset++));
+        if (offset + len > reply.body.size()) break;
+        users.append(QString::fromUtf8(reply.body.mid(offset, len)));
+        offset += len;
+    }
+    users.removeDuplicates();
+    emit watcherListReceived(users);
+}
+
+void OscarBackend::doRetrieveStoredMessages()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ICBM))
+        fail(QStringLiteral("this OSCAR server does not advertise ICBM/stored-message support"));
+    m_bos->sendSnac(FAM_ICBM, ICBM_SIN_RETRIEVE, QByteArray());
+    emit featureOperationResult(QStringLiteral("Stored messages"), true,
+                                QStringLiteral("Requested server-stored/offline messages."));
+}
+
+void OscarBackend::doTypingNotification(const QString &target, quint16 event)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ICBM)) return;
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    QByteArray body(8, '\0');
+    const quint64 cookie = QRandomGenerator::global()->generate64();
+    for (int i = 0; i < 8; ++i) body[i] = static_cast<char>((cookie >> ((7 - i) * 8)) & 0xff);
+    appendU16(body, ICBM_CHANNEL_IM);
+    body += lp8(clean);
+    appendU16(body, event);
+    m_bos->sendSnac(FAM_ICBM, ICBM_CLIENT_EVENT, body);
+}
+
+void OscarBackend::doRequestAccountInfo()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ADMIN))
+        fail(QStringLiteral("this OSCAR server does not advertise Account Administration support"));
+    const Snac reply = request(*m_bos, FAM_ADMIN, ADMIN_INFO_QUERY, QByteArray(), 6000);
+    if (reply.family != FAM_ADMIN || reply.subtype != ADMIN_INFO_REPLY)
+        fail(QStringLiteral("unexpected account-info reply %1/%2")
+                 .arg(reply.family, 4, 16, QLatin1Char('0'))
+                 .arg(reply.subtype, 4, 16, QLatin1Char('0')));
+    qsizetype offset = 0;
+    const QList<Tlv> items = parseTlvs(reply.body, offset);
+    QVariantMap info;
+    const QByteArray screen = firstTlv(items, ADMIN_TLV_SCREEN_NAME);
+    const QByteArray email = firstTlv(items, ADMIN_TLV_EMAIL);
+    const QByteArray reg = firstTlv(items, ADMIN_TLV_REG_STATUS);
+    const QByteArray err = firstTlv(items, ADMIN_TLV_ERROR_CODE);
+    if (!screen.isEmpty()) info.insert(QStringLiteral("screenName"), QString::fromUtf8(screen));
+    if (!email.isEmpty()) info.insert(QStringLiteral("email"), QString::fromUtf8(email));
+    if (!reg.isEmpty()) info.insert(QStringLiteral("registrationStatus"), reg.size() >= 2 ? readU16(reg, 0) : static_cast<quint8>(reg.at(0)));
+    if (!err.isEmpty()) info.insert(QStringLiteral("errorCode"), err.size() >= 2 ? readU16(err, 0) : static_cast<quint8>(err.at(0)));
+    info.insert(QStringLiteral("updatedAt"), QDateTime::currentDateTime().toString(Qt::ISODate));
+    emit accountInfoReceived(info);
+}
+
+static bool adminReplyOk(const Snac &reply, quint16 expectedSubtype)
+{
+    if (reply.family != FAM_ADMIN || reply.subtype != expectedSubtype) return false;
+    qsizetype offset = 0;
+    try {
+        const QList<Tlv> items = parseTlvs(reply.body, offset);
+        const QByteArray err = firstTlv(items, ADMIN_TLV_ERROR_CODE);
+        if (!err.isEmpty()) return false;
+    } catch (...) {
+        // Some classic servers return an empty success body.
+    }
+    return true;
+}
+
+void OscarBackend::doChangeAccountEmail(const QString &email)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ADMIN)) fail(QStringLiteral("Account Administration is unavailable"));
+    const Snac reply = request(*m_bos, FAM_ADMIN, ADMIN_INFO_CHANGE_REQUEST, tlv(ADMIN_TLV_EMAIL, email.trimmed()), 6000);
+    const bool ok = adminReplyOk(reply, ADMIN_INFO_CHANGE_REPLY);
+    emit featureOperationResult(QStringLiteral("Change account email"), ok, ok ? QStringLiteral("Account email updated.") : QStringLiteral("Account email change rejected."));
+    if (!ok) fail(QStringLiteral("AIM account email change failed"));
+}
+
+void OscarBackend::doChangeFormattedName(const QString &formattedName)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ADMIN)) fail(QStringLiteral("Account Administration is unavailable"));
+    const Snac reply = request(*m_bos, FAM_ADMIN, ADMIN_INFO_CHANGE_REQUEST, tlv(ADMIN_TLV_SCREEN_NAME, formattedName.trimmed()), 6000);
+    const bool ok = adminReplyOk(reply, ADMIN_INFO_CHANGE_REPLY);
+    emit featureOperationResult(QStringLiteral("Change formatted screen name"), ok, ok ? QStringLiteral("Formatted screen name updated.") : QStringLiteral("Formatted screen-name change rejected."));
+    if (!ok) fail(QStringLiteral("AIM formatted screen-name change failed"));
+}
+
+void OscarBackend::doConfirmAccount()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ADMIN)) fail(QStringLiteral("Account Administration is unavailable"));
+    const Snac reply = request(*m_bos, FAM_ADMIN, ADMIN_ACCOUNT_CONFIRM_REQUEST, QByteArray(), 6000);
+    const bool ok = adminReplyOk(reply, ADMIN_ACCOUNT_CONFIRM_REPLY);
+    emit featureOperationResult(QStringLiteral("Confirm AIM account"), ok, ok ? QStringLiteral("Account confirmation request submitted.") : QStringLiteral("Account confirmation request rejected."));
+    if (!ok) fail(QStringLiteral("AIM account confirmation request failed"));
+}
+
+void OscarBackend::doDeleteAccount()
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ADMIN)) fail(QStringLiteral("Account Administration is unavailable"));
+    const Snac reply = request(*m_bos, FAM_ADMIN, ADMIN_ACCOUNT_DELETE_REQUEST, QByteArray(), 6000);
+    const bool ok = adminReplyOk(reply, ADMIN_ACCOUNT_DELETE_REPLY);
+    emit featureOperationResult(QStringLiteral("Delete AIM account"), ok, ok ? QStringLiteral("Account deletion request accepted by the server.") : QStringLiteral("Account deletion request rejected."));
+    if (!ok) fail(QStringLiteral("AIM account deletion request failed"));
+}
+
+void OscarBackend::doSetPrivacyFlags(quint32 flags)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_OSERVICE)) fail(QStringLiteral("OSCAR Generic Service is unavailable"));
+    QByteArray body; appendU32(body, flags);
+    m_bos->sendSnac(FAM_OSERVICE, OS_SET_PRIVACY_FLAGS, body);
+    emit featureOperationResult(QStringLiteral("Privacy flags"), true, QStringLiteral("OSCAR privacy flags updated to 0x%1.").arg(flags, 8, 16, QLatin1Char('0')));
+}
+
+void OscarBackend::doVoiceRendezvous(quint16 messageType,
+                                     const QString &target,
+                                     const QString &cookieHex,
+                                     const QString &localAddress,
+                                     quint16 localPort,
+                                     int sampleRate,
+                                     quint16 cancelReason)
+{
+    if (!m_bos || !m_bos->families.contains(FAM_ICBM)) fail(QStringLiteral("OSCAR ICBM service is unavailable"));
+    const QByteArray cookie = QByteArray::fromHex(cookieHex.toLatin1());
+    if (cookie.size() != 8) fail(QStringLiteral("invalid OSCAR voice rendezvous cookie"));
+    if (target.trimmed().isEmpty()) fail(QStringLiteral("OSCAR voice target is empty"));
+
+    QByteArray rendezvous;
+    appendU16(rendezvous, messageType);
+    rendezvous += cookie;
+    rendezvous += waffleVoiceCapability();
+
+    if (messageType == RENDEZVOUS_PROPOSE || messageType == RENDEZVOUS_ACCEPT) {
+        const QByteArray ip = ipv4Bytes(localAddress);
+        if (ip.size() != 4 || localPort == 0) fail(QStringLiteral("invalid local OSCAR voice endpoint"));
+        rendezvous += tlv(RENDEZVOUS_TLV_IP, ip);
+        rendezvous += tlv(RENDEZVOUS_TLV_REQUESTER_IP, ip);
+        QByteArray port;
+        appendU16(port, localPort);
+        rendezvous += tlv(RENDEZVOUS_TLV_PORT, port);
+        if (messageType == RENDEZVOUS_PROPOSE) {
+            QByteArray seq;
+            appendU16(seq, 1);
+            rendezvous += tlv(RENDEZVOUS_TLV_SEQUENCE, seq);
+            rendezvous += tlv(RENDEZVOUS_TLV_INVITATION,
+                              QByteArrayLiteral("WaffleHouse-Client OSCAR voice chat"));
+        }
+        QByteArray extension = QByteArrayLiteral("WHV1");
+        appendU16(extension, static_cast<quint16>(std::clamp(sampleRate, 8000, 65535)));
+        appendU8(extension, 1);
+        rendezvous += tlv(RENDEZVOUS_TLV_WAFFLE_VOICE, extension);
+    } else {
+        QByteArray reason;
+        appendU16(reason, cancelReason);
+        rendezvous += tlv(RENDEZVOUS_TLV_CANCEL_REASON, reason);
+    }
+
+    QByteArray body;
+    body += cookie;
+    appendU16(body, ICBM_CHANNEL_RENDEZVOUS);
+    body += lp8(target.trimmed());
+    body += tlv(ICBM_TLV_RENDEZVOUS, rendezvous);
+    m_bos->sendSnac(FAM_ICBM, ICBM_MSG_TO_HOST, body);
 }
 
 void OscarBackend::processCommand(const Command &command)
@@ -1303,6 +2122,78 @@ void OscarBackend::processCommand(const Command &command)
         case CommandType::RefreshCapabilities:
             discoverBosCapabilities();
             break;
+        case CommandType::RequestUserInfo:
+            doRequestUserInfo(command.a);
+            break;
+        case CommandType::RequestDirectoryInfo:
+            doRequestDirectoryInfo(command.a);
+            break;
+        case CommandType::SetDirectoryInfo:
+            doSetDirectoryInfo(command.map);
+            break;
+        case CommandType::FindByEmail:
+            doFindByEmail(command.a);
+            break;
+        case CommandType::InviteByEmail:
+            doInviteByEmail(command.a, command.b);
+            break;
+        case CommandType::PrivacyListAction:
+            doPrivacyListAction(static_cast<quint16>(command.number), command.a, command.b);
+            break;
+        case CommandType::AuthorizationRequest:
+            doAuthorizationRequest(command.a, command.b);
+            break;
+        case CommandType::AuthorizationResponse:
+            doAuthorizationResponse(command.a, command.flag, command.b);
+            break;
+        case CommandType::PreAuthorize:
+            doPreAuthorize(command.a, command.b);
+            break;
+        case CommandType::RemoveMe:
+            doRemoveMe(command.a);
+            break;
+        case CommandType::TemporaryBuddy:
+            doTemporaryBuddy(command.a, command.flag);
+            break;
+        case CommandType::WatcherList:
+            doRequestWatcherList();
+            break;
+        case CommandType::RetrieveStoredMessages:
+            doRetrieveStoredMessages();
+            break;
+        case CommandType::TypingNotification:
+            doTypingNotification(command.a, static_cast<quint16>(command.number));
+            break;
+        case CommandType::RequestAccountInfo:
+            doRequestAccountInfo();
+            break;
+        case CommandType::ChangeAccountEmail:
+            doChangeAccountEmail(command.a);
+            break;
+        case CommandType::ChangeFormattedName:
+            doChangeFormattedName(command.a);
+            break;
+        case CommandType::ConfirmAccount:
+            doConfirmAccount();
+            break;
+        case CommandType::DeleteAccount:
+            doDeleteAccount();
+            break;
+        case CommandType::SetPrivacyFlags:
+            doSetPrivacyFlags(command.number);
+            break;
+        case CommandType::VoicePropose:
+            doVoiceRendezvous(RENDEZVOUS_PROPOSE, command.a, command.b, command.c,
+                              static_cast<quint16>(command.number), static_cast<int>(command.number2));
+            break;
+        case CommandType::VoiceAccept:
+            doVoiceRendezvous(RENDEZVOUS_ACCEPT, command.a, command.b, command.c,
+                              static_cast<quint16>(command.number), static_cast<int>(command.number2));
+            break;
+        case CommandType::VoiceCancel:
+            doVoiceRendezvous(RENDEZVOUS_CANCEL, command.a, command.b, QString(), 0, 0,
+                              static_cast<quint16>(command.number));
+            break;
         }
     } catch (const std::exception &e) {
         emit backendError(QStringLiteral("AIM/OSCAR"), QString::fromUtf8(e.what()));
@@ -1313,15 +2204,194 @@ void OscarBackend::processCommand(const Command &command)
 
 void OscarBackend::dispatchBos(const Snac &snac)
 {
+    if (snac.family == FAM_ICBM && snac.subtype == ICBM_CLIENT_EVENT) {
+        // cookie[8], channel[2], screen-name[LP8], event[2]
+        if (snac.body.size() >= 13) {
+            qsizetype offset = 10;
+            const quint8 len = static_cast<quint8>(snac.body.at(offset++));
+            if (offset + len + 2 <= snac.body.size()) {
+                const QString from = QString::fromUtf8(snac.body.mid(offset, len));
+                offset += len;
+                const quint16 event = readU16(snac.body, offset);
+                // Typing is transient UI state, not a chat event.  Consumers
+                // use the dedicated signal so GUI/CLI conversation containers
+                // are never created just to display a typing notification.
+                emit typingNotificationReceived(from, event);
+            }
+        }
+        return;
+    }
+
+    if (snac.family == FAM_FEEDBAG && snac.subtype == FEEDBAG_REQUEST_AUTHORIZE_TO_CLIENT) {
+        qsizetype offset = 0;
+        if (snac.body.isEmpty()) return;
+        const quint8 len = static_cast<quint8>(snac.body.at(offset++));
+        if (offset + len > snac.body.size()) return;
+        const QString from = QString::fromUtf8(snac.body.mid(offset, len)); offset += len;
+        QString message;
+        if (offset + 2 <= snac.body.size()) {
+            const quint16 msgLen = readU16(snac.body, offset); offset += 2;
+            if (offset + msgLen <= snac.body.size()) message = QString::fromUtf8(snac.body.mid(offset, msgLen));
+        }
+        emit authorizationRequestReceived(from, message);
+        emit eventReceived(QStringLiteral("authorization"), from,
+                           QStringLiteral("%1 requests buddy-list authorization%2")
+                               .arg(from, message.isEmpty() ? QString() : QStringLiteral(": %1").arg(message)));
+        return;
+    }
+
+    if (snac.family == FAM_FEEDBAG && snac.subtype == FEEDBAG_RESPOND_AUTHORIZE_TO_CLIENT) {
+        qsizetype offset = 0;
+        if (snac.body.isEmpty()) return;
+        const quint8 len = static_cast<quint8>(snac.body.at(offset++));
+        if (offset + len + 1 > snac.body.size()) return;
+        const QString from = QString::fromUtf8(snac.body.mid(offset, len)); offset += len;
+        const bool accepted = static_cast<quint8>(snac.body.at(offset++)) != 0;
+        QString message;
+        if (offset + 2 <= snac.body.size()) {
+            const quint16 msgLen = readU16(snac.body, offset); offset += 2;
+            if (offset + msgLen <= snac.body.size()) message = QString::fromUtf8(snac.body.mid(offset, msgLen));
+        }
+        emit authorizationResponseReceived(from, accepted, message);
+        emit eventReceived(QStringLiteral("authorization"), from,
+                           QStringLiteral("%1 %2 your buddy-list authorization request%3")
+                               .arg(from, accepted ? QStringLiteral("accepted") : QStringLiteral("denied"),
+                                    message.isEmpty() ? QString() : QStringLiteral(": %1").arg(message)));
+        return;
+    }
+
+    if (snac.family == FAM_FEEDBAG && snac.subtype == FEEDBAG_BUDDY_ADDED) {
+        qsizetype offset = 0;
+        if (snac.body.size() >= 7 && static_cast<quint8>(snac.body.at(0)) == 0) offset = 6;
+        if (offset < snac.body.size()) {
+            const quint8 len = static_cast<quint8>(snac.body.at(offset++));
+            if (offset + len <= snac.body.size()) {
+                const QString from = QString::fromUtf8(snac.body.mid(offset, len));
+                emit buddyAddedYou(from);
+                emit eventReceived(QStringLiteral("buddy"), from,
+                                   QStringLiteral("%1 added you to their buddy list").arg(from));
+            }
+        }
+        return;
+    }
+
+    if (snac.family == FAM_OSERVICE && (snac.subtype == OS_MOTD || snac.subtype == OS_WELL_KNOWN_URLS)) {
+        QStringList parts;
+        qsizetype offset = 0;
+        try {
+            const QList<Tlv> items = parseTlvs(snac.body, offset);
+            for (const Tlv &item : items) {
+                const QString text = stripAimHtml(QString::fromUtf8(item.value)).trimmed();
+                if (!text.isEmpty()) parts.append(text);
+            }
+        } catch (...) {
+            const QString raw = stripAimHtml(QString::fromUtf8(snac.body)).trimmed();
+            if (!raw.isEmpty()) parts.append(raw);
+        }
+        const QString kind = snac.subtype == OS_MOTD ? QStringLiteral("motd") : QStringLiteral("urls");
+        const QString text = parts.join(QStringLiteral("\n"));
+        if (!text.isEmpty()) { emit oscarNoticeReceived(kind, text); emit eventReceived(QStringLiteral("status"), QString(), text); }
+        return;
+    }
+
+    if (snac.family == FAM_BUDDY && snac.subtype == BUDDY_WATCHER_NOTIFICATION) {
+        QStringList users;
+        qsizetype offset = 0;
+        while (offset < snac.body.size()) {
+            const quint8 len = static_cast<quint8>(snac.body.at(offset++));
+            if (offset + len > snac.body.size()) break;
+            users.append(QString::fromUtf8(snac.body.mid(offset, len))); offset += len;
+        }
+        if (!users.isEmpty()) emit eventReceived(QStringLiteral("buddy"), QString(),
+                                                  QStringLiteral("Watcher notification: %1").arg(users.join(QStringLiteral(", "))));
+        return;
+    }
+
+    if (snac.family == FAM_ICBM && snac.subtype == ICBM_MISSED_CALLS) {
+        protocolLog(QStringLiteral("[OSCAR] The server reports missed ICBM message(s)/call(s)."));
+        return;
+    }
+    if (snac.family == FAM_ICBM && snac.subtype == ICBM_SIN_REPLY) {
+        protocolLog(QStringLiteral("[OSCAR] Server-stored message retrieval completed."));
+        return;
+    }
+
     if (snac.family == FAM_ICBM && snac.subtype == ICBM_MSG_TO_CLIENT) {
         if (snac.body.size() < 10) {
             protocolLog(QStringLiteral("[event error] truncated incoming ICBM"));
             return;
         }
 
+        const quint16 channel = readU16(snac.body, 8);
         qsizetype offset = 10;
         const UserInfo sender = parseUserInfo(snac.body, offset);
         const auto items = parseTlvs(snac.body, offset);
+
+        if (channel == ICBM_CHANNEL_RENDEZVOUS) {
+            const QByteArray blob = firstTlv(items, ICBM_TLV_RENDEZVOUS);
+            if (blob.size() < 26) {
+                protocolLog(QStringLiteral("[OSCAR rendezvous] Truncated service request from %1.").arg(sender.name));
+                return;
+            }
+            const quint16 messageType = readU16(blob, 0);
+            const QByteArray cookie = blob.mid(2, 8);
+            const QByteArray service = blob.mid(10, 16);
+            const QString cookieHex = QString::fromLatin1(cookie.toHex());
+
+            if (service == legacyAimVoiceCapability()) {
+                emit legacyVoiceInviteReceived(sender.name, cookieHex);
+                protocolLog(QStringLiteral("[OSCAR voice] %1 advertised a legacy AIM Talk invitation; "
+                                           "the proprietary legacy media codec is not enabled.").arg(sender.name));
+                return;
+            }
+            if (service != waffleVoiceCapability()) {
+                if (m_settings.debug) {
+                    protocolLog(QStringLiteral("[OSCAR rendezvous] %1 service %2 from %3")
+                                    .arg(messageType)
+                                    .arg(QString::fromLatin1(service.toHex()), sender.name));
+                }
+                return;
+            }
+
+            qsizetype rvOffset = 26;
+            const QList<Tlv> rv = parseTlvs(blob, rvOffset);
+            QString remoteAddress = ipv4Text(firstTlv(rv, RENDEZVOUS_TLV_VERIFIED_IP));
+            if (remoteAddress.isEmpty()) remoteAddress = ipv4Text(firstTlv(rv, RENDEZVOUS_TLV_IP));
+            if (remoteAddress.isEmpty()) remoteAddress = ipv4Text(firstTlv(rv, RENDEZVOUS_TLV_REQUESTER_IP));
+            const QByteArray portRaw = firstTlv(rv, RENDEZVOUS_TLV_PORT);
+            const quint16 remotePort = portRaw.size() >= 2 ? readU16(portRaw, 0) : 0;
+            const QByteArray ext = firstTlv(rv, RENDEZVOUS_TLV_WAFFLE_VOICE);
+            int sampleRate = 16000;
+            int channels = 1;
+            if (ext.size() >= 7 && ext.left(4) == QByteArrayLiteral("WHV1")) {
+                sampleRate = readU16(ext, 4);
+                channels = static_cast<unsigned char>(ext.at(6));
+            }
+            const QString invitation = QString::fromUtf8(firstTlv(rv, RENDEZVOUS_TLV_INVITATION));
+            const QByteArray reasonRaw = firstTlv(rv, RENDEZVOUS_TLV_CANCEL_REASON);
+            const quint16 reason = reasonRaw.size() >= 2 ? readU16(reasonRaw, 0) : 0;
+
+            if (messageType == RENDEZVOUS_PROPOSE) {
+                emit voiceInviteReceived(sender.name, cookieHex, remoteAddress, remotePort,
+                                         sampleRate, channels, invitation);
+            } else if (messageType == RENDEZVOUS_ACCEPT) {
+                emit voiceInviteAccepted(sender.name, cookieHex, remoteAddress, remotePort,
+                                         sampleRate, channels);
+            } else if (messageType == RENDEZVOUS_CANCEL || messageType == RENDEZVOUS_REJECT) {
+                emit voiceInviteCancelled(sender.name, cookieHex,
+                                          messageType == RENDEZVOUS_REJECT ? 0xffff : reason);
+            }
+            return;
+        }
+
+        if (channel != ICBM_CHANNEL_IM) {
+            if (m_settings.debug) {
+                protocolLog(QStringLiteral("[debug] Unsupported OSCAR ICBM channel %1 from %2")
+                                .arg(channel).arg(sender.name));
+            }
+            return;
+        }
+
         const QByteArray messageBlob = firstTlv(items, ICBM_TLV_IM_DATA);
         const QString message = messageBlob.isEmpty()
                               ? QStringLiteral("<non-text ICBM>")
@@ -1577,6 +2647,12 @@ void OscarBackend::run()
     }
 
     m_chats.clear();
+    {
+        QMutexLocker locker(&m_capabilityMutex);
+        m_serverFamilies.clear();
+        m_peerCapabilities.clear();
+    }
+    m_maxProfileLength = 0;
     if (m_chatNav) {
         m_chatNav->close();
         m_chatNav.reset();

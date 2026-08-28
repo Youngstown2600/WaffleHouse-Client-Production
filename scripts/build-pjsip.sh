@@ -27,6 +27,11 @@ case "$HOST_OS" in
     TM_CC=${CC:-cc}
     TM_CXX=${CXX:-c++}
     ;;
+  Darwin)
+    MAKE=make
+    TM_CC=${CC:-clang}
+    TM_CXX=${CXX:-clang++}
+    ;;
   FreeBSD)
     MAKE=gmake
     TM_CC=${WAFFLEHOUSE_PJSIP_CC:-${TRUNKMONKEY_PJSIP_CC:-/usr/bin/cc}}
@@ -332,6 +337,10 @@ case "$HOST_OS" in
     TM_OS=windows
     BUILD_ID="2.17-sak64-windows-mingw-$(uname -m 2>/dev/null || echo x86_64)-v1"
     ;;
+  Darwin)
+    TM_OS=macos
+    BUILD_ID="2.17-wafflehouse-acc32-call64-pic-macos-$(uname -m 2>/dev/null || echo unknown)-v10"
+    ;;
   FreeBSD)
     TM_OS=freebsd
     pc="$PREFIX/lib/pkgconfig/libpjproject.pc"
@@ -365,6 +374,10 @@ echo "PJSUA_MAX_ACC is configured for 32; PJSUA_MAX_CALLS is configured for 64; 
 if [ "$HOST_OS" = Windows ]; then
   echo "Windows audio backend: PJSIP native Windows audio backend."
   echo "Windows CLI/GUI use the same PJSUA2 core as Linux/FreeBSD."
+elif [ "$HOST_OS" = Darwin ]; then
+  echo "macOS audio backend: CoreAudio through PJSIP."
+  echo "macOS C++ ABI: Apple Clang/libc++."
+  echo "PJSUA2 Call lifetime compatibility guard: enabled."
 elif [ "$HOST_OS" = FreeBSD ]; then
   echo "FreeBSD audio backend: external PortAudio."
   echo "FreeBSD C++ ABI: base Clang/libc++."
