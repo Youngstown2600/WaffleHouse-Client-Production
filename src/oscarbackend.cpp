@@ -592,13 +592,39 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
             && snac.requestId == rateRequest) {
             if (snac.body.size() >= 2) {
                 const quint16 count = readU16(snac.body, 0);
-                qsizetype offset = 2;
-                for (quint16 i = 0; i < count; ++i) {
-                    if (offset + 30 > snac.body.size()) {
-                        break;
+
+                // OSCAR rate-parameter records exist in both the older
+                // 30-byte form and the later 35-byte form (which appends the
+                // last-arrival delta and current state byte).  Validate the
+                // rate-group tail to determine which layout this server sent
+                // instead of stepping through the reply with a hard-coded
+                // record size and accidentally ACKing bytes from inside a
+                // previous record as bogus class IDs.
+                auto hasValidRateGroups = [&](qsizetype offset) {
+                    for (quint16 i = 0; i < count; ++i) {
+                        if (offset + 4 > snac.body.size()) return false;
+                        const quint16 members = readU16(snac.body, offset + 2);
+                        offset += 4;
+                        const qsizetype memberBytes = static_cast<qsizetype>(members) * 4;
+                        if (memberBytes < 0 || offset + memberBytes > snac.body.size()) return false;
+                        offset += memberBytes;
                     }
+                    return offset == snac.body.size();
+                };
+
+                int recordBytes = 0;
+                const qsizetype v3Tail = 2 + static_cast<qsizetype>(count) * 35;
+                const qsizetype v2Tail = 2 + static_cast<qsizetype>(count) * 30;
+                if (v3Tail <= snac.body.size() && hasValidRateGroups(v3Tail)) recordBytes = 35;
+                else if (v2Tail <= snac.body.size() && hasValidRateGroups(v2Tail)) recordBytes = 30;
+                else if (v3Tail <= snac.body.size()) recordBytes = 35;
+                else if (v2Tail <= snac.body.size()) recordBytes = 30;
+
+                qsizetype offset = 2;
+                for (quint16 i = 0; i < count && recordBytes > 0; ++i) {
+                    if (offset + recordBytes > snac.body.size()) break;
                     rateIds.push_back(readU16(snac.body, offset));
-                    offset += 30;
+                    offset += recordBytes;
                 }
             }
             break;

@@ -1,5 +1,12 @@
 # WaffleHouse-Client 5.x Changelog
 
+## 5.0r5
+- Fixed AIM/OSCAR Send File from the buddy list so launching a transfer does not create an IM window.
+- File-transfer OFFER/ACCEPT/DATA/ACK/DONE/COMPLETE control traffic is now consumed as transport traffic and does not create GUI conversations.
+- Secure file-transfer payloads are recognized before an IM window is created, preventing the same pop-up behavior on encrypted transfers.
+- Corrected OSCAR rate-class reply parsing (supports both 30-byte and 35-byte layouts) and tuned relay transfers to use larger payloads at a roughly two-second cadence, reducing ICBM rate-limit pressure that could stall downloads after they started.
+- Extended reliable-transfer ACK retry tolerance and kept Send File available from an online IM even without an active secure session.
+
 ## 5.0r4
 - Fixed OSCAR typing notifications so they stay in the normal AIM IM window instead of opening a separate transient "typing" conversation window.
 - The existing IM header now remains the single typing-state indicator (typing, paused, or cleared).

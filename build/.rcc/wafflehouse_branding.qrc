@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/branding">
-    <file alias="wafflehouse-client-logo.png">/home/gitsc/Coding/WaffleHouse-Client-Beta/assets/branding/wafflehouse-client-logo.png</file>
-  </qresource>
-</RCC>
-

@@ -3777,8 +3777,11 @@ void TerminalUi::pumpFileTransfers()
         const bool secureTransfer = m_fileTransferSecure.value(id, true);
         if (secureTransfer && !m_secure.hasSession(entry->id, info.target)) continue;
         const bool irc = entry->settings.protocol == ConnectionSettings::Protocol::Irc;
-        const int chunkBytes = irc ? (secureTransfer ? 120 : 96) : 768;
-        const int minimumSendIntervalMs = irc ? 1000 : 500;
+        const bool oscar = entry->settings.protocol == ConnectionSettings::Protocol::Oscar;
+        const int chunkBytes = irc ? (secureTransfer ? 120 : 96)
+                                   : (oscar ? 3600 : 768);
+        const int minimumSendIntervalMs = irc ? 1000
+                                              : (oscar ? 2200 : 500);
         const QString payload = m_fileTransfers.nextOutgoingPayload(
             id, chunkBytes, &finished, &error, minimumSendIntervalMs);
         if (!error.isEmpty()) {

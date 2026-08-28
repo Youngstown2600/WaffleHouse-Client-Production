@@ -526,7 +526,7 @@ void ChatWindow::setBackendOnline(bool online)
     if (m_secureButton) m_secureButton->setEnabled(online && !m_secureActive);
     if (m_secureStatusButton) m_secureStatusButton->setEnabled(online);
     if (m_secureCloseButton) m_secureCloseButton->setEnabled(online && m_secureActive);
-    if (m_sendFileButton) m_sendFileButton->setEnabled(online && m_secureActive);
+    if (m_sendFileButton) m_sendFileButton->setEnabled(online && m_kind == QStringLiteral("im"));
     refreshTitle();
 }
 
@@ -559,7 +559,7 @@ void ChatWindow::setSecurityState(bool active,
     if (m_secureButton) m_secureButton->setEnabled(supportsSecurity && !m_secureActive && m_online);
     if (m_secureStatusButton) m_secureStatusButton->setEnabled(supportsSecurity && m_online);
     if (m_secureCloseButton) m_secureCloseButton->setEnabled(supportsSecurity && m_secureActive && m_online);
-    if (m_sendFileButton) m_sendFileButton->setEnabled(isIm && m_secureActive && m_online);
+    if (m_sendFileButton) m_sendFileButton->setEnabled(isIm && m_online);
 
     if (!active || !supportsSecurity) {
         m_securityLabel->clear();

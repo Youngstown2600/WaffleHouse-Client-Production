@@ -1656,10 +1656,7 @@ void MainWindow::showBuddyContextMenu(BackendState *state,
     connect(sendFileAction, &QAction::triggered, this, [this, backendId, target] {
         if (BackendState *current = stateById(backendId)) {
             selectState(current);
-            if (ChatWindow *window = ensureConversationWindow(
-                    current->backend, QStringLiteral("im"), target, true)) {
-                sendFile(window);
-            }
+            sendFileToTarget(current, target, targetDisplayName(current, QStringLiteral("im"), target));
         }
     });
 
@@ -5445,7 +5442,7 @@ void MainWindow::executeGuiCommand(const QString &input)
         QString target = takeGuiArgument(rest);
         if (target.isEmpty()) target = selectedBuddyName();
         if (target.isEmpty()) { report(QStringLiteral("Select a buddy or use /sendfile USER.")); return; }
-        if (ChatWindow *window = ensureConversationWindow(state->backend, QStringLiteral("im"), target, true)) sendFile(window);
+        sendFileToTarget(state, target, targetDisplayName(state, QStringLiteral("im"), target));
         return;
     }
     if (command == QStringLiteral("transfers")) { showTransferWindow(); return; }
@@ -6031,9 +6028,18 @@ void MainWindow::sendFile(ChatWindow *window)
 {
     if (!window || window->kind() != QStringLiteral("im")) return;
     BackendState *state = stateById(window->backendId());
-    if (!state || !state->connected || !state->backend) {
+    sendFileToTarget(state, window->target(), window->displayName());
+}
+
+void MainWindow::sendFileToTarget(BackendState *state,
+                          const QString &target,
+                          const QString &displayName)
+{
+    const QString peerTarget = target.trimmed();
+    const QString peerName = displayName.trimmed().isEmpty() ? peerTarget : displayName.trimmed();
+    if (!state || !state->connected || !state->backend || peerTarget.isEmpty()) {
         QMessageBox::information(this, QStringLiteral("Send File"),
-                                 QStringLiteral("Connect the AIM or IRC account before sending a file."));
+                                 QStringLiteral("Connect the AIM or IRC account and select a buddy before sending a file."));
         return;
     }
     if (state->backend->settings().protocol != ConnectionSettings::Protocol::Oscar
@@ -6044,7 +6050,7 @@ void MainWindow::sendFile(ChatWindow *window)
     }
 
     QDialog modeDialog(this);
-    modeDialog.setWindowTitle(QStringLiteral("Send File — %1").arg(window->displayName()));
+    modeDialog.setWindowTitle(QStringLiteral("Send File — %1").arg(peerName));
     modeDialog.setMinimumWidth(430);
     auto *outer = new QVBoxLayout(&modeDialog);
     auto *title = new QLabel(QStringLiteral("Choose transfer security"), &modeDialog);
@@ -6062,7 +6068,7 @@ void MainWindow::sendFile(ChatWindow *window)
     auto updateHelp = [=] {
         help->setText(secure->isChecked()
             ? QStringLiteral("Secure transfer requires an established CPX secure DM with this peer. Open the PM, start the secure session, compare fingerprints, then send. WaffleHouse encrypts/authenticates the transfer and prefers the encrypted direct path when both peers support it.")
-            : QStringLiteral("Unsecured transfer proceeds over ordinary AIM/IRC PM traffic without CPX encryption or authentication. File chunks remain resumable and the completed file is still verified with SHA-256."));
+            : QStringLiteral("Unsecured transfer proceeds over ordinary AIM/IRC PM traffic without CPX encryption or authentication. File chunks remain resumable and the completed file is still verified with SHA-256. Transfer control traffic stays out of the visible IM transcript."));
     };
     connect(secure, &QRadioButton::toggled, &modeDialog, updateHelp);
     updateHelp();
@@ -6075,7 +6081,7 @@ void MainWindow::sendFile(ChatWindow *window)
 
     const bool secureTransfer = secure->isChecked();
     if (secureTransfer) {
-        if (!m_secureReady || !m_secure.hasSession(state->profileId, window->target())) {
+        if (!m_secureReady || !m_secure.hasSession(state->profileId, peerTarget)) {
             QMessageBox::information(
                 this, QStringLiteral("Secure File Transfer — Setup Required"),
                 QStringLiteral("To send securely:\n\n"
@@ -6084,10 +6090,10 @@ void MainWindow::sendFile(ChatWindow *window)
                                "3. Compare the displayed fingerprints with the other user and trust the peer.\n"
                                "4. Choose Send File again and select Secure.\n\n"
                                "Nothing will be sent until the secure session is established.")
-                    .arg(window->displayName()));
+                    .arg(peerName));
             return;
         }
-        if (!m_secure.peerSupports(state->profileId, window->target(), QStringLiteral("file-transfer"))) {
+        if (!m_secure.peerSupports(state->profileId, peerTarget, QStringLiteral("file-transfer"))) {
             QMessageBox::information(this, QStringLiteral("Secure File Transfer"),
                                      QStringLiteral("This peer has not advertised CPX file-transfer support. The peer may be running an older client."));
             return;
@@ -6102,11 +6108,11 @@ void MainWindow::sendFile(ChatWindow *window)
     QString offer;
     QString error;
     const bool reliableTransfer = secureTransfer
-        ? m_secure.peerSupports(state->profileId, window->target(), QStringLiteral("file-ack"))
-        : true; // 3.0r1 unsecured peers use the ACK/resume framing by default.
+        ? m_secure.peerSupports(state->profileId, peerTarget, QStringLiteral("file-ack"))
+        : true; // Unsecured WaffleHouse peers use ACK/resume framing by default.
     const bool directPreferred = secureTransfer && reliableTransfer && m_secure.peerSupports(
-        state->profileId, window->target(), QStringLiteral("file-direct-v1"));
-    if (!m_fileTransfers.createOffer(window->target(), path, transferId, offer, &error,
+        state->profileId, peerTarget, QStringLiteral("file-direct-v1"));
+    if (!m_fileTransfers.createOffer(peerTarget, path, transferId, offer, &error,
                                      reliableTransfer)) {
         QMessageBox::warning(this, QStringLiteral("File Transfer"), error);
         return;
@@ -6115,16 +6121,15 @@ void MainWindow::sendFile(ChatWindow *window)
     m_fileTransferSecure.insert(transferId, secureTransfer);
     m_fileTransferProgressShown.insert(transferId, -10);
 
-    const QString peer = window->displayName();
-    refreshTransferWindow(transferId, QStringLiteral("Upload"), peer, QStringLiteral("Offering"));
+    refreshTransferWindow(transferId, QStringLiteral("Upload"), peerName, QStringLiteral("Offering"));
     logTransfer(QStringLiteral("Offering %1 to %2 [%3] — %4")
-                    .arg(QFileInfo(path).fileName(), peer, transferId,
+                    .arg(QFileInfo(path).fileName(), peerName, transferId,
                          secureTransfer
                              ? (directPreferred ? QStringLiteral("secure CPX; encrypted direct transport preferred")
                                                 : QStringLiteral("secure CPX relay"))
                              : QStringLiteral("UNSECURED AIM/IRC relay; SHA-256 verification enabled")));
 
-    if (!sendSecureControlPayload(state, window->target(), offer)) {
+    if (!sendSecureControlPayload(state, peerTarget, offer)) {
         logTransfer(QStringLiteral("Failed to send file offer for %1 [%2]")
                         .arg(QFileInfo(path).fileName(), transferId));
         m_fileTransfers.cancel(transferId, QStringLiteral("transport failed"));
@@ -6750,8 +6755,15 @@ void MainWindow::pumpFileTransfers()
 
         const QString peer = targetDisplayName(state, QStringLiteral("im"), before.target);
         const bool irc = state->backend->settings().protocol == ConnectionSettings::Protocol::Irc;
-        const int rawChunk = irc ? (secureTransfer ? 120 : 96) : 768;
-        const int minimumSendIntervalMs = irc ? 1000 : 500;
+        const bool oscar = state->backend->settings().protocol == ConnectionSettings::Protocol::Oscar;
+        // OSCAR rate classes are message-count sensitive.  The old 768-byte / 500 ms
+        // relay generated too many ICBMs and some servers began dropping ACK/data
+        // frames mid-transfer.  A larger payload at roughly one IM per two seconds
+        // moves more bytes per SNAC while staying comfortably under the 8 KiB cap.
+        const int rawChunk = irc ? (secureTransfer ? 120 : 96)
+                                 : (oscar ? 3600 : 768);
+        const int minimumSendIntervalMs = irc ? 1000
+                                              : (oscar ? 2200 : 500);
         bool finished = false;
         QString error;
         const QString payload = m_fileTransfers.nextOutgoingPayload(
@@ -7072,8 +7084,9 @@ void MainWindow::handleEvent(ChatBackend *backend,
         if (m_outgoingUnsecuredFileFrames.remove(outgoingToken)) return;
         QString filePayload;
         if (WaffleFileTransport::unwrapUnsecured(payload, filePayload)) {
-            ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
-            if (window) handleFileTransferPayload(state, target, filePayload, window, false);
+            // File-transfer control/data frames are transport traffic, not IMs.
+            // Process them without creating or surfacing a conversation window.
+            handleFileTransferPayload(state, target, filePayload, nullptr, false);
             return;
         }
     }
@@ -7087,12 +7100,12 @@ void MainWindow::handleEvent(ChatBackend *backend,
         }
 
         if (SecureChannelManager::looksLikeFrame(payload)) {
-            ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
-            if (!window) return;
-
             if (!m_options.encryptedDmEnabled) {
-                window->appendMessage(QStringLiteral(
-                    "[secure] Encrypted DM frame ignored because encrypted DMs are disabled."));
+                ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+                if (window) {
+                    window->appendMessage(QStringLiteral(
+                        "[secure] Encrypted DM frame ignored because encrypted DMs are disabled."));
+                }
                 return;
             }
 
@@ -7113,14 +7126,23 @@ void MainWindow::handleEvent(ChatBackend *backend,
             }
 
             if (result.kind == SecureChannelManager::IncomingKind::Decrypted) {
+                // File traffic rides inside the secure DM envelope, but it must
+                // remain invisible to normal conversations.  Handle it before
+                // creating a ChatWindow so receiving/sending a file never pops
+                // open an IM on either side.
+                if (handleFileTransferPayload(state, target, result.plaintext, nullptr, true)) {
+                    return;
+                }
                 if (handleSecureRoomKeyOffer(state, target, result.plaintext)) {
-                    updateConversationSecurity(window);
+                    if (ChatWindow *existing = m_windows.value(
+                            conversationKey(backend, kind, target), nullptr)) {
+                        updateConversationSecurity(existing);
+                    }
                     return;
                 }
-                if (handleFileTransferPayload(state, target, result.plaintext, window, true)) {
-                    updateConversationSecurity(window);
-                    return;
-                }
+
+                ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+                if (!window) return;
                 QString prefix = imSpeakerPrefix(text);
                 if (prefix.isEmpty()) {
                     prefix = QStringLiteral("<%1> ").arg(targetDisplayName(state, kind, target));
@@ -7139,6 +7161,9 @@ void MainWindow::handleEvent(ChatBackend *backend,
                 updateConversationSecurity(window);
                 return;
             }
+
+            ChatWindow *window = ensureConversationWindow(backend, kind, target, true);
+            if (!window) return;
 
             if (result.kind == SecureChannelManager::IncomingKind::Error) {
                 window->appendMessage(QStringLiteral("[error] [secure] %1").arg(result.notice));

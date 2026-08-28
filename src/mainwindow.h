@@ -214,6 +214,7 @@ private:
     bool handleSecureRoomKeyOffer(BackendState *state, const QString &peer, const QString &plaintext);
     void showSelectedFingerprint();
     void sendFile(ChatWindow *window);
+    void sendFileToTarget(BackendState *state, const QString &target, const QString &displayName = QString());
     bool sendSecureControlPayload(BackendState *state,
                                   const QString &target,
                                   const QString &plaintext);
