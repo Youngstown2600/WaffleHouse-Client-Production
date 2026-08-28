@@ -1,6 +1,6 @@
-# WaffleHouse-Client 3.4r1 — Linux build notes
+# WaffleHouse-Client 5.0r7 — Linux build notes
 
-WaffleHouse-Client 3.4r1 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
+WaffleHouse-Client 5.0r7 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
 
 ## Debian / Ubuntu / Linux Mint and derivatives
 
@@ -17,7 +17,7 @@ The builder detects Slackware/slackpkg and uses available base packages; if `sbo
 ## Testing without system application installation
 
 ```sh
-./build.sh --no-install
+./build.sh --os linux --no-install
 ```
 
 Use `--no-auto-deps` as well if you only want the dependency audit/build attempt and do not want the builder to install missing packages.

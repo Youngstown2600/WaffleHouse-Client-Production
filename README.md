@@ -1,25 +1,40 @@
-# WaffleHouse-Client 5.0r5 — Unix/Linux
+# WaffleHouse-Client 5.0r7 — Combined Desktop Bundle
 
-Dedicated source release for **Linux and FreeBSD**. This package contains both the Qt GUI and ncurses CLI frontends and the shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
+One source bundle for **Linux, FreeBSD/Unix, and macOS**. The Qt GUI and ncurses CLI use the same shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
 
 ## Build
 
 ```sh
+chmod +x build.sh
 ./build.sh
 ```
 
-The builder detects Linux vs. FreeBSD, checks/install dependencies where supported, prepares the managed PJSIP 2.17 dependency, and builds WaffleHouse-Client. See `BUILDING-Linux.md` or `BUILDING-FreeBSD.md` for platform notes.
+The top-level builder asks which operating system you are installing on:
 
-## 5.0r5 highlights
+1. Linux
+2. FreeBSD / Unix
+3. macOS
 
-- AIM/OSCAR file-transfer frames no longer open IM windows when using **Send File** from the buddy list or while transfers are running.
-- OSCAR rate-class parsing now handles both legacy and extended layouts; relay transfers use larger, slower-paced ICBM frames to avoid classic server rate-limit drops, with a more tolerant ACK retry window.
-- The IM-window **Send File** control now stays available while online even when no secure CPX session exists; the Secure/Unsecured choice is made in the transfer dialog.
-- OSCAR typing status now stays in the normal AIM IM window; no extra typing-only window is opened.
-- Redesigned Softphone **Phone** workspace.
-- Dedicated **SIP Accounts** navigation tab.
-- GUI Answer, Reject, Hang Up, Hold, Resume, Mute, Blind Transfer, Attended Transfer, DTMF, and Diagnostics controls.
-- Conventional **File → Exit** with Ctrl+Q and the existing clean-shutdown path.
-- GUI and CLI remain in the same desktop executable.
+It verifies the selection against the current host and then dispatches to the appropriate platform builder. You can also use `--os linux`, `--os freebsd`, or `--os macos` for scripted builds.
 
-This archive intentionally contains no macOS or Termux builder/source bundle, no historical 3.x release audits, and no internal regression-test tree.
+A normal successful build **does not automatically install WaffleHouse-Client into a system bin directory**. The selected platform builder asks first, and `[y/N]` defaults to **No**.
+
+- Linux / FreeBSD default launcher: `/usr/local/bin/wafflehouse-client`
+- macOS optional app install: `/Applications/WaffleHouse-Client.app`
+- macOS optional command launcher: `/usr/local/bin/wafflehouse-client`
+
+See `BUILDING-Linux.md`, `BUILDING-FreeBSD.md`, and `BUILDING-macOS.md` for platform notes.
+
+## 5.0r7 highlights
+
+- Re-unifies the Linux/FreeBSD and macOS release trees into one desktop source bundle with an explicit OS-selection builder.
+- macOS is synchronized to the 5.0r6 Unix/Linux source baseline, including all 5.0r4–5.0r6 AIM/OSCAR typing and file-transfer fixes.
+- Fixes the macOS menu/status icon regression where the tray/status artwork could become white-on-white after closing the last visible application window. The WaffleHouse icon is explicitly kept as a full-color non-template icon on macOS, and the status item is synchronously removed during application quit.
+- macOS notification sounds are copied into the `.app` bundle so moving the application out of the extracted source tree does not break built-in sounds.
+- Secure CPX direct file transfers finalize correctly: after the final encrypted byte arrives, the receiver SHA-256 verifies the `.cpxpart`, renames it to the chosen filename, reports Complete, and returns confirmation so the sender leaves Verifying.
+- AIM/OSCAR file-transfer control traffic no longer opens chat windows.
+- OSCAR typing status stays in the normal AIM IM window.
+- OSCAR rate-class parsing and relay pacing improvements from 5.0r5 are included on all desktop platforms.
+- GUI/CLI softphone, media, secure rooms, themes, notifications, contacts/history, and the 5.0r2 conventional GUI exit path remain shared.
+
+Termux/Android remains a separate target and is intentionally not included in this desktop bundle.

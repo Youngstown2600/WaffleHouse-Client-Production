@@ -1,5 +1,19 @@
 # WaffleHouse-Client 5.x Changelog
 
+## 5.0r7
+- Combined the Linux/FreeBSD and macOS desktop releases into one shared source bundle. The top-level builder now asks the user to select Linux, FreeBSD/Unix, or macOS before any platform build/dependency work begins.
+- Normal builds on every desktop platform ask before installing WaffleHouse-Client into a system bin directory; Enter/default remains No.
+- Synchronized macOS from the 5.0r3 platform package to the complete 5.0r6 application source, bringing over the 5.0r4 typing-window fix, 5.0r5 OSCAR transfer/window/rate fixes, and 5.0r6 secure-direct finalization/profile-ID fixes.
+- Fixed the macOS status/menu-bar icon white-on-white regression by explicitly keeping the WaffleHouse icon non-template/full-color and removing the QSystemTrayIcon synchronously during application quit.
+- Bundled built-in notification sounds inside the macOS `.app` so an installed/moved app does not depend on the extracted source directory.
+
+## 5.0r6
+- Fixed secure CPX direct downloads that reached 100% but remained as `*.cpxpart` while the receiver stayed on “Receiving direct” and the sender stayed on “Verifying”.
+- Corrected GUI file-transfer ownership lookup: transfer records store the stable connection profile ID, but several completion/cancel/resume/direct callbacks incorrectly looked it up as a transient backend ID.
+- Direct receive completion now always performs local SHA-256 verification and final rename even if the account/control-channel object becomes temporarily unavailable; peer completion confirmation is sent when the owning account is available.
+- Hardened the encrypted direct socket sender so a queued final frame can drain and close proactively instead of depending on the receiver to close first.
+- The same profile-ID lookup correction also restores GUI cancel, resume, decline, direct-progress peer naming, and direct-fallback handling for file transfers.
+
 ## 5.0r5
 - Fixed AIM/OSCAR Send File from the buddy list so launching a transfer does not create an IM window.
 - File-transfer OFFER/ACCEPT/DATA/ACK/DONE/COMPLETE control traffic is now consumed as transport traffic and does not create GUI conversations.

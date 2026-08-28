@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 5.0.4 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 5.0.7 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -18,8 +18,10 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
 pkg_check_modules(NCURSESW REQUIRED IMPORTED_TARGET ncursesw)
-# Linux/FreeBSD Qt platform integration package.
-pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
+# Linux/FreeBSD Qt platform integration package. macOS/Cocoa does not use xkbcommon.
+if(NOT APPLE)
+    pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
+endif()
 
 # The integrated softphone uses the 3.5/r14 synchronized PJSIP 2.17 engine.
 # 5.0 keeps the same tested PJSIP ABI while exposing more controls in both UIs.
@@ -143,7 +145,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="5.0r5"
+    APP_VERSION_STRING="5.0r7"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
     WAFFLEHOUSE_OSCAR_VOICE=1
 )
@@ -162,12 +164,21 @@ if(TARGET PkgConfig::XKBCOMMON)
     target_link_libraries(${APP_EXECUTABLE} PRIVATE PkgConfig::XKBCOMMON)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+if(APPLE)
+    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_MACOS=1)
+    set_target_properties(${APP_EXECUTABLE} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "WaffleHouse-Client"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "local.wafflehouse-client"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "5.0.7"
+        MACOSX_BUNDLE_BUNDLE_VERSION "5.0.7"
+    )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_FREEBSD=1)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_LINUX=1)
 else()
-    message(FATAL_ERROR "This release bundle supports Linux and FreeBSD only")
+    message(FATAL_ERROR "This desktop bundle supports Linux, FreeBSD, and macOS only")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
@@ -180,14 +191,21 @@ install(TARGETS ${APP_EXECUTABLE}
     BUNDLE DESTINATION .
 )
 
-install(PROGRAMS scripts/wafflehouse-shell DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES data/wafflehouse-client.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-foreach(_wh_icon_size IN ITEMS 16 22 24 32 48 64 128 256 512)
-    install(FILES assets/icons/${_wh_icon_size}x${_wh_icon_size}/wafflehouse-client.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_wh_icon_size}x${_wh_icon_size}/apps)
-endforeach()
-
-install(DIRECTORY sounds/
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/wafflehouse-client/sounds
-    FILES_MATCHING PATTERN "*.wav"
-)
+if(APPLE)
+    # Keep built-in sounds self-contained when the .app is moved out of the source tree.
+    install(DIRECTORY sounds/
+        DESTINATION "${APP_EXECUTABLE}.app/Contents/Resources/sounds"
+        FILES_MATCHING PATTERN "*.wav"
+    )
+else()
+    install(PROGRAMS scripts/wafflehouse-shell DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES data/wafflehouse-client.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    foreach(_wh_icon_size IN ITEMS 16 22 24 32 48 64 128 256 512)
+        install(FILES assets/icons/${_wh_icon_size}x${_wh_icon_size}/wafflehouse-client.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_wh_icon_size}x${_wh_icon_size}/apps)
+    endforeach()
+    install(DIRECTORY sounds/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/wafflehouse-client/sounds
+        FILES_MATCHING PATTERN "*.wav"
+    )
+endif()

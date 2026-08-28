@@ -1,6 +1,6 @@
-# WaffleHouse-Client 3.4r1 — FreeBSD build notes
+# WaffleHouse-Client 5.0r7 — FreeBSD build notes
 
-WaffleHouse-Client 3.4r1 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
+WaffleHouse-Client 5.0r7 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 
@@ -16,7 +16,7 @@ pkg install cmake pkgconf qt6-base libsodium ncurses libxkbcommon \
   gcc gmake git curl portaudio opus bcg729 libuuid pulseaudio
 ```
 
-The builder then creates a managed **PJSIP/PJSUA2 2.17** installation under `~/.local/wafflehouse-pjsip`, configured for 32 SIP accounts and 64 call slots (50 active-call runtime ceiling). Use `./build.sh --pjsip` to force that dependency to be rebuilt.
+The builder then creates a managed **PJSIP/PJSUA2 2.17** installation under `~/.local/wafflehouse-pjsip`, configured for 32 SIP accounts and 64 call slots (50 active-call runtime ceiling). Use `./build.sh --os freebsd --pjsip` to force that dependency to be rebuilt.
 
 FreeBSD normally supplies Clang/C++ in the base system. The WaffleHouse executable and PJSUA2 are pinned to the FreeBSD base Clang/libc++ ABI because the packaged Qt 6 (including `qt6-multimedia` for OSCAR voice) libraries use that ABI. GCC/G++ remain installed and verified as auxiliary project prerequisites, while GNU Make (`gmake`) is used for generated Makefiles and PJSIP.
 
@@ -43,13 +43,13 @@ Safety rules are deliberately strict:
 For diagnosis only:
 
 ```sh
-./build.sh --audio-diagnose
+./build.sh --os freebsd --audio-diagnose
 ```
 
 That mode is read-only. To run a normal build while explicitly disabling recognized automatic audio repair:
 
 ```sh
-./build.sh --no-audio-fix
+./build.sh --os freebsd --no-audio-fix
 ```
 
 
@@ -62,4 +62,4 @@ WaffleHouse-Client uses `paplay` for built-in and user-selected notification aud
 
 The media feature set additionally uses the packaged `mpv` and `ffmpeg` runtime tools. `build.sh` checks/installs them through `pkg` when automatic dependency handling is enabled. No libmpv development package is required because WaffleHouse controls mpv through local JSON IPC.
 
-A normal interactive `./build.sh` builds first and then asks whether to install the application to the configured prefix, defaulting to **No**. During testing, `./build.sh --no-install` guarantees the WaffleHouse executable is not installed. To avoid automatic package installation and the inherited guarded HDA repair as well, use `--no-install --no-auto-deps --no-audio-fix`.
+A normal interactive `./build.sh` builds first and then asks whether to install the application to the configured prefix, defaulting to **No**. During testing, `./build.sh --os freebsd --no-install` guarantees the WaffleHouse executable is not installed. To avoid automatic package installation and the inherited guarded HDA repair as well, use `--no-install --no-auto-deps --no-audio-fix`.

@@ -1029,6 +1029,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
     if (!m_quitting && m_trayIcon && m_trayIcon->isVisible()) {
         hide();
+#ifdef Q_OS_MACOS
+        // Closing the last visible window can make macOS refresh/re-resolve the
+        // status item. Re-apply the full-color non-template icon immediately so
+        // the old 3.x white-on-white status icon cannot reappear while the app
+        // continues running in the menu bar.
+        QIcon statusIcon = appIcon();
+        if (!statusIcon.isNull()) {
+            statusIcon.setIsMask(false);
+            m_trayIcon->setIcon(statusIcon);
+        }
+#endif
         event->ignore();
         if (!m_trayHintShown) {
             m_trayHintShown = true;
@@ -2666,6 +2677,12 @@ void MainWindow::buildTrayIcon()
             6000);
         return;
     }
+#ifdef Q_OS_MACOS
+    // Keep the WaffleHouse status-item artwork in full color. Treating it as a
+    // template/mask lets macOS recolor it; on a light menu bar that can produce
+    // the historical white-on-white icon after the last app window is closed.
+    icon.setIsMask(false);
+#endif
     m_trayIcon->setIcon(icon);
     m_trayIcon->setToolTip(appDisplayName());
 
@@ -3964,6 +3981,15 @@ MainWindow::BackendState *MainWindow::stateFor(ChatBackend *backend) const
 MainWindow::BackendState *MainWindow::stateById(const QString &id) const
 {
     return m_states.value(id, nullptr);
+}
+
+MainWindow::BackendState *MainWindow::stateByProfileId(const QString &profileId) const
+{
+    if (profileId.isEmpty()) return nullptr;
+    for (BackendState *state : m_states) {
+        if (state && state->profileId == profileId) return state;
+    }
+    return nullptr;
 }
 
 MainWindow::BackendState *MainWindow::stateFromBuddyItem(QTreeWidgetItem *item) const
@@ -5459,7 +5485,7 @@ void MainWindow::executeGuiCommand(const QString &input)
         const QString id = takeGuiArgument(rest);
         if (id.isEmpty()) { report(QStringLiteral("Usage: /decline ID [reason]")); return; }
         const auto info = m_fileTransfers.transfer(id);
-        BackendState *owner = stateById(m_fileTransferProfiles.value(id));
+        BackendState *owner = stateByProfileId(m_fileTransferProfiles.value(id));
         if (info.id.isEmpty() || !owner) { report(QStringLiteral("Transfer not found.")); return; }
         const QString payload = m_fileTransfers.declineIncoming(id,
             rest.trimmed().isEmpty() ? QStringLiteral("declined by user") : rest.trimmed());
@@ -5654,7 +5680,15 @@ void MainWindow::quitApplication()
     }
 
     if (m_trayIcon) {
+        // Remove the macOS NSStatusItem synchronously before QApplication begins
+        // teardown. This prevents the status icon from briefly surviving in a
+        // recolored/blank state while the last WaffleHouse window disappears.
+        m_trayIcon->setContextMenu(nullptr);
         m_trayIcon->hide();
+#ifdef Q_OS_MACOS
+        delete m_trayIcon;
+        m_trayIcon = nullptr;
+#endif
     }
     close();
     QApplication::quit();
@@ -6458,7 +6492,7 @@ void MainWindow::cancelFileTransfer(const QString &transferId)
     m_directTransfers.cancel(transferId);
     const QString payload = m_fileTransfers.cancel(
         transferId, QStringLiteral("cancelled by user"));
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
     if (state && state->connected && state->backend && !info.target.isEmpty()) {
         sendSecureControlPayload(state, info.target, payload);
     }
@@ -6561,7 +6595,7 @@ void MainWindow::resumeFileTransfer(const QString &transferId)
                                  QStringLiteral("This transfer is no longer resumable."));
         return;
     }
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
     const bool secureTransfer = m_fileTransferSecure.value(transferId, true);
     if (!state || !state->connected || !state->backend
         || (secureTransfer && !m_secure.hasSession(state->profileId, info.target))) {
@@ -6646,7 +6680,7 @@ void MainWindow::handleDirectProgress(const QString &transferId,
 {
     m_fileTransfers.updateDirectProgress(transferId, transferred, outgoing);
     const auto info = m_fileTransfers.transfer(transferId);
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
     const QString peer = state
         ? targetDisplayName(state, QStringLiteral("im"), info.target)
         : info.target;
@@ -6669,25 +6703,38 @@ void MainWindow::handleDirectProgress(const QString &transferId,
 void MainWindow::handleDirectIncomingFinished(const QString &transferId)
 {
     const auto before = m_fileTransfers.transfer(transferId);
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
-    if (before.id.isEmpty() || !state) return;
+    if (before.id.isEmpty()) return;
 
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
+    const QString peer = state
+        ? targetDisplayName(state, QStringLiteral("im"), before.target)
+        : before.target;
+
+    // Finalize the local file first.  A temporary account lookup/control-channel
+    // problem must never leave a fully received, verified file stranded as
+    // *.cpxpart.  The peer confirmation is control-plane bookkeeping; the
+    // receiver's SHA-256 verification and atomic rename are local data-plane work.
     QString error;
     if (!m_fileTransfers.finalizeIncomingDirect(transferId, &error)) {
         const QString cancel = m_fileTransfers.cancel(transferId, error);
-        refreshTransferWindow(transferId, QStringLiteral("Download"),
-                              targetDisplayName(state, QStringLiteral("im"), before.target),
+        refreshTransferWindow(transferId, QStringLiteral("Download"), peer,
                               QStringLiteral("Error"));
         logTransfer(QStringLiteral("ERROR verifying direct download %1: %2 [%3]")
                         .arg(before.fileName, error, transferId));
-        sendSecureControlPayload(state, before.target, cancel);
+        if (state && state->connected && state->backend) {
+            sendSecureControlPayload(state, before.target, cancel);
+        }
         return;
     }
 
-    sendSecureControlPayload(state, before.target,
-                             m_fileTransfers.completionPayload(transferId));
+    if (state && state->connected && state->backend) {
+        sendSecureControlPayload(state, before.target,
+                                 m_fileTransfers.completionPayload(transferId));
+    } else {
+        logTransfer(QStringLiteral("Direct download verified locally, but the peer completion confirmation could not be sent because the owning account is no longer available [%1]")
+                        .arg(transferId), false);
+    }
     const auto info = m_fileTransfers.transfer(transferId);
-    const QString peer = targetDisplayName(state, QStringLiteral("im"), info.target);
     refreshTransferWindow(transferId, QStringLiteral("Download"), peer,
                           QStringLiteral("Complete"));
     logTransfer(QStringLiteral("Direct download complete and SHA-256 verified: %1 [%2]")
@@ -6702,7 +6749,7 @@ void MainWindow::handleDirectOutgoingFinished(const QString &transferId)
 {
     m_fileTransfers.markOutgoingDirectSent(transferId);
     const auto info = m_fileTransfers.transfer(transferId);
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
     const QString peer = state
         ? targetDisplayName(state, QStringLiteral("im"), info.target)
         : info.target;
@@ -6717,7 +6764,7 @@ void MainWindow::handleDirectFailure(const QString &transferId,
                                      bool outgoing)
 {
     const auto info = m_fileTransfers.transfer(transferId);
-    BackendState *state = stateById(m_fileTransferProfiles.value(transferId));
+    BackendState *state = stateByProfileId(m_fileTransferProfiles.value(transferId));
     if (info.id.isEmpty() || !state || !state->connected || !state->backend) return;
 
     m_directTransfers.cancel(transferId);

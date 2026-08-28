@@ -121,6 +121,7 @@ private:
 
     BackendState *stateFor(ChatBackend *backend) const;
     BackendState *stateById(const QString &id) const;
+    BackendState *stateByProfileId(const QString &profileId) const;
     BackendState *selectedState() const;
     BackendState *stateFromBuddyItem(QTreeWidgetItem *item) const;
     void selectState(BackendState *state);
