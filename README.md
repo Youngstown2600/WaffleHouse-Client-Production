@@ -1,40 +1,32 @@
-# WaffleHouse-Client 5.0r8 — Combined Desktop Bundle
+# WaffleHouse-Client 5.0r10 — All-Platform Bundle
 
-One source bundle for **Linux, FreeBSD/Unix, and macOS**. The Qt GUI and ncurses CLI use the same shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
+This release was rebuilt from the user-supplied 5.0r8 desktop bundle as the desktop source-of-truth, then versioned forward to 5.0r10 after applying the SIP compatibility changes.
 
-## Build
+This archive contains:
 
-```sh
-chmod +x build.sh
-./build.sh
-```
+- **Linux** desktop GUI + CLI — WaffleHouse-Client 5.0r10
+- **FreeBSD / Unix** desktop GUI + CLI — WaffleHouse-Client 5.0r10
+- **macOS** desktop GUI + CLI — WaffleHouse-Client 5.0r10
+- **Termux / Android** CLI — WaffleHouse-Client-Termux Build 1.2
 
-The top-level builder asks which operating system you are installing on:
+Run `./build.sh` and choose the target OS, or pass `--os linux`, `--os freebsd`, `--os macos`, or `--os termux`.
 
-1. Linux
-2. FreeBSD / Unix
-3. macOS
+## macOS 5.0r10 linker fix
 
-It verifies the selection against the current host and then dispatches to the appropriate platform builder. You can also use `--os linux`, `--os freebsd`, or `--os macos` for scripted builds.
+The desktop branch now normalizes PJSIP pkg-config framework pairs before CMake links the application. macOS frameworks such as `CoreServices` and `AudioToolbox` are emitted as `-framework <Name>` instead of being misread as normal `-l<Name>` libraries. This fixes the `ld: library 'CoreServices' not found` failure seen at the final 100% link step.
 
-A normal successful build **does not automatically install WaffleHouse-Client into a system bin directory**. The selected platform builder asks first, and `[y/N]` defaults to **No**.
+## Asterisk chan_sip support
 
-- Linux / FreeBSD default launcher: `/usr/local/bin/wafflehouse-client`
-- macOS optional app install: `/Applications/WaffleHouse-Client.app`
-- macOS optional command launcher: `/usr/local/bin/wafflehouse-client`
+All four builds retain PJSIP 2.17 as the **client-side SIP stack** and can connect to standards-based SIP servers regardless of the server's internal channel driver. SIP account settings now expose:
 
-See `BUILDING-Linux.md`, `BUILDING-FreeBSD.md`, and `BUILDING-macOS.md` for platform notes.
+- `auto`
+- `standard`
+- `asterisk-chan_sip`
 
-## 5.0r8 highlights
+Select `asterisk-chan_sip` for older Asterisk servers using `chan_sip`. That mode uses legacy-safe registration behavior, including legacy Contact rewriting and disabling RFC 5626 SIP-Outbound, while retaining Digest authentication and normal SIP/RTP calling.
 
-- Re-unifies the Linux/FreeBSD and macOS release trees into one desktop source bundle with an explicit OS-selection builder.
-- macOS is synchronized to the 5.0r6 Unix/Linux source baseline, including all 5.0r4–5.0r6 AIM/OSCAR typing and file-transfer fixes.
-- Fixes the macOS menu/status icon regression where the tray/status artwork could become white-on-white after closing the last visible application window. The WaffleHouse icon is explicitly kept as a full-color non-template icon on macOS, and the status item is synchronously removed during application quit.
-- macOS notification sounds are copied into the `.app` bundle so moving the application out of the extracted source tree does not break built-in sounds.
-- Secure CPX direct file transfers finalize correctly: after the final encrypted byte arrives, the receiver SHA-256 verifies the `.cpxpart`, renames it to the chosen filename, reports Complete, and returns confirmation so the sender leaves Verifying.
-- AIM/OSCAR file-transfer control traffic no longer opens chat windows.
-- OSCAR typing status stays in the normal AIM IM window.
-- OSCAR rate-class parsing and relay pacing improvements from 5.0r5 are included on all desktop platforms.
-- GUI/CLI softphone, media, secure rooms, themes, notifications, contacts/history, and the 5.0r2 conventional GUI exit path remain shared.
+The account AOR/From identity now correctly honors the configured Caller-ID domain when it differs from the registrar/SIP domain.
 
-Termux/Android remains a separate target and is intentionally not included in this desktop bundle.
+## Installation behavior
+
+Building does **not** silently add WaffleHouse-Client to a bin directory. The selected builder asks first. Press Enter at the prompt to leave the application uninstalled and run it from the build output instead.

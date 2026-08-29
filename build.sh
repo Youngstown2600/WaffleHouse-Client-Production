@@ -1,129 +1,123 @@
 #!/bin/sh
 set -eu
-
-ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-cd "$ROOT_DIR"
-
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SELECTED_OS=
-PASSTHRU=
+ARGS_FILE="${TMPDIR:-/tmp}/wafflehouse-all-platform-args-$$"
+: > "$ARGS_FILE"
+trap 'rm -f "$ARGS_FILE"' EXIT HUP INT TERM
 
-usage() {
-  cat <<'USAGE'
-WaffleHouse-Client 5.0r8 — combined desktop builder
+usage(){
+cat <<'EOF'
+WaffleHouse-Client 5.0r10 — all-platform builder
 
-Usage: ./build.sh [--os linux|freebsd|macos] [platform build options]
+Usage: ./build.sh [--os linux|freebsd|macos|termux] [platform options]
 
-With no --os option the builder asks which operating system you are installing on:
+With no --os option, choose:
   1) Linux
   2) FreeBSD / Unix
   3) macOS
+  4) Termux / Android
 
-The selected platform is checked against the host before any dependency installation
-or build action begins. Termux/Android is intentionally not part of this desktop bundle.
+The desktop branch builds WaffleHouse-Client 5.0r10.
+The Termux branch builds WaffleHouse-Client-Termux Build 1.2.
 
-Application installation is NOT automatic. After a successful normal build, the
-platform builder asks before adding WaffleHouse-Client to a system bin directory.
-Pressing Enter at that prompt means No.
-
-Common options forwarded to the selected platform builder include:
-  --clean, --pjsip, --no-auto-deps, --jobs N, --build-type TYPE
-  --install, --no-install, --prefix PATH
-
-Linux/FreeBSD also support:
-  --audio-diagnose, --no-audio-fix, --dry-run, --upgrade, --uninstall, --yes
-
-macOS also supports:
-  --dmg, --with-media-deps, --yes
+Application installation is not automatic. Desktop builders and the Termux
+builder ask before adding WaffleHouse-Client to their normal bin locations.
+Pressing Enter at an install prompt means No.
 
 Examples:
   ./build.sh
   ./build.sh --os linux --clean
   ./build.sh --os freebsd --pjsip
   ./build.sh --os macos --clean --dmg
-USAGE
+  ./build.sh --os termux --clean
+  ./build.sh --os termux --install
+EOF
 }
 
-# Pull --os out of the argument list while preserving all other options.
-set -- "$@"
-forward_file="${TMPDIR:-/tmp}/wafflehouse-build-args-$$"
-: > "$forward_file"
-trap 'rm -f "$forward_file"' EXIT HUP INT TERM
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --os)
       shift
-      [ "$#" -gt 0 ] || { echo "--os requires linux, freebsd, or macos" >&2; exit 2; }
+      [ "$#" -gt 0 ] || { echo "--os requires linux, freebsd, macos, or termux" >&2; exit 2; }
       SELECTED_OS=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
       ;;
-    --os=*)
-      SELECTED_OS=$(printf '%s' "${1#--os=}" | tr '[:upper:]' '[:lower:]')
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      # POSIX sh has no safe array; store one shell-quoted argument per line.
-      printf '%s\n' "$1" | sed "s/'/'\\''/g; s/^/'/; s/$/'/" >> "$forward_file"
-      ;;
+    --os=*) SELECTED_OS=$(printf '%s' "${1#--os=}" | tr '[:upper:]' '[:lower:]') ;;
+    -h|--help) usage; exit 0 ;;
+    *) printf '%s\n' "$1" | sed "s/'/'\\''/g; s/^/'/; s/$/'/" >> "$ARGS_FILE" ;;
   esac
   shift
 done
 
 case "$SELECTED_OS" in
-  linux|freebsd|macos|darwin|'') : ;;
+  linux|freebsd|macos|darwin|termux|android|'') : ;;
+  unix) SELECTED_OS=freebsd ;;
   *) echo "Unknown --os value: $SELECTED_OS" >&2; usage >&2; exit 2 ;;
 esac
 [ "$SELECTED_OS" != darwin ] || SELECTED_OS=macos
+[ "$SELECTED_OS" != android ] || SELECTED_OS=termux
 
 if [ -z "$SELECTED_OS" ]; then
   if [ ! -t 0 ]; then
-    echo "No interactive terminal is available. Re-run with --os linux, --os freebsd, or --os macos." >&2
+    echo "No interactive terminal is available. Re-run with --os linux, freebsd, macos, or termux." >&2
     exit 2
   fi
-  cat <<'PROMPT'
+  cat <<'EOF'
 ============================================================
-             WAFFLEHOUSE-CLIENT 5.0r8 DESKTOP
+            WAFFLEHOUSE-CLIENT ALL PLATFORMS
 ============================================================
 What operating system are you installing on?
 
   1) Linux
   2) FreeBSD / Unix
   3) macOS
-PROMPT
-  printf 'Selection [1-3]: '
+  4) Termux / Android
+EOF
+  printf 'Selection [1-4]: '
   IFS= read -r answer
   case "$answer" in
     1|linux|Linux) SELECTED_OS=linux ;;
     2|freebsd|FreeBSD|unix|Unix) SELECTED_OS=freebsd ;;
     3|macos|macOS|MacOS|darwin|Darwin) SELECTED_OS=macos ;;
+    4|termux|Termux|android|Android) SELECTED_OS=termux ;;
     *) echo "Invalid selection." >&2; exit 2 ;;
   esac
 fi
 
-HOST_OS=$(uname -s)
-case "$SELECTED_OS:$HOST_OS" in
-  linux:Linux) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
-  freebsd:FreeBSD) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
-  macos:Darwin) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-macos.sh" ;;
-  freebsd:*)
-    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.0r8 is FreeBSD." >&2
-    exit 2
+HOST_OS=$(uname -s 2>/dev/null || echo unknown)
+case "$SELECTED_OS" in
+  linux)
+    [ "$HOST_OS" = Linux ] || { echo "Linux selected, but host reports $HOST_OS." >&2; exit 2; }
+    TARGET="$ROOT/desktop/build.sh --os linux"
     ;;
-  *)
-    echo "OS selection/host mismatch: selected '$SELECTED_OS', host reports '$HOST_OS'." >&2
-    echo "Re-run and choose the operating system you are actually building on." >&2
-    exit 2
+  freebsd)
+    [ "$HOST_OS" = FreeBSD ] || { echo "FreeBSD / Unix selected, but validated Unix target requires a FreeBSD host (host reports $HOST_OS)." >&2; exit 2; }
+    TARGET="$ROOT/desktop/build.sh --os freebsd"
+    ;;
+  macos)
+    [ "$HOST_OS" = Darwin ] || { echo "macOS selected, but host reports $HOST_OS." >&2; exit 2; }
+    TARGET="$ROOT/desktop/build.sh --os macos"
+    ;;
+  termux)
+    [ "$HOST_OS" = Linux ] || { echo "Termux selected, but host reports $HOST_OS." >&2; exit 2; }
+    case "${PREFIX:-}" in
+      /data/data/com.termux/files/usr) : ;;
+      *) echo "Termux selected, but this is not a native Termux environment (PREFIX=${PREFIX:-unset})." >&2; exit 2 ;;
+    esac
+    TARGET="$ROOT/termux/build.sh"
     ;;
 esac
 
-printf '\nSelected platform: %s (host: %s)\n\n' "$SELECTED_OS" "$HOST_OS"
-
-# Restore forwarded arguments exactly enough for normal CLI paths/options.
-# shellcheck disable=SC2046,SC2086
-if [ -s "$forward_file" ]; then
-  eval "set -- $(tr '\n' ' ' < "$forward_file")"
+if [ -s "$ARGS_FILE" ]; then
+  eval "set -- $(tr '\n' ' ' < "$ARGS_FILE")"
 else
   set --
 fi
-exec "$PLATFORM_SCRIPT" "$@"
+
+printf '\nSelected platform: %s (host: %s)\n\n' "$SELECTED_OS" "$HOST_OS"
+case "$SELECTED_OS" in
+  linux) exec "$ROOT/desktop/build.sh" --os linux "$@" ;;
+  freebsd) exec "$ROOT/desktop/build.sh" --os freebsd "$@" ;;
+  macos) exec "$ROOT/desktop/build.sh" --os macos "$@" ;;
+  termux) exec "$ROOT/termux/build.sh" "$@" ;;
+esac
