@@ -1,0 +1,59 @@
+WaffleHouse-Client 5.0r18 — validation
+=====================================
+Date: 2026-08-29
+
+Scope
+-----
+5.0r18 fixes the AIM/OSCAR account context-menu Join AIM Chat action being
+incorrectly disabled when the BOS connection does not directly advertise the
+CHAT_NAV (0x000D) and CHAT (0x000E) foodgroups.
+
+Root cause
+----------
+The GUI used OscarBackend::supportsFamily() for CHAT_NAV and CHAT. That method
+correctly reports only the families advertised by the currently connected BOS
+HostOnline packet. Classic OSCAR chat navigation and chat are separate service
+connections obtained through OSERVICE SERVICE_REQUEST redirects, so absence
+from the BOS family list is not proof that chat is unavailable.
+
+Fix
+---
+- A connected OSCAR account now enables Join AIM Chat.
+- The existing backend path requests CHAT_NAV via OSERVICE, resolves/creates the
+  room, then requests the CHAT service using room information.
+- If the server declines either redirect, the existing backend error path
+  reports the real OSCAR error to the user.
+- OSCAR Feature Center text now distinguishes BOS-advertised foodgroups from
+  separately redirected ChatNav/Chat services.
+
+Regression validation
+---------------------
+The 5.0r18 ChatNav/Chat redirect/menu regression verifies that the GUI no
+longer gates Join AIM Chat on supportsFamily(CHAT_NAV/CHAT), while the backend
+still requests both services on demand. All existing project regression gates
+are also run for this release.
+
+Full regression result
+----------------------
+11/11 source regression gates PASS:
+- BuildFeatures GUI declaration scope
+- IM composer initial focus
+- macOS framework linkage
+- macOS Qt deployment
+- OSCAR login/full debug + native idle
+- OSCAR native feature audit
+- selectable protocols + multi-SIP + BBS geometry + OSCAR
+- 5.0r17 OSCAR persistent log + /bin install prompt
+- 5.0r18 OSCAR ChatNav/Chat redirect/menu gating
+- chan_sip compatibility
+- SIP server-type UI
+
+All 17 project shell scripts PASS `sh -n`.
+
+Native-build limitation in this execution environment
+-----------------------------------------------------
+A fresh CMake configure was attempted. This environment still does not provide
+the Qt 6 development CMake package (Qt6Config.cmake / qt6-config.cmake), so the
+configure cannot reach compilation/linking here. The r18 source change itself
+is confined to MainWindow OSCAR menu/feature-center gating and passes the full
+source regression suite.

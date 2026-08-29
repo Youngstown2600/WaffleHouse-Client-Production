@@ -1,0 +1,25 @@
+WaffleHouse-Client 5.0r12 validation
+
+Validated in the build container:
+- OSCAR debug/audit + native idle source regression: PASS
+- Asterisk chan_sip compatibility regression: PASS
+- SIP server-type selector regression: PASS
+- macOS framework-linkage regression: PASS
+- macOS Homebrew Qt deployment regression: PASS
+- build/test shell syntax: PASS
+
+OSCAR 5.0r12 audit coverage:
+- off / login / full persisted modes
+- BUCP challenge/login stage diagnostics
+- decoded login error TLVs and legacy FLAP channel-4 SIGNOFF failures
+- BOS/service bootstrap diagnostics
+- credential-safe FLAP/SNAC wire trace
+- native idle SNAC 0x0001/0x0011 with uint32 seconds and zero=active
+
+Security note: trace output redacts account passwords, BUCP password hashes,
+challenge material, BOS/service cookies, and OSCAR Admin password fields.
+
+Environment limitation:
+The container does not provide Qt 6 development headers/pkg-config metadata,
+so a fresh native C++/Qt compile was not performed here. Source/regression
+validation passed; native platform builds remain the final integration check.

@@ -1,0 +1,59 @@
+WaffleHouse-Client 5.0r17 — validation
+=====================================
+Date: 2026-08-29
+
+Scope
+-----
+5.0r17 adds a persistent, redacted OSCAR audit log/viewer and makes the
+Linux/FreeBSD post-build installation prompt explicitly offer
+/bin/wafflehouse-client. It retains the 5.0r16 BuildFeatures compile fix,
+5.0r15 IM focus fix, and 5.0r14 native OSCAR presence/profile behavior.
+
+OSCAR audit logging
+-------------------
+- Login Audit and Full Wire Trace persist protocolLog() output to a per-account
+  application-data log file under logs/.
+- The filename is derived from sanitized AIM username + server + port.
+- Existing credential redaction is preserved; persistence receives the same
+  redacted diagnostic strings shown in Activity.
+- Log rotation occurs at 5 MiB with one .old generation retained.
+- GUI viewer is available from Tools -> View OSCAR Audit Log and from the OSCAR
+  account context menu.
+- Multiple AIM accounts are selectable; the viewer shows the exact filesystem
+  path and tails the last 512 KiB for large files.
+
+Linux/FreeBSD /bin install prompt
+---------------------------------
+- A successful interactive build explicitly asks whether to install
+  WaffleHouse-Client system-wide and add /bin/wafflehouse-client.
+- Enter/default remains No.
+- Normal application/assets remain under CMAKE_INSTALL_PREFIX (default
+  /usr/local). /bin/wafflehouse-client is installed as a launcher symlink to
+  the prefix executable, preventing application data from being scattered
+  under /share.
+- --install and --upgrade also create the /bin launcher.
+- --no-install suppresses installation as before.
+
+Regression validation
+---------------------
+10/10 source regression gates PASS:
+- BuildFeatures GUI declaration scope
+- IM composer initial focus
+- macOS framework linkage
+- macOS Qt deployment
+- OSCAR login/full debug + native idle
+- OSCAR native feature audit (presence/profile/SSI/privacy/chat/admin/etc.)
+- selectable protocols + multi-SIP + BBS geometry + OSCAR
+- 5.0r17 OSCAR persistent log + /bin install prompt
+- chan_sip compatibility
+- SIP server-type UI
+
+All project shell scripts PASS `sh -n`.
+Top-level `build.sh --help` reports 5.0r17 and the explicit /bin prompt policy.
+
+Native-build limitation in this execution environment
+-----------------------------------------------------
+A fresh CMake configure was attempted. GNU C++ 14.2.0 and Threads were found,
+but configuration stops at find_package(Qt6) because this execution environment
+does not contain Qt6Config.cmake / qt6-config.cmake. Therefore this validation
+does not claim a fresh Qt compile/link of 5.0r17 in this container.

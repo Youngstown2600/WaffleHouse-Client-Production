@@ -1,0 +1,29 @@
+WaffleHouse-Client 5.0r14 validation
+====================================
+Baseline: user-supplied WaffleHouse-Client 5.0r13 Desktop Bundle.
+
+OSCAR changes audited/fixed:
+- Native idle uses OSERVICE 0x0001/0x0011 with uint32 seconds; zero clears idle.
+- Away/back uses LOCATE 0x0002/0x0004 unavailable MIME/data TLVs.
+- Profile get/set uses native LOCATE profile TLVs and Query/Reply; locally saved profiles replay after BOS login.
+- Query2 requests profile + unavailable/away + capabilities + HTML user info.
+- BUDDY arrival/departure now decodes native user flags, ICQ status bits, idle minutes, sign-on/member times, warning level, and capability TLVs.
+- Batched BUDDY arrival/departure bodies are consumed record-by-record rather than only parsing the first user.
+- OSERVICE own-user-info updates and warning/evil notifications are consumed; rejected BUDDY watches are surfaced to the user.
+- GUI/CLI buddy lists display Away/DND/N/A/Busy/Free-for-Chat/Invisible/Idle rather than reducing all connected peers to Online.
+- Buddy rights request asks for initial departure notifications only; unsupported BART support is not claimed.
+- Native chat capability is advertised because OSCAR chat rooms are implemented. Legacy AIM Talk, Direct IM, standard rendezvous File Transfer, and BART remain explicitly detection-only and are not falsely advertised.
+- Existing SSI buddy persistence/authorization, permit-deny privacy, temporary watches, watcher list, typing, stored-message retrieval, account administration, directory lookup/edit, email lookup/invite, chat, IM, raw SNAC, and server-family gating remain present.
+
+Validation gates:
+- tests/oscar_debug_idle_test.sh
+- tests/oscar_native_feature_audit_test.sh
+- tests/r13_selectable_protocols_multisip_bbs_oscar_test.sh (historical-name regression retained)
+- macOS framework/Qt deployment regressions
+- SIP chan_sip/server-type regressions
+- POSIX shell syntax for project shell scripts
+
+Native build/runtime note:
+- CMake configuration was attempted with dependency auto-install disabled. GNU C++ 14.2 and Threads were detected successfully.
+- Configuration then stopped at find_package(Qt6) because this execution environment does not contain the Qt 6 development CMake packages (Qt6Config.cmake/qt6-config.cmake). Therefore this report does not claim a fresh native link or runtime test here.
+- Static regression checks validate source/wire construction and GUI/CLI plumbing. A real OSCAR server remains the final authority for server-specific behavior, especially revival servers that implement subsets or variants of classic AOL OSCAR.
