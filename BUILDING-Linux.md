@@ -1,6 +1,6 @@
-# WaffleHouse-Client 5.0r7 — Linux build notes
+# WaffleHouse-Client 5.0r8 — Linux build notes
 
-WaffleHouse-Client 5.0r7 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
+WaffleHouse-Client 5.0r8 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
 
 ## Debian / Ubuntu / Linux Mint and derivatives
 

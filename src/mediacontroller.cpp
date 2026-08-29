@@ -34,14 +34,44 @@ QString boolText(bool value)
 {
     return value ? QStringLiteral("on") : QStringLiteral("off");
 }
+
+QString findExternalExecutable(const QString &name)
+{
+    const QString onPath = QStandardPaths::findExecutable(name);
+    if (!onPath.isEmpty()) return onPath;
+
+#ifdef Q_OS_MACOS
+    // Finder-launched .app bundles normally do not inherit the user's shell PATH.
+    // Check the conventional package-manager locations explicitly so an mpv/ffmpeg
+    // installed by Homebrew, MacPorts, or Fink is still usable.
+    const QStringList dirs = {
+        QStringLiteral("/opt/homebrew/bin"),
+        QStringLiteral("/usr/local/bin"),
+        QStringLiteral("/opt/local/bin"),
+        QStringLiteral("/sw/bin")
+    };
+    for (const QString &dir : dirs) {
+        const QString candidate = QDir(dir).filePath(name);
+        const QFileInfo info(candidate);
+        if (info.exists() && info.isFile() && info.isExecutable()) return candidate;
+    }
+
+    if (name == QStringLiteral("mpv")) {
+        const QString appBinary = QStringLiteral("/Applications/mpv.app/Contents/MacOS/mpv");
+        const QFileInfo info(appBinary);
+        if (info.exists() && info.isFile() && info.isExecutable()) return appBinary;
+    }
+#endif
+    return {};
+}
 }
 
 MediaController::MediaController(QObject *parent)
     : QObject(parent)
 {
     m_remoteSocket = qEnvironmentVariable("WAFFLEHOUSE_REMOTE_MEDIA_SOCKET").trimmed();
-    m_mpv = QStandardPaths::findExecutable(QStringLiteral("mpv"));
-    m_ffmpeg = QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+    m_mpv = findExternalExecutable(QStringLiteral("mpv"));
+    m_ffmpeg = findExternalExecutable(QStringLiteral("ffmpeg"));
     probeBackendVersion();
 
     m_process = new QProcess(this);

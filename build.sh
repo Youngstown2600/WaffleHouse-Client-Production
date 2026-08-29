@@ -9,7 +9,7 @@ PASSTHRU=
 
 usage() {
   cat <<'USAGE'
-WaffleHouse-Client 5.0r7 — combined desktop builder
+WaffleHouse-Client 5.0r8 — combined desktop builder
 
 Usage: ./build.sh [--os linux|freebsd|macos] [platform build options]
 
@@ -33,7 +33,7 @@ Linux/FreeBSD also support:
   --audio-diagnose, --no-audio-fix, --dry-run, --upgrade, --uninstall, --yes
 
 macOS also supports:
-  --dmg, --yes
+  --dmg, --with-media-deps, --yes
 
 Examples:
   ./build.sh
@@ -83,7 +83,7 @@ if [ -z "$SELECTED_OS" ]; then
   fi
   cat <<'PROMPT'
 ============================================================
-             WAFFLEHOUSE-CLIENT 5.0r7 DESKTOP
+             WAFFLEHOUSE-CLIENT 5.0r8 DESKTOP
 ============================================================
 What operating system are you installing on?
 
@@ -107,7 +107,7 @@ case "$SELECTED_OS:$HOST_OS" in
   freebsd:FreeBSD) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
   macos:Darwin) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-macos.sh" ;;
   freebsd:*)
-    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.0r7 is FreeBSD." >&2
+    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.0r8 is FreeBSD." >&2
     exit 2
     ;;
   *)

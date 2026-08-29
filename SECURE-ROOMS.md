@@ -46,4 +46,4 @@ For a simple test with two WaffleHouse clients:
 
 ## Main window / Softphone layout
 
-WaffleHouse-Client 5.0r7 uses a compact main **Accounts** window without the old navigation rail. SIP accounts remain visible alongside AIM/IRC/Telnet accounts. The full Softphone workspace is available from **Tools -> Open Softphone**, the system tray, and supported `/phone` commands.
+WaffleHouse-Client 5.0r8 uses a compact main **Accounts** window without the old navigation rail. SIP accounts remain visible alongside AIM/IRC/Telnet accounts. The full Softphone workspace is available from **Tools -> Open Softphone**, the system tray, and supported `/phone` commands.

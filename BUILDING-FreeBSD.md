@@ -1,6 +1,6 @@
-# WaffleHouse-Client 5.0r7 — FreeBSD build notes
+# WaffleHouse-Client 5.0r8 — FreeBSD build notes
 
-WaffleHouse-Client 5.0r7 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
+WaffleHouse-Client 5.0r8 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 

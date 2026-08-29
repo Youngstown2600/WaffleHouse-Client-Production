@@ -1,4 +1,4 @@
-# Building WaffleHouse-Client 5.0r7 on macOS
+# Building WaffleHouse-Client 5.0r8 on macOS
 
 From the source root:
 
@@ -13,7 +13,15 @@ Choose **3) macOS** when prompted. For scripted builds you can use:
 ./build.sh --os macos --clean
 ```
 
-Homebrew is required. Missing Homebrew formulae are installed unless `--no-auto-deps` is supplied. The builder prepares managed PJSIP 2.17, configures Qt 6/Cocoa, builds the `.app`, copies the built-in notification sounds into the application resources, and runs `macdeployqt`.
+Homebrew is required for the build toolchain. Only compile/link dependencies are mandatory and auto-installed unless `--no-auto-deps` is supplied. `mpv` and `ffmpeg` are optional runtime helpers and **never block the client build**; `yt-dlp` is not required. The builder prepares managed PJSIP 2.17, configures Qt 6/Cocoa, builds the `.app`, copies the built-in notification sounds into the application resources, and runs `macdeployqt`.
+
+If you want the builder to *try* installing the optional media helpers, use:
+
+```sh
+./build.sh --os macos --with-media-deps
+```
+
+If Homebrew reports that `mpv` has no bottle for that Mac/macOS release, the builder prints a warning and continues. The rest of WaffleHouse-Client remains fully buildable; only local/radio media playback is unavailable until an `mpv` runtime is installed.
 
 Create a DMG as well:
 
@@ -33,6 +41,6 @@ After a successful normal build, the builder asks before installing. Pressing En
 - `/Applications/WaffleHouse-Client.app`
 - `/usr/local/bin/wafflehouse-client` → the executable inside the installed `.app`
 
-The 5.0r7 macOS path uses the same application source as Linux/FreeBSD and includes the 5.0r4–5.0r6 OSCAR fixes. It also explicitly keeps the WaffleHouse status/menu-bar icon as a full-color non-template icon and removes the status item synchronously during quit to prevent the historical white-on-white icon state.
+The 5.0r8 macOS path uses the same application source as Linux/FreeBSD and includes the 5.0r4–5.0r6 OSCAR fixes. It also explicitly keeps the WaffleHouse status/menu-bar icon as a full-color non-template icon and removes the status item synchronously during quit to prevent the historical white-on-white icon state.
 
 Code signing and notarization require the distributor's own Apple Developer identity and are intentionally not fabricated by the builder.

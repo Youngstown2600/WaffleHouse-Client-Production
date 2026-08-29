@@ -1,6 +1,6 @@
 # WaffleHouse-Client Themes
 
-WaffleHouse-Client 5.0r7 retains the complete GUI/CLI theme family plus the WaffleHouse-specific palettes. The CLI shortcut footer uses each theme's own secondary accent.
+WaffleHouse-Client 5.0r8 retains the complete GUI/CLI theme family plus the WaffleHouse-specific palettes. The CLI shortcut footer uses each theme's own secondary accent.
 
 ## S.I.P.H.E.R. theme family
 

@@ -1,4 +1,4 @@
-# WaffleHouse-Client 5.0r7 — Combined Desktop Bundle
+# WaffleHouse-Client 5.0r8 — Combined Desktop Bundle
 
 One source bundle for **Linux, FreeBSD/Unix, and macOS**. The Qt GUI and ncurses CLI use the same shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
 
@@ -25,7 +25,7 @@ A normal successful build **does not automatically install WaffleHouse-Client in
 
 See `BUILDING-Linux.md`, `BUILDING-FreeBSD.md`, and `BUILDING-macOS.md` for platform notes.
 
-## 5.0r7 highlights
+## 5.0r8 highlights
 
 - Re-unifies the Linux/FreeBSD and macOS release trees into one desktop source bundle with an explicit OS-selection builder.
 - macOS is synchronized to the 5.0r6 Unix/Linux source baseline, including all 5.0r4–5.0r6 AIM/OSCAR typing and file-transfer fixes.

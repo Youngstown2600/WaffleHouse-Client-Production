@@ -1,5 +1,11 @@
 # WaffleHouse-Client 5.x Changelog
 
+## 5.0r8
+- Fixed the macOS builder so optional media tools cannot block compilation of the client. `mpv` and `ffmpeg` are now runtime-only optional dependencies; failure to install either one is non-fatal.
+- Removed the stale macOS `yt-dlp` build dependency; the 5.0r8 media path does not use the removed YouTube resolver.
+- Added `--with-media-deps` for users who explicitly want the builder to attempt Homebrew installation of `mpv`/`ffmpeg`. A Homebrew “no bottle available” error now produces a warning and the WaffleHouse build continues.
+- macOS runtime discovery now checks Homebrew, MacPorts, Fink, and `/Applications/mpv.app` locations so Finder-launched `.app` bundles can find `mpv`/`ffmpeg` even when those directories are absent from the GUI process PATH.
+
 ## 5.0r7
 - Combined the Linux/FreeBSD and macOS desktop releases into one shared source bundle. The top-level builder now asks the user to select Linux, FreeBSD/Unix, or macOS before any platform build/dependency work begins.
 - Normal builds on every desktop platform ask before installing WaffleHouse-Client into a system bin directory; Enter/default remains No.

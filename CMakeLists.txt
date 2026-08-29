@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 5.0.7 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 5.0.8 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -145,7 +145,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="5.0r7"
+    APP_VERSION_STRING="5.0r8"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
     WAFFLEHOUSE_OSCAR_VOICE=1
 )
@@ -170,8 +170,8 @@ if(APPLE)
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_NAME "WaffleHouse-Client"
         MACOSX_BUNDLE_GUI_IDENTIFIER "local.wafflehouse-client"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "5.0.7"
-        MACOSX_BUNDLE_BUNDLE_VERSION "5.0.7"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "5.0.8"
+        MACOSX_BUNDLE_BUNDLE_VERSION "5.0.8"
     )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_FREEBSD=1)

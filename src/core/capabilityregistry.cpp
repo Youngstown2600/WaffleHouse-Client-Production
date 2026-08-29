@@ -1,7 +1,10 @@
 #include "core/capabilityregistry.h"
 
+#include <QDir>
+#include <QFileInfo>
 #include <QProcessEnvironment>
 #include <QStandardPaths>
+#include <QtGlobal>
 
 namespace {
 void add(QList<ClientCapability> &out, const QString &key, const QString &label,
@@ -10,9 +13,34 @@ void add(QList<ClientCapability> &out, const QString &key, const QString &label,
     out.push_back({key, label, available, detail});
 }
 
+QString findExternalExecutable(const QString &name)
+{
+    const QString onPath = QStandardPaths::findExecutable(name);
+    if (!onPath.isEmpty()) return onPath;
+#ifdef Q_OS_MACOS
+    const QStringList dirs = {
+        QStringLiteral("/opt/homebrew/bin"),
+        QStringLiteral("/usr/local/bin"),
+        QStringLiteral("/opt/local/bin"),
+        QStringLiteral("/sw/bin")
+    };
+    for (const QString &dir : dirs) {
+        const QString candidate = QDir(dir).filePath(name);
+        const QFileInfo info(candidate);
+        if (info.exists() && info.isFile() && info.isExecutable()) return candidate;
+    }
+    if (name == QStringLiteral("mpv")) {
+        const QString appBinary = QStringLiteral("/Applications/mpv.app/Contents/MacOS/mpv");
+        const QFileInfo info(appBinary);
+        if (info.exists() && info.isFile() && info.isExecutable()) return appBinary;
+    }
+#endif
+    return {};
+}
+
 bool commandAvailable(const QString &name)
 {
-    return !QStandardPaths::findExecutable(name).isEmpty();
+    return !findExternalExecutable(name).isEmpty();
 }
 }
 

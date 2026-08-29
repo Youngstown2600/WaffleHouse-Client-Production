@@ -1,4 +1,4 @@
-WaffleHouse-Client 5.0r7 — Combined Desktop Bundle
+WaffleHouse-Client 5.0r8 — Combined Desktop Bundle
 Platforms: Linux, FreeBSD/Unix, macOS
 Build: ./build.sh
 
@@ -8,5 +8,7 @@ uname, and dispatches to the matching platform build path.
 A successful normal build asks before installing WaffleHouse-Client into the
 platform's system bin location. The default answer is No.
 
-macOS source is synchronized to the 5.0r6 Unix/Linux fixes and includes the
-5.0r7 macOS status/menu-bar icon teardown/non-template fix.
+macOS 5.0r8 fixes the Homebrew mpv failure seen on 5.0r7: mpv and ffmpeg are
+optional runtime helpers and no longer block compilation. The builder does not
+try to install them unless --with-media-deps is explicitly supplied; even then,
+a Homebrew install failure is a warning rather than a fatal build error.

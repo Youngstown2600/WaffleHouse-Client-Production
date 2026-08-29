@@ -10,6 +10,7 @@ CLEAN=0
 FORCE_PJSIP=0
 AUTO_DEPS=1
 MAKE_DMG=0
+WITH_MEDIA_DEPS=0
 BUILD_TYPE=Release
 JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 2)
 PJSIP_PREFIX=${PJSIP_PREFIX:-${HOME:-$ROOT_DIR}/.local/wafflehouse-pjsip}
@@ -23,12 +24,15 @@ usage() {
   cat <<USAGE
 Usage: ./build.sh --os macos [options]
 
-Build WaffleHouse-Client 5.0r7 for macOS. The .app contains the GUI and the same
+Build WaffleHouse-Client 5.0r8 for macOS. The .app contains the GUI and the same
 binary also supports --cli for the terminal interface.
 
   --clean          remove the macOS build directory first
   --pjsip          force rebuild managed PJSIP 2.17
   --dmg            also create a local DMG with macdeployqt
+  --with-media-deps
+                   optionally try to install mpv/ffmpeg with Homebrew;
+                   failures do not abort the WaffleHouse build
   --no-auto-deps   do not install missing Homebrew dependencies
   --install        install after a successful build without the final prompt
   --no-install     build only and suppress the install prompt
@@ -51,6 +55,7 @@ while [ "$#" -gt 0 ]; do
     --clean) CLEAN=1 ;;
     --pjsip) FORCE_PJSIP=1 ;;
     --dmg) MAKE_DMG=1 ;;
+    --with-media-deps) WITH_MEDIA_DEPS=1 ;;
     --no-auto-deps) AUTO_DEPS=0 ;;
     --install) INSTALL_MODE=yes ;;
     --no-install) INSTALL_MODE=no ;;
@@ -89,10 +94,42 @@ need_formula() {
   brew install "$formula"
 }
 
-for formula in cmake pkg-config qt libsodium ncurses portaudio opus mpv ffmpeg yt-dlp; do
+# Only packages required to compile/link WaffleHouse belong in the fatal
+# dependency preflight. mpv and ffmpeg are external runtime helpers and are
+# deliberately optional; an older/unsupported macOS Homebrew installation may
+# have no bottle for mpv, and that must never prevent the client itself from
+# building. yt-dlp is not used by the 5.0r8 media implementation.
+for formula in cmake pkg-config qt libsodium ncurses portaudio opus; do
   need_formula "$formula"
 done
 command -v git >/dev/null 2>&1 || { echo "git is required (install Xcode Command Line Tools)." >&2; exit 1; }
+
+optional_formula() {
+  formula=$1
+  purpose=$2
+  if brew list --versions "$formula" >/dev/null 2>&1; then
+    echo "Optional runtime dependency present: $formula ($purpose)"
+    return 0
+  fi
+
+  if [ "$WITH_MEDIA_DEPS" -eq 0 ]; then
+    echo "NOTE: optional runtime dependency '$formula' is not installed ($purpose)."
+    echo "      WaffleHouse-Client will still build; only the related media feature is unavailable."
+    echo "      Re-run with --with-media-deps if you want the builder to try Homebrew."
+    return 0
+  fi
+
+  echo "==> Trying optional macOS runtime dependency: $formula"
+  if brew install "$formula"; then
+    echo "Installed optional dependency: $formula"
+  else
+    echo "WARNING: Homebrew could not install optional dependency '$formula'." >&2
+    echo "         Continuing the WaffleHouse-Client build without it." >&2
+  fi
+}
+
+optional_formula mpv "local/radio media playback"
+optional_formula ffmpeg "SSH/remote media audio helper"
 
 if [ "$FORCE_PJSIP" -eq 1 ]; then rm -f "$PJSIP_PREFIX/.wafflehouse-pjsip-build"; fi
 if ! PKG_CONFIG_PATH="$PJSIP_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}" pkg-config --exact-version=2.17 libpjproject >/dev/null 2>&1 || \
@@ -113,7 +150,7 @@ export PKG_CONFIG_PATH="$PJSIP_PREFIX/lib/pkgconfig:$SODIUM_PREFIX/lib/pkgconfig
 export CMAKE_PREFIX_PATH="$QT_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
 printf '%s\n' "============================================================" \
-  "                    WAFFLEHOUSE-CLIENT 5.0r7" \
+  "                    WAFFLEHOUSE-CLIENT 5.0r8" \
   "============================================================" \
   "Platform:       macOS $(sw_vers -productVersion 2>/dev/null || true)" \
   "Architecture:   $(uname -m)" \
@@ -164,7 +201,7 @@ run_admin() {
 ask_install
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 5.0r7 for macOS"
+  echo "==> Installing WaffleHouse-Client 5.0r8 for macOS"
   run_admin mkdir -p "$APP_INSTALL_DIR" "$INSTALL_PREFIX/bin"
   if [ -e "$INSTALL_APP" ]; then run_admin rm -rf "$INSTALL_APP"; fi
   run_admin ditto "$APP" "$INSTALL_APP"
@@ -178,9 +215,22 @@ else
   echo "Built app: $APP"
 fi
 
+echo
+echo "Optional media runtime status:"
+if brew list --versions mpv >/dev/null 2>&1 || command -v mpv >/dev/null 2>&1; then
+  echo "  mpv:    available"
+else
+  echo "  mpv:    not installed (client works; Media playback is disabled)"
+fi
+if brew list --versions ffmpeg >/dev/null 2>&1 || command -v ffmpeg >/dev/null 2>&1; then
+  echo "  ffmpeg: available"
+else
+  echo "  ffmpeg: not installed (only SSH/remote media helper is unavailable)"
+fi
+
 cat <<DONE
 
-WaffleHouse-Client 5.0r7 macOS build complete.
+WaffleHouse-Client 5.0r8 macOS build complete.
 GUI: open "$APP"
 CLI: "$APP/Contents/MacOS/wafflehouse-client" --cli
 $(if [ "$MAKE_DMG" -eq 1 ]; then echo "DMG: $BUILD_DIR/wafflehouse-client.dmg"; fi)
