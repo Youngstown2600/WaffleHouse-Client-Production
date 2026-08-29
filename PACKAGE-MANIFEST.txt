@@ -1,0 +1,9 @@
+WaffleHouse-Client 5.0r10 All Platforms — corrected package
+
+Linux/         desktop 5.0r10
+Unix-FreeBSD/  desktop 5.0r10
+macOS/         desktop 5.0r10
+Termux/        Termux Build 1.2
+
+macOS framework linker correction is present in macOS/CMakeLists.txt.
+chan_sip compatibility changes are present in all SIP-capable trees.

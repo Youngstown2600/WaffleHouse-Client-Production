@@ -1,0 +1,67 @@
+WaffleHouse-Client 5.0r7 — macOS vs Unix/Linux comparison
+====================================================================
+Compared inputs
+---------------
+- macOS platform baseline: WaffleHouse-Client 5.0r3 macOS
+- Unix/Linux current baseline: WaffleHouse-Client 5.0r6 Unix/Linux
+
+Application-source differences found before synchronization
+-----------------------------------------------------------
+The 5.0r3 macOS and 5.0r6 Unix/Linux src/ trees differed in exactly these files:
+- src/appbranding.h
+- src/chatwindow.cpp
+- src/directtransfer.cpp
+- src/filetransfer.cpp
+- src/mainwindow.cpp
+- src/mainwindow.h
+- src/oscarbackend.cpp
+- src/terminalui.cpp
+
+The functional differences correspond to the 5.0r4–5.0r6 fixes:
+- 5.0r4: OSCAR typing notifications no longer create a separate conversation.
+- 5.0r5: buddy-list Send File does not create an IM; file-transfer control traffic
+  is consumed before conversation creation; unsecured Send File remains usable;
+  OSCAR rate-class parsing supports 30/35-byte records; transfer pacing and ACK
+  retry tolerance were increased.
+- 5.0r6: GUI transfer ownership resolves stable profile IDs correctly; secure
+  direct receive finalization verifies/renames .cpxpart files; outgoing direct
+  final-frame drain/close is reachable; cancel/resume/decline/fallback paths use
+  the same stable transfer owner resolution.
+
+5.0r7 synchronization result
+----------------------------
+5.0r7 now uses one shared application source tree for Linux, FreeBSD, and macOS.
+The following 5.0r6 fix-bearing source files are byte-for-byte identical to the
+5.0r6 Unix/Linux baseline in 5.0r7:
+- src/chatwindow.cpp
+- src/directtransfer.cpp
+- src/filetransfer.cpp
+- src/mainwindow.h
+- src/oscarbackend.cpp
+- src/terminalui.cpp
+
+src/mainwindow.cpp starts from the complete 5.0r6 implementation and adds only
+5.0r7 macOS status/menu-bar icon handling. src/notificationmanager.cpp adds the
+macOS .app Resources/sounds lookup. appbranding/version files advance to 5.0r7.
+
+Platform build differences intentionally retained
+-------------------------------------------------
+- Linux/FreeBSD: xkbcommon, desktop entry, hicolor icon installation, shell
+  wrapper, Linux/FreeBSD package/dependency handling, and FreeBSD HDA helpers.
+- macOS: Cocoa/.app bundle properties, Homebrew dependency path, macdeployqt,
+  optional DMG creation, and optional /Applications installation.
+- xkbcommon is not required or linked on macOS.
+- The macOS builder copies notification WAV files into Contents/Resources/sounds.
+
+5.0r7 macOS white-on-white status icon fix
+-------------------------------------------
+The old macOS status/tray path used the shared QIcon without explicitly pinning
+it as non-template and merely hid the QSystemTrayIcon during quit. 5.0r7 now:
+- calls QIcon::setIsMask(false) for the macOS status item so the colored
+  WaffleHouse artwork is not recolored as a template/mask;
+- re-applies that non-template icon immediately after the last visible Buddy List
+  window is hidden, covering the exact close-window transition seen in 3.x;
+- detaches the status context menu, hides the status icon, and destroys the
+  QSystemTrayIcon synchronously before QApplication shutdown on macOS.
+This covers both the last-window-hidden state and application teardown path that
+could leave the status item white-on-white on a light menu bar.
