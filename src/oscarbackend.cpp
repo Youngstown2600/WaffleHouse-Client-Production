@@ -30,6 +30,17 @@ QString normalizedOscarDebugMode(const ConnectionSettings &settings)
     return QStringLiteral("off");
 }
 
+bool isNinaNetwork(const ConnectionSettings &settings)
+{
+    if (settings.networkProfile.compare(QStringLiteral("nina"), Qt::CaseInsensitive) == 0)
+        return true;
+    const QString host = settings.server.trimmed().toCaseFolded();
+    return host == QStringLiteral("login.oscar.nina.chat")
+        || host.endsWith(QStringLiteral(".oscar.nina.chat"))
+        || host.endsWith(QStringLiteral(".nina.chat"));
+}
+
+
 bool oscarLoginAuditEnabled(const ConnectionSettings &settings)
 {
     const QString mode = normalizedOscarDebugMode(settings);
@@ -542,8 +553,8 @@ void OscarBackend::protocolLog(const QString &text)
     throw ProtocolError(message);
 }
 
-QPair<QString, quint16> OscarBackend::redirectEndpoint(const QString &advertised,
-                                                       quint16 fallbackPort) const
+QPair<QString, quint16> OscarBackend::bosRedirectEndpoint(const QString &advertised,
+                                                          quint16 fallbackPort) const
 {
     auto endpoint = parseEndpoint(advertised, fallbackPort);
     if (!m_settings.redirectHost.trimmed().isEmpty()) {
@@ -553,6 +564,14 @@ QPair<QString, quint16> OscarBackend::redirectEndpoint(const QString &advertised
         endpoint.second = m_settings.redirectPort;
     }
     return endpoint;
+}
+
+QPair<QString, quint16> OscarBackend::serviceRedirectEndpoint(const QString &advertised,
+                                                              quint16 fallbackPort) const
+{
+    // Secondary OSCAR services are authoritative redirects from BOS. Never
+    // rewrite ChatNav/Chat/Admin/BART/etc. through the login/BOS override.
+    return parseEndpoint(advertised, fallbackPort);
 }
 
 void OscarBackend::expectGreeting(FlapConnection &connection)
@@ -619,12 +638,31 @@ QPair<QString, QByteArray> OscarBackend::authenticate()
             if (snac.body.size() < 2) {
                 fail(QStringLiteral("truncated BUCP challenge response"));
             }
-            const quint16 length = readU16(snac.body, 0);
-            if (snac.body.size() < 2 + length) {
-                fail(QStringLiteral("truncated BUCP auth key"));
+
+            // BUCP challenge responses exist in both a classic 16-bit-length
+            // form and a revival/private-server 32-bit-length form. NINA has
+            // used the latter in deployments. Accept either representation so
+            // the password digest is built from the actual challenge bytes.
+            qsizetype prefixBytes = 2;
+            quint32 length = readU16(snac.body, 0);
+            QString lengthForm = QStringLiteral("u16");
+            if (snac.body.size() >= 4) {
+                const quint32 length32 = readU32(snac.body, 0);
+                const bool valid32 = length32 > 0
+                    && static_cast<quint64>(4) + length32 <= static_cast<quint64>(snac.body.size());
+                const bool valid16 = static_cast<quint64>(2) + length <= static_cast<quint64>(snac.body.size());
+                if (valid32 && (length == 0 || !valid16)) {
+                    length = length32;
+                    prefixBytes = 4;
+                    lengthForm = QStringLiteral("u32");
+                }
             }
-            authKey = snac.body.mid(2, length);
-            if (audit) protocolLog(QStringLiteral("[oscar-login] Received BUCP challenge key: <redacted:%1 bytes>").arg(authKey.size()));
+            if (length == 0 || static_cast<quint64>(prefixBytes) + length > static_cast<quint64>(snac.body.size())) {
+                fail(QStringLiteral("truncated or empty BUCP auth key"));
+            }
+            authKey = snac.body.mid(prefixBytes, static_cast<qsizetype>(length));
+            if (audit) protocolLog(QStringLiteral("[oscar-login] Received BUCP challenge key: <redacted:%1 bytes> length-form=%2")
+                                       .arg(authKey.size()).arg(lengthForm));
             break;
         }
 
@@ -730,7 +768,7 @@ QPair<QString, QByteArray> OscarBackend::authenticate()
 
 void OscarBackend::bootstrapService(FlapConnection &connection,
                                     const QByteArray &cookie,
-                                    bool addIcbmParams)
+                                    bool bosBootstrap)
 {
     const bool audit = oscarLoginAuditEnabled(m_settings);
     const auto auditBootstrapSnac = [this, &connection, audit](const Snac &snac, const QString &stage) {
@@ -754,13 +792,48 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
                                .arg(connection.label(), connection.host())
                                .arg(connection.port()));
     connection.connectToHost();
-    expectGreeting(connection);
-    connection.sendSignon({Tlv{TLV_AUTH_COOKIE, cookie}});
-    if (audit) protocolLog(QStringLiteral("[oscar-login] %1 authenticated with service cookie <redacted:%2 bytes>")
-                               .arg(connection.label()).arg(cookie.size()));
+
+    // OSCAR service endpoints are not unanimous about who speaks first after
+    // TCP connect. Some classic/private implementations send a FLAP SIGNON
+    // greeting immediately, while NINA's documented BOSS flow permits the
+    // client to send its cookie-bearing FLAP SIGNON as the first frame. Do a
+    // short opportunistic greeting read, but never sit on the socket waiting
+    // for a greeting while the server is waiting for our cookie.
+    bool consumedGreeting = false;
+    if (connection.waitForData(250)) {
+        expectGreeting(connection);
+        consumedGreeting = true;
+    }
+    QList<Tlv> signonTlvs{Tlv{TLV_AUTH_COOKIE, cookie}};
+    // NINA's BOSS Stage-2 sign-on requires OSERVICE__MULTICONN_FLAGS (0x004A)
+    // alongside the login cookie.  This is also what multi-instance-capable
+    // classic AIM clients send.  Do not add it to secondary service cookies,
+    // whose documented sign-on is cookie-only.
+    if (bosBootstrap) {
+        signonTlvs.push_back(Tlv{TLV_MULTI_CONN, QByteArray(1, char(1))});
+    }
+    connection.sendSignon(signonTlvs);
+    if (audit) protocolLog(QStringLiteral("[oscar-login] %1 sent service-cookie FLAP SIGNON <redacted:%2 bytes> multi-conn=%3 startup=%4")
+                               .arg(connection.label()).arg(cookie.size())
+                               .arg(bosBootstrap ? QStringLiteral("1") : QStringLiteral("n/a"))
+                               .arg(consumedGreeting ? QStringLiteral("server-greeting-first")
+                                                     : QStringLiteral("client-signon-first")));
+
+    const auto receiveBootstrapSnac = [&connection](const QString &stage) -> Snac {
+        try {
+            // receiveSnac() deliberately skips FLAP SIGNON/KEEPALIVE frames.
+            // On NINA BOSS this consumes the required server FLAP SIGNON reply
+            // before returning the following OSERVICE__HOST_ONLINE SNAC.
+            return connection.receiveSnac();
+        } catch (const ProtocolError &e) {
+            throw ProtocolError(QStringLiteral("%1: %2 while waiting for %3 from %4:%5")
+                                    .arg(connection.label(), QString::fromUtf8(e.what()), stage, connection.host())
+                                    .arg(connection.port()));
+        }
+    };
 
     while (true) {
-        const Snac snac = connection.receiveSnac();
+        const Snac snac = receiveBootstrapSnac(QStringLiteral("HOST_ONLINE"));
         auditBootstrapSnac(snac, QStringLiteral("HOST_ONLINE"));
         if (snac.family == FAM_OSERVICE && snac.subtype == OS_HOST_ONLINE) {
             if (snac.body.size() % 2 != 0) {
@@ -778,20 +851,89 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
                                .arg(connection.families.size())
                                .arg(oscarFamilyIdList(connection.families)));
 
+    const bool ninaNetwork = isNinaNetwork(m_settings);
+
+    // NINAPatcher does not replace AIM's OSCAR engine; it redirects stock AIM
+    // to NINA endpoints.  For the NINA profile, therefore, advertise the
+    // classic WinAIM/libfaim family set rather than inventing capabilities for
+    // every family the server happens to announce.
+    const auto clientImplementsFamily = [](quint16 family) -> bool {
+        switch (family) {
+        case FAM_OSERVICE:
+        case FAM_LOCATE:
+        case FAM_BUDDY:
+        case FAM_ICBM:
+        case FAM_INVITE:
+        case FAM_ADMIN:
+        case FAM_POPUP:
+        case FAM_PERMIT_DENY:
+        case FAM_USER_LOOKUP:
+        case FAM_STATS:
+        case FAM_TRANSLATE:
+        case FAM_CHATNAV:
+        case FAM_CHAT:
+        case FAM_ODIR:
+        case FAM_BART:
+        case FAM_FEEDBAG:
+        case FAM_ALERT:
+            return true;
+        default:
+            return false;
+        }
+    };
+
+    const auto familyVersion = [ninaNetwork](quint16 family) -> quint16 {
+        if (ninaNetwork) {
+            // Classic patched AIM compatibility.  WinAIM/libfaim-era clients
+            // negotiate OSERVICE v3 and SSI/FEEDBAG v2; all other advertised
+            // BOS families use v1.  NINA supports these legacy clients by
+            // design, and NINAPatcher leaves these protocol versions intact.
+            if (family == FAM_OSERVICE) return 3;
+            if (family == FAM_FEEDBAG) return 2;
+            return 1;
+        }
+        // Keep the newer profile for generic/custom revival servers.
+        if (family == FAM_OSERVICE) return 4;
+        if (family == FAM_FEEDBAG) return 3;
+        return 1;
+    };
+
+    QList<quint16> negotiatedFamilies;
     QByteArray versions;
     for (const quint16 family : connection.families) {
+        if (!clientImplementsFamily(family)) {
+            if (audit) protocolLog(QStringLiteral("[oscar-login] %1 skipping unsupported HOST_ONLINE family 0x%2")
+                                       .arg(connection.label())
+                                       .arg(family, 4, 16, QLatin1Char('0')));
+            continue;
+        }
+        negotiatedFamilies.push_back(family);
         appendU16(versions, family);
-        appendU16(versions, 1);
+        appendU16(versions, familyVersion(family));
     }
-    const quint32 versionsRequest = connection.sendSnac(
-        FAM_OSERVICE, OS_CLIENT_VERSIONS, versions);
+    if (!negotiatedFamilies.contains(FAM_OSERVICE)) {
+        fail(QStringLiteral("HOST_ONLINE did not offer OSCAR Generic Service"));
+    }
+
+    // Stock AIM/libfaim uses a normal generated SNAC id here.  More
+    // importantly, it dispatches HOST_VERSIONS by family/subtype and does not
+    // require the server to echo that request id.  NINA has hosted multiple
+    // generations of AIM servers/clients, so be equally tolerant.
+    const quint32 versionsRequest = connection.sendSnac(FAM_OSERVICE, OS_CLIENT_VERSIONS, versions);
+    if (audit) protocolLog(QStringLiteral("[oscar-login] %1 CLIENT_VERSIONS sent: records=%2 request-id=%3 body=%4")
+                               .arg(connection.label())
+                               .arg(negotiatedFamilies.size())
+                               .arg(versionsRequest)
+                               .arg(QString::fromLatin1(versions.toHex())));
 
     while (true) {
-        const Snac snac = connection.receiveSnac();
+        const Snac snac = receiveBootstrapSnac(QStringLiteral("HOST_VERSIONS"));
         auditBootstrapSnac(snac, QStringLiteral("HOST_VERSIONS"));
-        if (snac.family == FAM_OSERVICE
-            && snac.subtype == OS_HOST_VERSIONS
-            && snac.requestId == versionsRequest) {
+        if (snac.family == FAM_OSERVICE && snac.subtype == OS_HOST_VERSIONS) {
+            if (audit && snac.requestId != versionsRequest) {
+                protocolLog(QStringLiteral("[oscar-login] %1 accepting HOST_VERSIONS with non-echoed request-id=%2 (sent=%3), matching stock AIM behavior")
+                                .arg(connection.label()).arg(snac.requestId).arg(versionsRequest));
+            }
             break;
         }
     }
@@ -800,11 +942,13 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
     const quint32 rateRequest = connection.sendSnac(FAM_OSERVICE, OS_RATE_QUERY);
     QList<quint16> rateIds;
     while (true) {
-        const Snac snac = connection.receiveSnac();
+        const Snac snac = receiveBootstrapSnac(QStringLiteral("RATE_REPLY"));
         auditBootstrapSnac(snac, QStringLiteral("RATE_REPLY"));
-        if (snac.family == FAM_OSERVICE
-            && snac.subtype == OS_RATE_REPLY
-            && snac.requestId == rateRequest) {
+        if (snac.family == FAM_OSERVICE && snac.subtype == OS_RATE_REPLY) {
+            if (audit && snac.requestId != rateRequest) {
+                protocolLog(QStringLiteral("[oscar-login] %1 accepting RATE_REPLY with non-echoed request-id=%2 (sent=%3)")
+                                .arg(connection.label()).arg(snac.requestId).arg(rateRequest));
+            }
             if (snac.body.size() >= 2) {
                 const quint16 count = readU16(snac.body, 0);
 
@@ -856,7 +1000,7 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
         connection.sendSnac(FAM_OSERVICE, OS_RATE_ACK, ack);
     }
 
-    if (addIcbmParams && connection.families.contains(FAM_ICBM)) {
+    if (bosBootstrap && connection.families.contains(FAM_ICBM)) {
         QByteArray params;
         appendU16(params, ICBM_CHANNEL_IM);
         appendU32(params, 3);
@@ -879,12 +1023,36 @@ void OscarBackend::bootstrapService(FlapConnection &connection,
         connection.sendSnac(FAM_ICBM, ICBM_ADD_PARAMS, rendezvousParams);
     }
 
+    const auto classicToolInfo = [](quint16 family) -> QPair<quint16, quint16> {
+        switch (family) {
+        case FAM_ADMIN:
+        case FAM_CHATNAV:
+        case FAM_CHAT:
+        case FAM_ODIR:
+        case FAM_BART:
+        case FAM_ALERT:
+            return {0x0010, 0x0629};
+        case FAM_POPUP:
+        case FAM_STATS:
+        case FAM_TRANSLATE:
+            return {0x0104, 0x0001};
+        default:
+            return {0x0110, 0x0629};
+        }
+    };
+
     QByteArray online;
-    for (const quint16 family : connection.families) {
+    for (const quint16 family : negotiatedFamilies) {
         appendU16(online, family);
-        appendU16(online, 1);
-        appendU16(online, 0x0110);
-        appendU16(online, 0x0001);
+        appendU16(online, familyVersion(family));
+        if (ninaNetwork) {
+            const auto tool = classicToolInfo(family);
+            appendU16(online, tool.first);
+            appendU16(online, tool.second);
+        } else {
+            appendU16(online, 0x0110);
+            appendU16(online, 0x0001);
+        }
     }
     connection.sendSnac(FAM_OSERVICE, OS_CLIENT_ONLINE, online);
     if (audit) protocolLog(QStringLiteral("[oscar-login] %1 CLIENT_ONLINE sent; OSCAR service bootstrap complete")
@@ -950,7 +1118,7 @@ OscarBackend::ServiceRedirect OscarBackend::requestService(
         fail(QStringLiteral("service redirect missing host or cookie"));
     }
 
-    const auto endpoint = redirectEndpoint(QString::fromUtf8(hostRaw), m_settings.port);
+    const auto endpoint = serviceRedirectEndpoint(QString::fromUtf8(hostRaw), 5190);
     return {endpoint.first, endpoint.second, cookie};
 }
 
@@ -1693,6 +1861,74 @@ void OscarBackend::doSetBack()
     m_presenceMessage.clear();
     m_idleSeconds = 0;
     emitPresence();
+}
+
+void OscarBackend::requestBuddyPresenceHydration(const QString &target, bool legacyFallback)
+{
+    if (!m_bos || !m_bos->isConnected() || !m_bos->families.contains(FAM_LOCATE)) return;
+    const QString clean = target.trimmed();
+    if (clean.isEmpty()) return;
+    const QString key = clean.toCaseFolded();
+    if (m_presenceLookupInFlight.contains(key)) return;
+
+    const bool useLegacy = legacyFallback || m_presenceUseLegacyLocate;
+    QByteArray body;
+    quint16 subtype = LOCATE_USER_INFO_QUERY2;
+    if (useLegacy) {
+        // Classic LOCATE query type 0x0003 asks specifically for the away
+        // message.  The generic USERINFO block in the reply also carries idle,
+        // flags and status, which makes it a useful fallback for revival BOSes.
+        subtype = LOCATE_USER_INFO_QUERY;
+        appendU16(body, 0x0003);
+    } else {
+        // Query2 UNAVAILABLE.  We deliberately avoid requesting the profile on
+        // every presence refresh; this path is for light-weight buddy state.
+        appendU32(body, 0x00000002);
+    }
+    body += lp8(clean);
+
+    const quint32 requestId = m_bos->sendSnac(FAM_LOCATE, subtype, body);
+    m_pendingPresenceLookups.insert(requestId, PresenceLookup{clean, useLegacy});
+    m_presenceLookupInFlight.insert(key);
+    if (oscarWireTraceEnabled(m_settings)) {
+        protocolLog(QStringLiteral("[oscar-presence] LOCATE hydration -> %1 (%2 req=%3)")
+                        .arg(clean,
+                             useLegacy ? QStringLiteral("classic-away")
+                                       : QStringLiteral("query2-away"))
+                        .arg(requestId));
+    }
+}
+
+void OscarBackend::refreshOnlineBuddyPresence()
+{
+    if (!m_bos || !m_bos->isConnected() || !m_bos->families.contains(FAM_LOCATE)) return;
+
+    // Keep polling deliberately conservative.  Classic OSCAR normally pushes
+    // status transitions, but private/revival servers vary.  A periodic LOCATE
+    // refresh lets WaffleHouse display authoritative away text and idle minutes
+    // without hammering the BOS when a user has a large buddy list.
+    constexpr int MaxRefreshPerSweep = 32;
+    QStringList names = m_onlineBuddyNames.values();
+    names.sort(Qt::CaseInsensitive);
+    if (names.isEmpty()) {
+        m_presenceRefreshCursor = 0;
+        return;
+    }
+    if (m_presenceRefreshCursor < 0 || m_presenceRefreshCursor >= names.size())
+        m_presenceRefreshCursor = 0;
+
+    int scheduled = 0;
+    int inspected = 0;
+    while (inspected < names.size() && scheduled < MaxRefreshPerSweep) {
+        const int index = (m_presenceRefreshCursor + inspected) % names.size();
+        const QString name = names.at(index);
+        const QString key = name.toCaseFolded();
+        ++inspected;
+        if (m_presenceLookupInFlight.contains(key)) continue;
+        requestBuddyPresenceHydration(name, false);
+        ++scheduled;
+    }
+    m_presenceRefreshCursor = (m_presenceRefreshCursor + inspected) % names.size();
 }
 
 void OscarBackend::discoverBosCapabilities()
@@ -2494,6 +2730,108 @@ void OscarBackend::processCommand(const Command &command)
 
 void OscarBackend::dispatchBos(const Snac &snac)
 {
+    // Lightweight asynchronous LOCATE refreshes are used to hydrate buddy
+    // Away/Idle state.  This is intentionally handled before the normal SNAC
+    // dispatch so the reply never falls through as an "unhandled" wire packet.
+    if (snac.family == FAM_LOCATE && m_pendingPresenceLookups.contains(snac.requestId)) {
+        const PresenceLookup pending = m_pendingPresenceLookups.take(snac.requestId);
+        const QString key = pending.name.toCaseFolded();
+        m_presenceLookupInFlight.remove(key);
+
+        if (snac.subtype == 0x0001) {
+            if (!pending.legacyFallback && m_onlineBuddyNames.contains(key)) {
+                // Some revival servers implement only the classic 02/05 query.
+                // Remember that preference for the remainder of this session so
+                // the periodic refresh does not intentionally provoke an error
+                // before every fallback query.
+                m_presenceUseLegacyLocate = true;
+                requestBuddyPresenceHydration(pending.name, true);
+            } else if (oscarWireTraceEnabled(m_settings)) {
+                const int code = snac.body.size() >= 2 ? readU16(snac.body, 0) : -1;
+                protocolLog(QStringLiteral("[oscar-presence] LOCATE hydration for %1 failed (0x%2)")
+                                .arg(pending.name)
+                                .arg(code, 4, 16, QLatin1Char('0')));
+            }
+            return;
+        }
+
+        if (snac.subtype != LOCATE_USER_INFO_REPLY) {
+            if (oscarWireTraceEnabled(m_settings)) {
+                protocolLog(QStringLiteral("[oscar-presence] unexpected LOCATE hydration reply %1/%2 for %3")
+                                .arg(snac.family, 4, 16, QLatin1Char('0'))
+                                .arg(snac.subtype, 4, 16, QLatin1Char('0'))
+                                .arg(pending.name));
+            }
+            return;
+        }
+
+        // Ignore a late lookup after a buddy has gone offline.
+        if (!m_onlineBuddyNames.contains(key)) return;
+
+        try {
+            qsizetype offset = 0;
+            const UserInfo user = parseUserInfo(snac.body, offset);
+            const QList<Tlv> locateTlvs = parseTlvs(snac.body, offset);
+            const QString displayName = user.name.isEmpty() ? pending.name : user.name;
+
+            quint64 userFlags = 0;
+            const QByteArray lowRaw = firstTlv(user.tlvs, USERINFO_TLV_FLAGS);
+            if (lowRaw.size() >= 2) userFlags = readU16(lowRaw, 0);
+            const QByteArray highRaw = firstTlv(user.tlvs, USERINFO_TLV_FLAGS2);
+            if (!highRaw.isEmpty()) {
+                quint64 upper = 0;
+                for (const char byte : highRaw) upper = (upper << 8) | static_cast<quint8>(byte);
+                userFlags |= (upper << 16);
+            }
+
+            const QByteArray idleRaw = firstTlv(user.tlvs, USERINFO_TLV_IDLE_TIME);
+            const int idleMinutes = idleRaw.size() >= 2 ? static_cast<int>(readU16(idleRaw, 0)) : 0;
+            const QByteArray statusRawBytes = firstTlv(user.tlvs, USERINFO_TLV_STATUS);
+            const bool statusSupplied = statusRawBytes.size() >= 4;
+            const quint32 statusBits = statusSupplied ? readU32(statusRawBytes, 0) : 0;
+            const QString away = stripAimHtml(
+                QString::fromUtf8(firstTlv(locateTlvs, LOCATE_TLV_UNAVAILABLE_DATA))).trimmed();
+
+            QString state = QStringLiteral("Online");
+            if (statusSupplied && (statusBits & USER_STATUS_INVISIBLE)) state = QStringLiteral("Invisible");
+            else if (statusSupplied && (statusBits & USER_STATUS_DND)) state = QStringLiteral("Do Not Disturb");
+            else if (statusSupplied && (statusBits & USER_STATUS_NA)) state = QStringLiteral("Not Available");
+            else if (statusSupplied && (statusBits & USER_STATUS_BUSY)) state = QStringLiteral("Busy");
+            else if (!away.isEmpty() || (userFlags & USER_FLAG_UNAVAILABLE)
+                     || (statusSupplied && (statusBits & USER_STATUS_AWAY))) state = QStringLiteral("Away");
+            else if (statusSupplied && (statusBits & USER_STATUS_FREE_FOR_CHAT)) state = QStringLiteral("Free for Chat");
+            else if (idleMinutes > 0) state = QStringLiteral("Idle");
+
+            QVariantMap native;
+            native.insert(QStringLiteral("online"), true);
+            native.insert(QStringLiteral("state"), state);
+            native.insert(QStringLiteral("awayMessage"), away);
+            native.insert(QStringLiteral("idleMinutes"), idleMinutes);
+            native.insert(QStringLiteral("idleSeconds"), idleMinutes > 0 ? idleMinutes * 60 : 0);
+            native.insert(QStringLiteral("userFlags"), QVariant::fromValue<qulonglong>(userFlags));
+            native.insert(QStringLiteral("statusSupplied"), statusSupplied);
+            native.insert(QStringLiteral("statusRaw"), statusSupplied ? static_cast<qint64>(statusBits) : -1);
+            native.insert(QStringLiteral("warningRaw"), static_cast<int>(user.warningLevel));
+            native.insert(QStringLiteral("warningPercent"), static_cast<double>(user.warningLevel) / 10.0);
+
+            const QByteArray signonRaw = firstTlv(user.tlvs, USERINFO_TLV_SIGNON_TIME);
+            const QByteArray memberRaw = firstTlv(user.tlvs, USERINFO_TLV_MEMBER_SINCE);
+            if (signonRaw.size() >= 4) native.insert(QStringLiteral("signonTime"), static_cast<qint64>(readU32(signonRaw, 0)));
+            if (memberRaw.size() >= 4) native.insert(QStringLiteral("memberSince"), static_cast<qint64>(readU32(memberRaw, 0)));
+
+            emit buddyNativePresenceChanged(displayName, native);
+            if (oscarWireTraceEnabled(m_settings)) {
+                protocolLog(QStringLiteral("[oscar-presence] LOCATE hydrated %1 => %2 idle=%3m awayBytes=%4")
+                                .arg(displayName, state)
+                                .arg(idleMinutes)
+                                .arg(away.toUtf8().size()));
+            }
+        } catch (const std::exception &e) {
+            protocolLog(QStringLiteral("[oscar-presence] LOCATE hydration parse error for %1: %2")
+                            .arg(pending.name, QString::fromUtf8(e.what())));
+        }
+        return;
+    }
     if (snac.family == FAM_ICBM && snac.subtype == ICBM_CLIENT_EVENT) {
         // cookie[8], channel[2], screen-name[LP8], event[2]
         if (snac.body.size() >= 13) {
@@ -2815,6 +3153,12 @@ void OscarBackend::dispatchBos(const Snac &snac)
                 if (user.name.isEmpty()) continue;
 
                 emit buddyPresenceChanged(user.name, online);
+                const QString buddyKey = user.name.toCaseFolded();
+                if (online) m_onlineBuddyNames.insert(buddyKey, user.name);
+                else {
+                    m_onlineBuddyNames.remove(buddyKey);
+                    m_presenceLookupInFlight.remove(buddyKey);
+                }
 
                 QVariantMap native;
                 native.insert(QStringLiteral("online"), online);
@@ -2881,6 +3225,7 @@ void OscarBackend::dispatchBos(const Snac &snac)
                 }
 
                 emit buddyNativePresenceChanged(user.name, native);
+                if (online) requestBuddyPresenceHydration(user.name, false);
                 if (oscarWireTraceEnabled(m_settings)) {
                     protocolLog(QStringLiteral("[oscar-presence] %1 => %2 idle=%3m flags=0x%4 status=%5")
                                     .arg(user.name, state)
@@ -3025,7 +3370,7 @@ void OscarBackend::run()
 
     try {
         const auto authResult = authenticate();
-        const auto endpoint = redirectEndpoint(authResult.first, m_settings.port);
+        const auto endpoint = bosRedirectEndpoint(authResult.first, m_settings.port);
 
         m_bos = std::make_unique<FlapConnection>(
             endpoint.first,
@@ -3049,9 +3394,17 @@ void OscarBackend::run()
         emit connected(m_settings.username,
                        QStringLiteral("%1:%2").arg(endpoint.first).arg(endpoint.second));
 
+        QElapsedTimer buddyPresenceRefresh;
+        buddyPresenceRefresh.start();
+
         while (!m_stopRequested) {
             for (const Command &command : takeCommands()) {
                 processCommand(command);
+            }
+
+            if (buddyPresenceRefresh.elapsed() >= 60000) {
+                refreshOnlineBuddyPresence();
+                buddyPresenceRefresh.restart();
             }
 
             if (m_bos && !m_bos->isConnected()) {
@@ -3092,6 +3445,11 @@ void OscarBackend::run()
     }
 
     m_chats.clear();
+    m_onlineBuddyNames.clear();
+    m_pendingPresenceLookups.clear();
+    m_presenceLookupInFlight.clear();
+    m_presenceUseLegacyLocate = false;
+    m_presenceRefreshCursor = 0;
     {
         QMutexLocker locker(&m_capabilityMutex);
         m_serverFamilies.clear();

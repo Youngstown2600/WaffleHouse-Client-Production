@@ -1,3 +1,27 @@
+## 5.1
+
+- Re-merged and regression-verified every WaffleHouse-Client 5.0r20 maintenance fix into the 5.1 all-platform tree after confirming the original 5.1 branch had been promoted from 5.0r18 rather than r20.
+- Restored the printable unsecured-transfer `[[WHFILE2:...]]` envelope and receive compatibility with both intact and separator-stripped legacy `WHFILE1` frames, preventing macOS/Qt/AIM normalization from exposing transfer control payloads as chat text.
+- Restored asynchronous OSCAR LOCATE Away/Idle hydration, Query2-to-classic fallback, online-buddy tracking, and conservative 60-second presence refresh so revival/private servers can supply authoritative away text and idle time on every supported platform.
+- Restored GUI presence-cache merge semantics and manual AIM User Info hydration so refreshed Away/Idle state does not discard capability/sign-on metadata and offline events cannot retain stale presence.
+- Restored the two 5.0r20 regression gates and verified them alongside all 5.1 NINA/platform regressions.
+- Promoted the 5.0r18 desktop tree to WaffleHouse-Client 5.1.
+- Imported the known-good NinaIM 0.2/0.3 NINAPatcher-compatible AIM/OSCAR sign-on path.
+- Added AIM network profiles (`auto`, `nina`, `custom`) to GUI and CLI saved accounts.
+- NINA is auto-detected for `*.nina.chat` hosts and can also be explicitly selected.
+- NINA BOSS bootstrap now supports client-sign-on-first startup, includes multi-connection TLV `0x004A`, accepts 16/32-bit BUCP challenge lengths, advertises only implemented OSCAR families, uses stock-AIM family/tool versions, and tolerates non-echoed HOST_VERSIONS/rate request IDs.
+- BOS redirect overrides no longer rewrite secondary OSCAR ChatNav/Chat/Admin/BART/etc. service redirects.
+- Added Windows 10/11 MSYS2/UCRT64 build support and GUI/CLI launchers.
+- Added Termux/Android native build support and GUI/CLI launchers; GUI requires Termux:X11 at runtime.
+- Linux/Unix, FreeBSD, macOS, Windows, and Termux share the exact same OSCAR backend compatibility implementation.
+
+## 5.0r20
+
+- Replaced the unsecured file-transfer wire wrapper's leading ASCII Record Separator (`0x1E`) with a printable `[[WHFILE2:...]]` envelope so macOS/Qt/AIM normalization cannot turn internal transfer frames into visible garbage text.
+- Kept receive compatibility with exact legacy `WHFILE1` frames and with legacy frames whose leading separator was stripped in transit.
+- Added asynchronous OSCAR LOCATE presence hydration after buddy arrival/status updates so Away message/state and Idle minutes are recovered when a revival/private BOS provides an incomplete BUDDY UserInfo block.
+- Added a conservative 60-second refresh for online AIM buddies, Query2-to-classic LOCATE fallback, and merge semantics that preserve richer native buddy metadata.
+
 ## 5.0r18
 
 - Fix AIM/OSCAR account context-menu **Join AIM Chat…** being incorrectly disabled when BOS does not advertise CHAT_NAV (0x000D) and CHAT (0x000E) directly.

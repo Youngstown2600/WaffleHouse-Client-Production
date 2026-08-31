@@ -1,4 +1,19 @@
-# WaffleHouse-Client 5.0r18 — Desktop Bundle
+# WaffleHouse-Client 5.1 — All-Platform Source Bundle
+
+## 5.1 — NINA compatibility + all-platform propagation
+
+WaffleHouse-Client 5.1 carries the NINA compatibility behavior proven in NinaIM 0.2.0/0.3.0 while preserving WaffleHouse's full multi-protocol client. AIM/OSCAR accounts can use **Auto**, **NINA Network**, or **Custom OSCAR** network profiles. The same OSCAR backend is used by GUI and CLI on Linux/Unix, FreeBSD, macOS, Windows, and Termux. See `NINA-COMPATIBILITY.md`, `BUILDING-Windows.md`, and `BUILDING-Termux.md`.
+
+## 5.0r20 fixes retained in 5.1
+
+The 5.1 tree has been audited directly against the actual 5.0r20 release and now contains the complete r20 maintenance set in addition to the newer 5.1 NINA/platform work. In particular:
+
+- Unsecured file-transfer control traffic uses the printable ASCII `[[WHFILE2:...]]` envelope, with backward-compatible decoding of both intact and separator-stripped legacy `WHFILE1` frames.
+- AIM/OSCAR buddy presence uses asynchronous LOCATE hydration to recover authoritative Away text/state and Idle minutes, with Query2-to-classic fallback and a conservative 60-second online-buddy refresh.
+- LOCATE refreshes merge with existing native buddy metadata; offline events replace cached presence so stale Away/Idle data cannot survive sign-off.
+- Manual AIM User Info results refresh the same GUI buddy-presence cache.
+- All earlier r14-r18 fixes remain covered by the regression suite, including native presence/profile replay, IM composer focus, BuildFeatures GUI scope, persistent OSCAR audit logs, `/bin` launcher prompting, and ChatNav/Chat redirect gating.
+
 
 ## 5.0r18 AIM chat menu fix
 
@@ -26,7 +41,7 @@
 
 WaffleHouse now decodes native OSCAR buddy away/status/idle fields instead of treating every connected buddy as simply Online. Saved AIM profiles are replayed after BOS login for servers that do not persist LOCATE data, and the regression suite audits the native presence/profile feature surface. Batched buddy updates are fully consumed, and standard host-side USERINFO, warning-level, and rejected-watch notifications are handled instead of falling through as unknown SNACs.
 
-One source bundle for **Linux, FreeBSD/Unix, and macOS**. The Qt GUI and ncurses CLI use the same shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
+One source bundle for **Linux, FreeBSD/Unix, macOS, Windows, and Termux/Android**. The Qt GUI and ncurses CLI use the same shared AIM/OSCAR, IRC, Telnet/BBS, SIP/PJSIP, media, secure-room, transfer, contacts, and history implementation.
 
 ## Build
 
@@ -40,8 +55,10 @@ The top-level builder asks which operating system you are installing on:
 1. Linux
 2. FreeBSD / Unix
 3. macOS
+4. Windows / MSYS2
+5. Termux / Android
 
-It verifies the selection against the current host and then dispatches to the appropriate platform builder. You can also use `--os linux`, `--os freebsd`, or `--os macos` for scripted builds.
+It verifies the selection against the current host and then dispatches to the appropriate platform builder. Scripted platform selection is also supported by the platform-aware builders; see the per-platform BUILDING documents.
 
 A normal successful build **does not automatically install WaffleHouse-Client**. Linux/FreeBSD explicitly ask whether to install it system-wide and add `/bin/wafflehouse-client`; `[y/N]` defaults to **No**.
 
@@ -75,7 +92,7 @@ See `OSCAR-DEBUG.md` for the audit fields and secret-redaction policy.
 - OSCAR rate-class parsing and relay pacing improvements from 5.0r5 are included on all desktop platforms.
 - GUI/CLI softphone, media, secure rooms, themes, notifications, contacts/history, and the 5.0r2 conventional GUI exit path remain shared.
 
-Termux/Android remains a separate target and is intentionally not included in this desktop bundle.
+Termux/Android is included in the 5.1 all-platform source bundle and uses the same shared protocol/core implementation, with its native Termux builder and Termux:X11 requirements documented separately.
 
 ## 5.0r14 selectable protocol build
 

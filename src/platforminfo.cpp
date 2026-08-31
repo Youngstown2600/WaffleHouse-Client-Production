@@ -3,8 +3,13 @@
 #include <QProcessEnvironment>
 #include <QSysInfo>
 #include <QStringList>
+#include <cstdio>
 
+#if defined(Q_OS_WIN)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace {
 QString firstEnvironmentValue(const QProcessEnvironment &env,
@@ -41,15 +46,20 @@ RuntimeEnvironment RuntimeEnvironment::detect()
 
     info.graphicalSession = !display.isEmpty() || !wayland.isEmpty()
         || xdgSession == QStringLiteral("x11") || xdgSession == QStringLiteral("wayland");
-#if defined(Q_OS_MACOS)
-    // Cocoa sessions do not export DISPLAY/WAYLAND_DISPLAY. A normal macOS
-    // user launch is graphical even when started from Terminal.
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    // Cocoa and Win32 sessions do not use DISPLAY/WAYLAND_DISPLAY.
     info.graphicalSession = true;
 #endif
+#if defined(Q_OS_WIN)
+    info.ttyAttached = ::_isatty(_fileno(stdin)) || ::_isatty(_fileno(stdout));
+#else
     info.ttyAttached = ::isatty(STDIN_FILENO) || ::isatty(STDOUT_FILENO);
+#endif
 
 #if defined(Q_OS_MACOS)
     info.sessionType = QStringLiteral("cocoa");
+#elif defined(Q_OS_WIN)
+    info.sessionType = QStringLiteral("win32");
 #else
     if (!xdgSession.isEmpty() && xdgSession != QStringLiteral("tty")) {
         info.sessionType = xdgSession;

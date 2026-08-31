@@ -10,7 +10,7 @@ PROTOCOLS_EXPLICIT=0
 
 usage() {
   cat <<'USAGE'
-WaffleHouse-Client 5.0r18 — combined desktop builder
+WaffleHouse-Client 5.1 — Linux/Unix/macOS builder
 
 Usage: ./build.sh [--os linux|freebsd|macos] [--protocols LIST] [platform build options]
 
@@ -20,7 +20,7 @@ With no --os option the builder asks which operating system you are installing o
   3) macOS
 
 The selected platform is checked against the host before any dependency installation
-or build action begins. Termux/Android is intentionally not part of this desktop bundle.
+or build action begins. For Termux/Android use ./scripts/build-termux.sh; for Windows use ./build-windows.ps1.
 
 The builder also asks which features to bake into this binary:
   AIM/OSCAR, IRC, Telnet/BBS, SIP/VoIP, Media/Radio
@@ -102,7 +102,7 @@ if [ -z "$SELECTED_OS" ]; then
   fi
   cat <<'PROMPT'
 ============================================================
-             WAFFLEHOUSE-CLIENT 5.0r18 DESKTOP
+             WAFFLEHOUSE-CLIENT 5.1
 ============================================================
 What operating system are you installing on?
 
@@ -126,7 +126,7 @@ case "$SELECTED_OS:$HOST_OS" in
   freebsd:FreeBSD) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
   macos:Darwin) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-macos.sh" ;;
   freebsd:*)
-    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.0r18 is FreeBSD." >&2
+    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.1 is FreeBSD." >&2
     exit 2
     ;;
   *)

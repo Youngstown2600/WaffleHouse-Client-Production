@@ -344,6 +344,17 @@ public:
         form->addRow(QStringLiteral("Protocol:"), m_protocol);
         m_protocol->setEnabled(!m_editing);
 
+        m_oscarNetworkLabel = new QLabel(QStringLiteral("AIM network:"), this);
+        m_oscarNetwork = new QComboBox(this);
+        m_oscarNetwork->addItem(QStringLiteral("Auto detect"), QStringLiteral("auto"));
+        m_oscarNetwork->addItem(QStringLiteral("NINA Network (NINAPatcher compatibility)"), QStringLiteral("nina"));
+        m_oscarNetwork->addItem(QStringLiteral("Custom OSCAR server"), QStringLiteral("custom"));
+        QString requestedNetwork = defaults.networkProfile.trimmed().toCaseFolded();
+        if (requestedNetwork.isEmpty()) requestedNetwork = QStringLiteral("auto");
+        const int networkIndex = m_oscarNetwork->findData(requestedNetwork);
+        m_oscarNetwork->setCurrentIndex(networkIndex >= 0 ? networkIndex : 0);
+        form->addRow(m_oscarNetworkLabel, m_oscarNetwork);
+
         m_serverLabel = new QLabel(QStringLiteral("Server:"), this);
         m_server = new QLineEdit(defaults.server, this);
         form->addRow(m_serverLabel, m_server);
@@ -580,6 +591,17 @@ public:
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
         connect(m_protocol, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this] { updateFields(); });
+        connect(m_oscarNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, [this] {
+                    if (currentProtocol() != ConnectionSettings::Protocol::Oscar) return;
+                    const QString profile = m_oscarNetwork->currentData().toString();
+                    if (profile == QStringLiteral("nina")) {
+                        const QString host = m_server->text().trimmed().toCaseFolded();
+                        if (host.isEmpty() || host == QStringLiteral("login.oscar.nina.chat"))
+                            m_server->setText(QStringLiteral("login.oscar.nina.chat"));
+                        m_port->setValue(5190);
+                    }
+                });
         connect(m_tls, &QCheckBox::toggled, this, [this](bool enabled) {
             if (currentProtocol() == ConnectionSettings::Protocol::Irc) {
                 if (enabled && m_port->value() == 6667) {
@@ -601,6 +623,14 @@ public:
         value.savePassword = m_savePassword->isChecked() && !value.password.isEmpty();
         value.debug = currentProtocol() == ConnectionSettings::Protocol::Oscar ? false : m_debug->isChecked();
         value.oscarDebugMode = m_oscarDebug->currentData().toString();
+        value.networkProfile = m_oscarNetwork->currentData().toString();
+        if (value.networkProfile == QStringLiteral("nina")) {
+            value.arsHost = QStringLiteral("ars.oscar.nina.chat");
+            value.arsPort = 5190;
+        } else {
+            value.arsHost = m_original.arsHost;
+            value.arsPort = m_original.arsPort;
+        }
         // AIM profile is edited in the dedicated Profile UI, not in transport
         // settings. Preserve it when the account connection is edited.
         value.oscarProfile = m_original.oscarProfile;
@@ -675,6 +705,8 @@ private:
         m_realName->setVisible(irc);
         m_tls->setVisible(irc);
 
+        m_oscarNetworkLabel->setVisible(oscar);
+        m_oscarNetwork->setVisible(oscar);
         m_redirectHostLabel->setVisible(oscar);
         m_redirectHost->setVisible(oscar);
         m_redirectPortLabel->setVisible(oscar);
@@ -749,6 +781,8 @@ private:
     QLabel *m_realNameLabel = nullptr;
     QLineEdit *m_realName = nullptr;
     QCheckBox *m_tls = nullptr;
+    QLabel *m_oscarNetworkLabel = nullptr;
+    QComboBox *m_oscarNetwork = nullptr;
     QLabel *m_redirectHostLabel = nullptr;
     QLineEdit *m_redirectHost = nullptr;
     QLabel *m_redirectPortLabel = nullptr;
@@ -3572,6 +3606,9 @@ void MainWindow::loadConnections()
             : value.protocol == ConnectionSettings::Protocol::Sip ? 5060 : 5190;
         value.port = static_cast<quint16>(settings.value(QStringLiteral("port"), defaultPort).toUInt());
         value.username = settings.value(QStringLiteral("username")).toString();
+        value.networkProfile = settings.value(QStringLiteral("networkProfile"), QStringLiteral("auto")).toString();
+        value.arsHost = settings.value(QStringLiteral("arsHost")).toString();
+        value.arsPort = static_cast<quint16>(settings.value(QStringLiteral("arsPort"), 5190).toUInt());
         value.redirectHost = settings.value(QStringLiteral("redirectHost")).toString();
         value.redirectPort = static_cast<quint16>(settings.value(QStringLiteral("redirectPort"), 0).toUInt());
         value.oscarDebugMode = settings.value(QStringLiteral("oscarDebugMode"), QStringLiteral("off")).toString();
@@ -3657,6 +3694,9 @@ void MainWindow::saveConnections() const
         settings.setValue(QStringLiteral("server"), value.server);
         settings.setValue(QStringLiteral("port"), value.port);
         settings.setValue(QStringLiteral("username"), value.username);
+        settings.setValue(QStringLiteral("networkProfile"), value.networkProfile);
+        settings.setValue(QStringLiteral("arsHost"), value.arsHost);
+        settings.setValue(QStringLiteral("arsPort"), value.arsPort);
         settings.setValue(QStringLiteral("redirectHost"), value.redirectHost);
         settings.setValue(QStringLiteral("redirectPort"), value.redirectPort);
         settings.setValue(QStringLiteral("oscarDebugMode"), value.oscarDebugMode);
@@ -3862,10 +3902,47 @@ void MainWindow::wireBackend(ChatBackend *backend)
                     if (BackendState *state = stateFor(backend)) {
                         const QString key = name.trimmed().toCaseFolded();
                         if (key.isEmpty()) return;
-                        state->oscarBuddyPresence.insert(key, presence);
+                        const bool online = presence.value(QStringLiteral("online"), true).toBool();
+                        if (online) {
+                            // LOCATE hydration intentionally carries only live
+                            // presence fields. Merge it into the last BUDDY
+                            // packet so capabilities/sign-on metadata are not
+                            // discarded on every refresh.
+                            QVariantMap merged = state->oscarBuddyPresence.value(key);
+                            for (auto it = presence.cbegin(); it != presence.cend(); ++it)
+                                merged.insert(it.key(), it.value());
+                            state->oscarBuddyPresence.insert(key, merged);
+                        } else {
+                            // Offline must replace the record so stale Away text
+                            // and idle values cannot survive a departure event.
+                            state->oscarBuddyPresence.insert(key, presence);
+                        }
                         state->buddies.insert(name.trimmed());
-                        if (presence.value(QStringLiteral("online"), true).toBool()) state->onlineBuddies.insert(key);
+                        if (online) state->onlineBuddies.insert(key);
                         else state->onlineBuddies.remove(key);
+                        refreshBuddyList();
+                    }
+                }, Qt::QueuedConnection);
+        connect(oscar, &OscarBackend::userInfoReceived, this,
+                [this, backend](const QString &name, const QVariantMap &info) {
+                    if (BackendState *state = stateFor(backend)) {
+                        const QString clean = name.trimmed();
+                        const QString key = clean.toCaseFolded();
+                        const bool knownBuddy = std::any_of(state->buddies.cbegin(), state->buddies.cend(),
+                            [&clean](const QString &buddy) { return buddy.compare(clean, Qt::CaseInsensitive) == 0; });
+                        if (key.isEmpty() || !knownBuddy || !state->onlineBuddies.contains(key)) return;
+                        QVariantMap native = state->oscarBuddyPresence.value(key);
+                        native.insert(QStringLiteral("online"), true);
+                        native.insert(QStringLiteral("state"),
+                                      info.value(QStringLiteral("presence"), native.value(QStringLiteral("state"), QStringLiteral("Online"))));
+                        native.insert(QStringLiteral("awayMessage"), info.value(QStringLiteral("awayMessage")));
+                        native.insert(QStringLiteral("idleMinutes"), info.value(QStringLiteral("idleMinutes"), 0));
+                        native.insert(QStringLiteral("idleSeconds"), info.value(QStringLiteral("idleSeconds"), 0));
+                        native.insert(QStringLiteral("userFlags"), info.value(QStringLiteral("userFlags"), native.value(QStringLiteral("userFlags"))));
+                        native.insert(QStringLiteral("statusSupplied"), info.value(QStringLiteral("statusSupplied"), false));
+                        native.insert(QStringLiteral("statusRaw"), info.value(QStringLiteral("statusRaw"), -1));
+                        state->oscarBuddyPresence.insert(key, native);
+                        state->onlineBuddies.insert(key);
                         refreshBuddyList();
                     }
                 }, Qt::QueuedConnection);
@@ -5117,7 +5194,7 @@ void MainWindow::executeGuiCommand(const QString &input)
             return;
         }
         if (action == QStringLiteral("idle") || action == QStringLiteral("away")) {
-            report(QStringLiteral("Client-side AIM idle/away thresholds were removed in 5.0r13 (retained in 5.0r18). Native idle seconds are reported to OSCAR; Away/AFK is manual/server-native."));
+            report(QStringLiteral("Client-side AIM idle/away thresholds were removed in 5.0r13 (retained in 5.1). Native idle seconds are reported to OSCAR; Away/AFK is manual/server-native."));
             return;
         }
         report(QStringLiteral("Usage: /autopresence on|off"));

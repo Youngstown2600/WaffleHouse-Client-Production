@@ -28,7 +28,15 @@ struct ConnectionSettings {
     // QSettings does not encrypt this value; the UI makes that clear before opt-in.
     bool savePassword = false;
 
-    // AIM/OSCAR-specific redirect overrides and diagnostic mode.
+    // AIM/OSCAR network compatibility profile. "nina" reproduces the
+    // stock-AIM behavior used after NINAPatcher redirects AIM to NINA.
+    // "auto" also enables that profile automatically for *.nina.chat hosts.
+    QString networkProfile = QStringLiteral("auto");
+    QString arsHost;
+    quint16 arsPort = 5190;
+
+    // AIM/OSCAR-specific BOS redirect overrides and diagnostic mode.
+    // Secondary OSCAR service redirects always follow the server-advertised host.
     QString redirectHost;
     quint16 redirectPort = 0;
     // off = no OSCAR diagnostics; login = credential-safe login/bootstrap audit;

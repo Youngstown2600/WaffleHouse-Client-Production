@@ -1,4 +1,7 @@
-WaffleHouse-Client 5.0r18 — Combined Desktop Bundle
+NINA NETWORK: WaffleHouse-Client 5.1 includes the known-good NinaIM/NINAPatcher-compatible OSCAR handshake in the shared GUI/CLI backend.
+PLATFORMS: Linux/Unix, FreeBSD, macOS, Windows, Termux/Android.
+
+WaffleHouse-Client 5.1 — All-Platform Source Bundle
 Platforms: Linux, FreeBSD/Unix, macOS
 Build: ./build.sh
 

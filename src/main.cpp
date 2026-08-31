@@ -80,7 +80,8 @@ QList<StoredProfile> readProfiles(QSettings &settings)
 {
     static const QStringList keys = {
         QStringLiteral("id"), QStringLiteral("protocol"), QStringLiteral("server"),
-        QStringLiteral("port"), QStringLiteral("username"), QStringLiteral("redirectHost"),
+        QStringLiteral("port"), QStringLiteral("username"), QStringLiteral("networkProfile"),
+        QStringLiteral("arsHost"), QStringLiteral("arsPort"), QStringLiteral("redirectHost"),
         QStringLiteral("redirectPort"), QStringLiteral("oscarDebugMode"), QStringLiteral("realName"), QStringLiteral("tls"),
         QStringLiteral("ircBuddies"), QStringLiteral("sipContacts"),
         QStringLiteral("telnetTerminalType"), QStringLiteral("telnetColumns"), QStringLiteral("telnetRows"), QStringLiteral("telnetAutoFit"), QStringLiteral("sipProfileName"),
@@ -243,6 +244,9 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     QCommandLineOption oscarDebugOpt(QStringList{QStringLiteral("oscar-debug")},
                                      QStringLiteral("AIM/OSCAR diagnostics: off, login, or full. Login decodes authentication/bootstrap; full adds credential-safe FLAP/SNAC wire tracing."),
                                      QStringLiteral("mode"), QStringLiteral("off"));
+    QCommandLineOption oscarNetworkOpt(QStringList{QStringLiteral("oscar-network")},
+                                       QStringLiteral("AIM/OSCAR network profile: auto, nina, or custom. NINA reproduces the stock AIM behavior used with NINAPatcher."),
+                                       QStringLiteral("profile"), QStringLiteral("auto"));
 
     parser.addOption(protocolOpt);
     parser.addOption(serverOpt);
@@ -255,6 +259,7 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     parser.addOption(terminalTypeOpt);
     parser.addOption(debugOpt);
     parser.addOption(oscarDebugOpt);
+    parser.addOption(oscarNetworkOpt);
     parser.process(app);
 
     migrateLegacyWaffleHouseProfiles();
@@ -278,6 +283,16 @@ int runGui(int argc, char *argv[], const RuntimeEnvironment &runtime)
     defaults.telnetTerminalType = parser.value(terminalTypeOpt);
     defaults.debug = parser.isSet(debugOpt);
     defaults.oscarDebugMode = parser.value(oscarDebugOpt).trimmed().toCaseFolded();
+    defaults.networkProfile = parser.value(oscarNetworkOpt).trimmed().toCaseFolded();
+    if (defaults.networkProfile != QStringLiteral("auto")
+        && defaults.networkProfile != QStringLiteral("nina")
+        && defaults.networkProfile != QStringLiteral("custom"))
+        defaults.networkProfile = QStringLiteral("auto");
+    if (defaults.networkProfile == QStringLiteral("nina")) {
+        if (defaults.server.trimmed().isEmpty()) defaults.server = QStringLiteral("login.oscar.nina.chat");
+        defaults.arsHost = QStringLiteral("ars.oscar.nina.chat");
+        defaults.arsPort = 5190;
+    }
     if (defaults.oscarDebugMode != QStringLiteral("off")
         && defaults.oscarDebugMode != QStringLiteral("login")
         && defaults.oscarDebugMode != QStringLiteral("full"))

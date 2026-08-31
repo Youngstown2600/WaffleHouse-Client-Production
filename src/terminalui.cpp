@@ -2830,6 +2830,9 @@ void TerminalUi::loadConnections()
                     : value.protocol == ConnectionSettings::Protocol::Sip ? 5060 : 5190)
                 .toUInt());
             value.username = settings.value(QStringLiteral("username")).toString();
+            value.networkProfile = settings.value(QStringLiteral("networkProfile"), QStringLiteral("auto")).toString();
+            value.arsHost = settings.value(QStringLiteral("arsHost")).toString();
+            value.arsPort = static_cast<quint16>(settings.value(QStringLiteral("arsPort"), 5190).toUInt());
             value.redirectHost = settings.value(QStringLiteral("redirectHost")).toString();
             value.redirectPort = static_cast<quint16>(
                 settings.value(QStringLiteral("redirectPort"), 0).toUInt());
@@ -2965,6 +2968,9 @@ void TerminalUi::saveConnections() const
         settings.setValue(QStringLiteral("server"), value.server);
         settings.setValue(QStringLiteral("port"), value.port);
         settings.setValue(QStringLiteral("username"), value.username);
+        settings.setValue(QStringLiteral("networkProfile"), value.networkProfile);
+        settings.setValue(QStringLiteral("arsHost"), value.arsHost);
+        settings.setValue(QStringLiteral("arsPort"), value.arsPort);
         settings.setValue(QStringLiteral("redirectHost"), value.redirectHost);
         settings.setValue(QStringLiteral("redirectPort"), value.redirectPort);
         settings.setValue(QStringLiteral("oscarDebugMode"), value.oscarDebugMode);
@@ -5005,7 +5011,7 @@ void TerminalUi::handleCommand(const QString &line)
             return;
         }
         if (action == QStringLiteral("idle") || action == QStringLiteral("away")) {
-            status(QStringLiteral("Client-side AIM idle/away thresholds were removed in 5.0r13 (retained in 5.0r18). Native idle seconds are reported to OSCAR; Away/AFK is manual/server-native."));
+            status(QStringLiteral("Client-side AIM idle/away thresholds were removed in 5.0r13 (retained in 5.1). Native idle seconds are reported to OSCAR; Away/AFK is manual/server-native."));
             return;
         }
         if (action == QStringLiteral("on") || action == QStringLiteral("off")) {
@@ -7265,7 +7271,9 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         {QStringLiteral("ircpass"), QStringLiteral("IRC PASS required"),
          secretRequired && settings.protocol == ConnectionSettings::Protocol::Irc
              ? QStringLiteral("yes") : QStringLiteral("no"), FieldType::Toggle},
-        {QStringLiteral("redirecthost"), QStringLiteral("AIM Redirect host"),
+        {QStringLiteral("oscarnetwork"), QStringLiteral("AIM network (auto/nina/custom)"),
+         settings.networkProfile.isEmpty() ? QStringLiteral("auto") : settings.networkProfile, FieldType::Text},
+        {QStringLiteral("redirecthost"), QStringLiteral("AIM BOS Redirect host"),
          settings.redirectHost, FieldType::Text},
         {QStringLiteral("redirectport"), QStringLiteral("AIM Redirect port"),
          QString::number(settings.redirectPort), FieldType::Text},
@@ -7303,7 +7311,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
             return p != ConnectionSettings::Protocol::Telnet;
         if (key == QStringLiteral("tls") || key == QStringLiteral("realname")
             || key == QStringLiteral("ircpass")) return p == ConnectionSettings::Protocol::Irc;
-        if (key == QStringLiteral("redirecthost") || key == QStringLiteral("redirectport")
+        if (key == QStringLiteral("oscarnetwork") || key == QStringLiteral("redirecthost") || key == QStringLiteral("redirectport")
             || key == QStringLiteral("oscardebug"))
             return p == ConnectionSettings::Protocol::Oscar;
         if (key == QStringLiteral("terminaltype") || key == QStringLiteral("terminalcols")
@@ -7631,6 +7639,20 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         settings.server = server;
         settings.port = port;
         settings.username = account;
+        settings.networkProfile = field(QStringLiteral("oscarnetwork")).value.trimmed().toCaseFolded();
+        if (settings.networkProfile.isEmpty()) settings.networkProfile = QStringLiteral("auto");
+        if (currentProtocol == ConnectionSettings::Protocol::Oscar
+            && settings.networkProfile != QStringLiteral("auto")
+            && settings.networkProfile != QStringLiteral("nina")
+            && settings.networkProfile != QStringLiteral("custom")) {
+            messageBox(QStringLiteral("AIM/OSCAR Network"),
+                       {QStringLiteral("Network profile must be auto, nina, or custom.")});
+            continue;
+        }
+        if (settings.networkProfile == QStringLiteral("nina")) {
+            settings.arsHost = QStringLiteral("ars.oscar.nina.chat");
+            settings.arsPort = 5190;
+        }
         settings.redirectHost = field(QStringLiteral("redirecthost")).value.trimmed();
         bool rpOk = false;
         const int rp = field(QStringLiteral("redirectport")).value.toInt(&rpOk);

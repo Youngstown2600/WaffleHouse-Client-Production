@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(WaffleHouseClient VERSION 5.0.14 LANGUAGES CXX)
+project(WaffleHouseClient VERSION 5.1.0 LANGUAGES CXX)
 
 set(APP_DISPLAY_NAME "WaffleHouse-Client" CACHE STRING "Application display name")
 set(APP_ID "WaffleHouseClient" CACHE STRING "Application settings/config identifier")
@@ -19,24 +19,30 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC OFF)
 
+set(WAFFLEHOUSE_TERMUX_BUILD OFF)
+if(DEFINED ENV{TERMUX_VERSION} OR "$ENV{PREFIX}" MATCHES "com[.]termux")
+    set(WAFFLEHOUSE_TERMUX_BUILD ON)
+endif()
+
 find_package(Threads REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
 pkg_check_modules(NCURSESW REQUIRED IMPORTED_TARGET ncursesw)
-# Linux/FreeBSD Qt platform integration package. macOS/Cocoa does not use xkbcommon.
-if(NOT APPLE)
-    pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
+# X11/Wayland keyboard integration where available. It is not required by
+# Windows, macOS/Cocoa, or Termux/X11 builds.
+if(UNIX AND NOT APPLE AND NOT WAFFLEHOUSE_TERMUX_BUILD)
+    pkg_check_modules(XKBCOMMON QUIET IMPORTED_TARGET xkbcommon)
 endif()
 
 # The integrated softphone uses the 3.5/r14 synchronized PJSIP 2.17 engine.
-# 5.0 keeps the same tested PJSIP ABI while exposing more controls in both UIs.
+# 5.1 keeps the same tested PJSIP ABI while exposing the shared GUI/CLI feature set on all supported platforms.
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     set(ENV{PKG_CONFIG_ALLOW_SYSTEM_LIBS} "1")
 endif()
 pkg_check_modules(PJPROJECT REQUIRED libpjproject)
 if(NOT PJPROJECT_VERSION VERSION_EQUAL "2.17")
-    message(FATAL_ERROR "WaffleHouse-Client 5.0 softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
+    message(FATAL_ERROR "WaffleHouse-Client 5.1 softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
 endif()
 if(NOT PJPROJECT_STATIC_LDFLAGS)
     message(FATAL_ERROR "pkg-config did not return static PJSIP flags. Check: pkg-config --cflags --libs --static libpjproject")
@@ -182,7 +188,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="5.0r18"
+    APP_VERSION_STRING="5.1"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
     WAFFLEHOUSE_OSCAR_VOICE=1
     WAFFLEHOUSE_FEATURE_OSCAR=$<BOOL:${WAFFLEHOUSE_ENABLE_OSCAR}>
@@ -220,15 +226,23 @@ if(APPLE)
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_NAME "WaffleHouse-Client"
         MACOSX_BUNDLE_GUI_IDENTIFIER "local.wafflehouse-client"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "5.0.14"
-        MACOSX_BUNDLE_BUNDLE_VERSION "5.0.14"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "5.1.0"
+        MACOSX_BUNDLE_BUNDLE_VERSION "5.1.0"
     )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_FREEBSD=1)
+elseif(WIN32)
+    target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_WINDOWS=1)
+    # Keep a console subsystem so the exact same executable can run the ncurses
+    # frontend with --cli. GUI mode remains available with --gui/double-click.
+    set_target_properties(${APP_EXECUTABLE} PROPERTIES WIN32_EXECUTABLE FALSE)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_LINUX=1)
+    if(WAFFLEHOUSE_TERMUX_BUILD)
+        target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_TERMUX=1)
+    endif()
 else()
-    message(FATAL_ERROR "This desktop bundle supports Linux, FreeBSD, and macOS only")
+    message(FATAL_ERROR "WaffleHouse-Client 5.1 supports Linux/Unix, FreeBSD, macOS, Windows, and Termux/Android")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
@@ -247,7 +261,7 @@ if(APPLE)
         DESTINATION "${APP_EXECUTABLE}.app/Contents/Resources/sounds"
         FILES_MATCHING PATTERN "*.wav"
     )
-else()
+elseif(UNIX)
     install(PROGRAMS scripts/wafflehouse-shell DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES data/wafflehouse-client.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     foreach(_wh_icon_size IN ITEMS 16 22 24 32 48 64 128 256 512)

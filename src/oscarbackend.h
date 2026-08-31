@@ -202,6 +202,11 @@ private:
         QByteArray cookie;
     };
 
+    struct PresenceLookup {
+        QString name;
+        bool legacyFallback = false;
+    };
+
     struct FeedbagItem {
         QString name;
         quint16 groupId = 0;
@@ -218,7 +223,7 @@ private:
     void expectGreeting(Oscar::FlapConnection &connection);
     void bootstrapService(Oscar::FlapConnection &connection,
                           const QByteArray &cookie,
-                          bool addIcbmParams = false);
+                          bool bosBootstrap = false);
     ServiceRedirect requestService(quint16 family,
                                    const QList<Oscar::Tlv> &extraTlvs = {});
     Oscar::FlapConnection &ensureChatNav();
@@ -279,6 +284,8 @@ private:
                            int sampleRate,
                            quint16 cancelReason = 0);
     void advertiseClientCapabilities();
+    void requestBuddyPresenceHydration(const QString &target, bool legacyFallback = false);
+    void refreshOnlineBuddyPresence();
     void discoverBosCapabilities();
     QString fetchOwnProfile();
     void emitPresence();
@@ -295,8 +302,10 @@ private:
                                const QList<FeedbagItem> &mods,
                                const QList<FeedbagItem> &dels);
 
-    QPair<QString, quint16> redirectEndpoint(const QString &advertised,
-                                             quint16 fallbackPort) const;
+    QPair<QString, quint16> bosRedirectEndpoint(const QString &advertised,
+                                                quint16 fallbackPort) const;
+    QPair<QString, quint16> serviceRedirectEndpoint(const QString &advertised,
+                                                    quint16 fallbackPort = 5190) const;
     void protocolLog(const QString &text);
     [[noreturn]] void fail(const QString &message) const;
 
@@ -314,6 +323,11 @@ private:
     QString m_presenceMessage;
     quint32 m_idleSeconds = 0;
     QHash<QString, QString> m_peerClientHints;
+    QHash<QString, QString> m_onlineBuddyNames;
+    QHash<quint32, PresenceLookup> m_pendingPresenceLookups;
+    QSet<QString> m_presenceLookupInFlight;
+    bool m_presenceUseLegacyLocate = false;
+    int m_presenceRefreshCursor = 0;
     mutable QMutex m_capabilityMutex;
     QSet<quint16> m_serverFamilies;
     QHash<QString, QSet<QByteArray>> m_peerCapabilities;
