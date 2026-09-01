@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT_DIR=$(cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
-echo "WaffleHouse-Client 5.1 - Windows/MSYS2 UCRT64 GUI + CLI"
+echo "WaffleHouse-Client 5.1r3 - Windows/MSYS2 UCRT64 GUI + CLI"
 if [[ "${MSYSTEM:-}" != UCRT64 ]]; then
   echo "This script requires an MSYS2 UCRT64 shell. Run build-windows.ps1." >&2; exit 2
 fi

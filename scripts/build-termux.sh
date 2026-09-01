@@ -3,10 +3,67 @@ set -euo pipefail
 ROOT_DIR=$(cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
-echo "WaffleHouse-Client 5.1 - Termux/Android GUI + CLI"
+ACTION=build
+ASSUME_YES=0
+ORIGINAL_ARGC=$#
+usage() {
+  cat <<'USAGE'
+Usage: ./scripts/build-termux.sh [--uninstall|--remove-only] [--yes]
+
+With no options in an interactive Termux session the builder asks whether to
+build/install or uninstall/remove WaffleHouse-Client. Uninstall preserves all
+per-user WaffleHouse configuration.
+USAGE
+}
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --uninstall|--remove-only) ACTION=uninstall ;;
+    --yes|-y) ASSUME_YES=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown Termux builder option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+echo "WaffleHouse-Client 5.1r3 - Termux/Android GUI + CLI"
 if [[ -z "${TERMUX_VERSION:-}" && "${PREFIX:-}" != *com.termux* ]]; then
   echo "This builder must be run inside Termux." >&2; exit 2
 fi
+
+if [[ "$ORIGINAL_ARGC" -eq 0 && -t 0 ]]; then
+  cat <<'ACTION_PROMPT'
+
+What do you want to do?
+  1) Build / Install WaffleHouse-Client
+  2) Uninstall / Remove WaffleHouse-Client
+ACTION_PROMPT
+  read -r -p 'Selection [1]: ' answer
+  case "$answer" in
+    ''|1) ACTION=build ;;
+    2) ACTION=uninstall ;;
+    *) echo "Invalid selection." >&2; exit 2 ;;
+  esac
+fi
+
+if [[ "$ACTION" == uninstall ]]; then
+  if [[ "$ASSUME_YES" -ne 1 && -t 0 ]]; then
+    read -r -p 'Remove installed WaffleHouse-Client files and preserve user configuration? [y/N]: ' answer
+    case "$answer" in y|Y|yes|YES|Yes) ;; *) echo "Uninstall cancelled."; exit 0 ;; esac
+  fi
+  echo "==> Removing WaffleHouse-Client from Termux"
+  rm -f "$PREFIX/bin/wafflehouse-client" \
+        "$PREFIX/bin/wafflehouse-client-gui" \
+        "$PREFIX/bin/wafflehouse-client-cli" \
+        "$PREFIX/bin/wafflehouse-shell" \
+        "$PREFIX/share/applications/wafflehouse-client.desktop"
+  for size in 16 22 24 32 48 64 128 256 512; do
+    rm -f "$PREFIX/share/icons/hicolor/${size}x${size}/apps/wafflehouse-client.png"
+  done
+  rm -rf "$PREFIX/share/wafflehouse-client"
+  echo "WaffleHouse-Client application files removed. User configuration was preserved."
+  exit 0
+fi
+
 pkg update -y
 pkg install -y x11-repo
 pkg update -y

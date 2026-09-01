@@ -1,5 +1,20 @@
 # WaffleHouse-Client 5.1 — All-Platform Source Bundle
 
+
+## 5.1r3 AIM/IRC account labels + compact phone controls
+
+AIM/OSCAR and IRC saved accounts now have an optional **Account label** field, matching the convenience already available for SIP accounts. The label is local-only: it changes how WaffleHouse identifies the account in its GUI/CLI, not the AIM screen name or IRC nickname sent to the server.
+
+The softphone dial pad now enforces identical geometry for all twelve keys across Qt platform styles. Active Call Controls are also shorter: Answer/Reject/Hang Up/Hold and Resume/Mute/Blind Xfer/Attended Xfer occupy two compact rows, followed by DTMF and Diagnostics.
+
+## 5.1r2 uninstall/remove lifecycle
+
+The top-level builder offers Build/Install/Upgrade or Uninstall/Remove before protocol selection and dependency checks. Platform uninstall paths preserve per-user configuration, accounts, history, and logs.
+
+## 5.1r1 softphone layout update
+
+The Phone workspace has been rebalanced for normal desktop widths: Destination is a full-width field, the status banner is height-limited, keypad controls are larger, and long transfer actions no longer truncate. This maintenance release retains the complete 5.0r20 OSCAR/file-transfer fix set merged into 5.1.
+
 ## 5.1 — NINA compatibility + all-platform propagation
 
 WaffleHouse-Client 5.1 carries the NINA compatibility behavior proven in NinaIM 0.2.0/0.3.0 while preserving WaffleHouse's full multi-protocol client. AIM/OSCAR accounts can use **Auto**, **NINA Network**, or **Custom OSCAR** network profiles. The same OSCAR backend is used by GUI and CLI on Linux/Unix, FreeBSD, macOS, Windows, and Termux. See `NINA-COMPATIBILITY.md`, `BUILDING-Windows.md`, and `BUILDING-Termux.md`.
@@ -58,7 +73,7 @@ The top-level builder asks which operating system you are installing on:
 4. Windows / MSYS2
 5. Termux / Android
 
-It verifies the selection against the current host and then dispatches to the appropriate platform builder. Scripted platform selection is also supported by the platform-aware builders; see the per-platform BUILDING documents.
+It verifies the selection against the current host and then dispatches to the appropriate platform builder. On Linux/FreeBSD/macOS the interactive builder now asks whether you want to **Build / Install / Upgrade** or **Uninstall / Remove** before any protocol-selection or dependency work. Scripted removal is available with `--uninstall` or `--remove-only`. The uninstall path removes application payload files but deliberately preserves per-user accounts, settings, history, and OSCAR audit data.
 
 A normal successful build **does not automatically install WaffleHouse-Client**. Linux/FreeBSD explicitly ask whether to install it system-wide and add `/bin/wafflehouse-client`; `[y/N]` defaults to **No**.
 
@@ -66,6 +81,8 @@ A normal successful build **does not automatically install WaffleHouse-Client**.
 - Linux / FreeBSD optional system launcher: `/bin/wafflehouse-client`
 - macOS optional app install: `/Applications/WaffleHouse-Client.app`
 - macOS optional command launcher: `/usr/local/bin/wafflehouse-client`
+- Termux removal: `./scripts/build-termux.sh --uninstall`
+- Windows portable-package removal: `./build-windows.ps1 -Uninstall`
 
 See `BUILDING-Linux.md`, `BUILDING-FreeBSD.md`, and `BUILDING-macOS.md` for platform notes.
 

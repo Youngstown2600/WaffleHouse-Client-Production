@@ -22,6 +22,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QTableWidget>
@@ -60,8 +61,8 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     : QWidget(parent), m_controller(controller)
 {
     setWindowTitle(QStringLiteral("%1 %2 — Softphone").arg(appDisplayName(), appVersionString()));
-    resize(1180, 760);
-    setMinimumSize(980, 620);
+    resize(1260, 800);
+    setMinimumSize(1120, 680);
     setAttribute(Qt::WA_QuitOnClose, false);
 
     setObjectName(QStringLiteral("ModernRoot"));
@@ -134,7 +135,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     phoneSplit->setChildrenCollapsible(false);
 
     auto *dialBox = new QGroupBox(QStringLiteral("Dialer"), phoneSplit);
-    dialBox->setMinimumWidth(365);
+    dialBox->setMinimumWidth(405);
     auto *dialGrid = new QGridLayout(dialBox);
     dialGrid->setHorizontalSpacing(10);
     dialGrid->setVerticalSpacing(10);
@@ -142,9 +143,12 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     m_phoneStatus = new QLabel(QStringLiteral("READY — No active call"), dialBox);
     m_phoneStatus->setObjectName(QStringLiteral("StatusPill"));
     m_phoneStatus->setAlignment(Qt::AlignCenter);
+    // Keep the status banner informative without allowing it to consume the dialer.
+    m_phoneStatus->setFixedHeight(58);
     dialGrid->addWidget(m_phoneStatus, 0, 0, 1, 4);
 
     m_phoneAccount = new QComboBox(dialBox);
+    m_phoneAccount->setMinimumHeight(34);
     m_phoneAccount->setToolTip(QStringLiteral("SIP account used for new outgoing calls."));
     dialGrid->addWidget(new QLabel(QStringLiteral("SIP Account:"), dialBox), 1, 0);
     dialGrid->addWidget(m_phoneAccount, 1, 1, 1, 3);
@@ -152,6 +156,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     m_destination = new QLineEdit(dialBox);
     m_destination->setPlaceholderText(QStringLiteral("extension, number, user@domain, or sip: URI"));
     m_destination->setAlignment(Qt::AlignCenter);
+    m_destination->setMinimumHeight(42);
     QFont dialFont = m_destination->font();
     dialFont.setPointSize(15);
     dialFont.setBold(true);
@@ -159,18 +164,26 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
 
     m_runtimeDialPrefix = new QLineEdit(dialBox);
     m_runtimeDialPrefix->setPlaceholderText(QStringLiteral("e.g. 9 or 4071"));
-    m_runtimeDialPrefix->setMaximumWidth(180);
+    m_runtimeDialPrefix->setMinimumHeight(34);
+    m_runtimeDialPrefix->setMaximumWidth(220);
     m_runtimeDialPrefix->setToolTip(QStringLiteral("Session routing prefix for the selected SIP account. Explicit sip:/sips: URIs and user@domain destinations are never modified."));
     m_callerId = new QLineEdit(dialBox);
+    m_callerId->setMinimumHeight(34);
     m_callerId->setPlaceholderText(QStringLiteral("optional caller ID override"));
 
     dialGrid->addWidget(new QLabel(QStringLiteral("Caller ID:"), dialBox), 2, 0);
     dialGrid->addWidget(m_callerId, 2, 1, 1, 3);
+
+    // Prefix and destination used to share one narrow row. On Linux/macOS this
+    // could collapse Destination to only a few characters. Give the actual dial
+    // target its own full-width row and keep the optional prefix compact.
     dialGrid->addWidget(new QLabel(QStringLiteral("Prefix:"), dialBox), 3, 0);
-    dialGrid->addWidget(m_runtimeDialPrefix, 3, 1);
-    dialGrid->addWidget(new QLabel(QStringLiteral("Destination:"), dialBox), 3, 2);
-    dialGrid->addWidget(m_destination, 3, 3);
-    dialGrid->setColumnStretch(3, 1);
+    dialGrid->addWidget(m_runtimeDialPrefix, 3, 1, 1, 3, Qt::AlignLeft);
+    dialGrid->addWidget(new QLabel(QStringLiteral("Destination:"), dialBox), 4, 0);
+    dialGrid->addWidget(m_destination, 4, 1, 1, 3);
+    dialGrid->setColumnStretch(1, 1);
+    dialGrid->setColumnStretch(2, 1);
+    dialGrid->setColumnStretch(3, 2);
 
     auto *keypadHost = new QWidget(dialBox);
     auto *keypadOuter = new QHBoxLayout(keypadHost);
@@ -187,13 +200,24 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
                                  QStringLiteral("4\nGHI"), QStringLiteral("5\nJKL"), QStringLiteral("6\nMNO"),
                                  QStringLiteral("7\nPQRS"), QStringLiteral("8\nTUV"), QStringLiteral("9\nWXYZ"),
                                  QStringLiteral("*"), QStringLiteral("0\n+"), QStringLiteral("#")};
+    // Keep every dial key geometrically identical.  Some Qt platform styles
+    // derive different size hints for one-line keys (1, *, #) versus two-line
+    // keys (2/ABC, 0/+), which made the keypad look warped on Linux/macOS.
+    constexpr int dialKeyWidth = 76;
+    constexpr int dialKeyHeight = 58;
+    for (int row = 0; row < 4; ++row) keypad->setRowMinimumHeight(row, dialKeyHeight);
+    for (int col = 0; col < 3; ++col) {
+        keypad->setColumnMinimumWidth(col, dialKeyWidth);
+        keypad->setColumnStretch(col, 1);
+    }
     for (int i = 0; i < digits.size(); ++i) {
         auto *key = new QPushButton(dialLabels.at(i), keypadHost);
         key->setProperty("dialKey", true);
-        key->setFixedSize(64, 64);
+        key->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        key->setFixedSize(76, 58);
         key->setCursor(Qt::PointingHandCursor);
         QFont keyFont = key->font();
-        keyFont.setPointSize(11);
+        keyFont.setPointSize(12);
         keyFont.setBold(true);
         key->setFont(keyFont);
         keypad->addWidget(key, i / 3, i % 3, Qt::AlignCenter);
@@ -211,7 +235,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     }
     keypadOuter->addLayout(keypad);
     keypadOuter->addStretch(1);
-    dialGrid->addWidget(keypadHost, 4, 0, 1, 4);
+    dialGrid->addWidget(keypadHost, 5, 0, 1, 4);
 
     auto *utilityRow = new QWidget(dialBox);
     auto *utilityLayout = new QHBoxLayout(utilityRow);
@@ -221,13 +245,13 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     auto *clear = new QPushButton(QStringLiteral("Clear"), utilityRow);
     backspace->setProperty("phoneUtility", true);
     clear->setProperty("phoneUtility", true);
-    backspace->setFixedSize(104, 34);
-    clear->setFixedSize(104, 34);
+    backspace->setFixedSize(112, 36);
+    clear->setFixedSize(112, 36);
     utilityLayout->addWidget(backspace);
     utilityLayout->addSpacing(10);
     utilityLayout->addWidget(clear);
     utilityLayout->addStretch(1);
-    dialGrid->addWidget(utilityRow, 5, 0, 1, 4);
+    dialGrid->addWidget(utilityRow, 6, 0, 1, 4);
 
     auto *actionRow = new QWidget(dialBox);
     auto *actionLayout = new QHBoxLayout(actionRow);
@@ -236,15 +260,15 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     auto *dialButton = new QPushButton(QStringLiteral("CALL"), actionRow);
     dialButton->setProperty("phoneAction", "call");
     dialButton->setDefault(true);
-    dialButton->setFixedSize(124, 38);
+    dialButton->setFixedSize(132, 42);
     auto *hangupMain = new QPushButton(QStringLiteral("HANG UP"), actionRow);
     hangupMain->setProperty("phoneAction", "hangup");
-    hangupMain->setFixedSize(124, 38);
+    hangupMain->setFixedSize(132, 42);
     actionLayout->addWidget(dialButton);
     actionLayout->addSpacing(12);
     actionLayout->addWidget(hangupMain);
     actionLayout->addStretch(1);
-    dialGrid->addWidget(actionRow, 6, 0, 1, 4);
+    dialGrid->addWidget(actionRow, 7, 0, 1, 4);
 
     connect(backspace, &QPushButton::clicked, m_destination, &QLineEdit::backspace);
     connect(clear, &QPushButton::clicked, m_destination, &QLineEdit::clear);
@@ -260,7 +284,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     // Active call pane: intentionally compact enough for Linux desktops and
     // complete enough that Hold/Mute/Transfer are never hidden off the right.
     auto *activeBox = new QGroupBox(QStringLiteral("Active Calls & Controls"), phoneSplit);
-    activeBox->setMinimumWidth(500);
+    activeBox->setMinimumWidth(440);
     auto *activeLayout = new QVBoxLayout(activeBox);
     m_calls = new QTableWidget(0, 14, activeBox);
     m_calls->setHorizontalHeaderLabels({QStringLiteral("ID"), QStringLiteral("Account"), QStringLiteral("Dir"), QStringLiteral("Remote"),
@@ -276,21 +300,36 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     activeLayout->addWidget(m_calls, 1);
 
     auto *callButtons = new QGridLayout;
-    callButtons->setHorizontalSpacing(8);
-    callButtons->setVerticalSpacing(8);
+    callButtons->setHorizontalSpacing(6);
+    callButtons->setVerticalSpacing(6);
     auto *answer = new QPushButton(QStringLiteral("Answer"), activeBox);
     auto *reject = new QPushButton(QStringLiteral("Reject"), activeBox);
     auto *hangup = new QPushButton(QStringLiteral("Hang Up"), activeBox);
     auto *hold = new QPushButton(QStringLiteral("Hold"), activeBox);
     auto *resume = new QPushButton(QStringLiteral("Resume"), activeBox);
     auto *mute = new QPushButton(QStringLiteral("Mute / Unmute"), activeBox);
-    auto *blindTransfer = new QPushButton(QStringLiteral("Blind Transfer…"), activeBox);
-    auto *attendedTransfer = new QPushButton(QStringLiteral("Attended Transfer…"), activeBox);
+    // Compact labels keep the full two-row call-control bank readable without
+    // making the active-call pane unnecessarily tall. Full action names remain
+    // available as tooltips.
+    auto *blindTransfer = new QPushButton(QStringLiteral("Blind Xfer…"), activeBox);
+    blindTransfer->setToolTip(QStringLiteral("Blind Transfer…"));
+    auto *attendedTransfer = new QPushButton(QStringLiteral("Attended Xfer…"), activeBox);
+    attendedTransfer->setToolTip(QStringLiteral("Attended Transfer…"));
     auto *diagnostics = new QPushButton(QStringLiteral("Diagnostics"), activeBox);
     m_dtmf = new QLineEdit(activeBox);
     m_dtmf->setPlaceholderText(QStringLiteral("DTMF digits"));
     auto *dtmfButton = new QPushButton(QStringLiteral("Send DTMF"), activeBox);
 
+    const QList<QPushButton *> liveCallButtons{answer, reject, hangup, hold, resume, mute,
+                                               blindTransfer, attendedTransfer, dtmfButton, diagnostics};
+    for (auto *button : liveCallButtons) {
+        button->setMinimumHeight(30);
+        button->setMaximumHeight(34);
+    }
+
+    // Eight primary controls fit in two rows: the common call actions first,
+    // then resume/mute/transfers.  DTMF and diagnostics stay below as utility
+    // rows. This matches the more compact layout requested for 5.1r3.
     callButtons->addWidget(answer, 0, 0);
     callButtons->addWidget(reject, 0, 1);
     callButtons->addWidget(hangup, 0, 2);
@@ -309,7 +348,7 @@ SoftphoneWindow::SoftphoneWindow(SipController *controller, QWidget *parent)
     phoneSplit->addWidget(activeBox);
     phoneSplit->setStretchFactor(0, 0);
     phoneSplit->setStretchFactor(1, 1);
-    phoneSplit->setSizes({390, 650});
+    phoneSplit->setSizes({455, 585});
     phoneLayout->addWidget(phoneSplit, 1);
     m_tabs->addTab(phone, QStringLiteral("Phone"));
 

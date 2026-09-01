@@ -1,6 +1,6 @@
-# WaffleHouse-Client 5.0r13 — Linux build notes
+# WaffleHouse-Client 5.1r3 — Linux build notes
 
-WaffleHouse-Client 5.0r13 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
+WaffleHouse-Client 5.1r3 builds the same C++/Qt6 GUI + ncurses CLI on Debian-family Linux, Fedora, and Slackware. OSCAR voice adds the Qt 6 Multimedia development module to the existing Core/Gui/Widgets/Network requirements. The Media Center still uses `mpv` + `ffmpeg`.
 
 ## Debian / Ubuntu / Linux Mint and derivatives
 
@@ -25,3 +25,14 @@ After a successful interactive build, WaffleHouse asks whether to install the ap
 ```
 
 Use `--no-auto-deps` as well if you only want the dependency audit/build attempt and do not want the builder to install missing packages.
+
+
+## Uninstall / remove
+
+Interactive `./build.sh` now offers **Uninstall / Remove** before dependency or protocol prompts. Scripted removal is also available:
+
+```sh
+./build.sh --os linux --uninstall
+```
+
+This removes the installed executable, `/bin/wafflehouse-client` launcher, `wafflehouse-shell`, desktop entry, installed icons, and WaffleHouse shared sound/resource directory. **Per-user configuration, accounts, history, and logs are preserved.** `--remove-only` is an alias, and `--yes` can be used for unattended removal.

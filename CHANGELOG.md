@@ -1,3 +1,28 @@
+# WaffleHouse-Client 5.1r3
+
+## 5.1r3 AIM/IRC labels + softphone control cleanup
+
+- Added an optional local **Account label** for AIM/OSCAR and IRC profiles. Labels are persisted in the shared GUI/CLI settings model and can identify accounts as `NINA`, `Waffle BBS`, `Work IRC`, etc. without changing the actual AIM screen name or IRC nickname used on the wire.
+- Account labels are used in the GUI account tree/context menus/connections list and in CLI connection labels; the real protocol identity remains available in tooltips/status details.
+- Hardened dial-pad geometry so all twelve keys use identical fixed dimensions and uniform grid rows/columns across Qt platform styles. One-line keys (`1`, `*`, `#`) can no longer collapse differently from two-line lettered keys.
+- Compacted Active Calls controls into two four-button primary rows plus DTMF and Diagnostics utility rows. Transfer buttons use compact visible labels with full action-name tooltips.
+- Retains the complete 5.1 + 5.0r20 OSCAR/file-transfer maintenance merge and all 5.1r2 uninstall/remove behavior.
+
+## 5.1r2 builder uninstall/remove lifecycle
+
+- Added an interactive **Build / Install / Upgrade** versus **Uninstall / Remove** choice before protocol selection or dependency checks.
+- Added direct uninstall/remove flags for Linux/FreeBSD, macOS, Termux, and the portable Windows package.
+- Removal deletes installed application payloads while preserving per-user settings, accounts, history, and logs.
+
+## 5.1r1 softphone GUI layout repair
+
+- Reworked the Phone workspace so the destination field has a dedicated full-width row instead of being squeezed beside the runtime prefix.
+- Capped the READY / call-state banner height so it cannot consume the dialer vertically.
+- Enlarged the keypad and primary CALL / HANG UP controls for desktop use.
+- Rebalanced the Phone splitter so the dialer remains usable while Active Calls stays flexible.
+- Reflowed live-call controls so long transfer actions are not clipped.
+- Preserves the full 5.1 + 5.0r20 OSCAR/file-transfer maintenance merge and all 5.1 platform/NINA work.
+
 ## 5.1
 
 - Re-merged and regression-verified every WaffleHouse-Client 5.0r20 maintenance fix into the 5.1 all-platform tree after confirming the original 5.1 branch had been promoted from 5.0r18 rather than r20.

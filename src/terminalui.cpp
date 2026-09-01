@@ -923,7 +923,17 @@ QString TerminalUi::connectionLabel(const ConnectionEntry *entry)
         return QStringLiteral("none");
     }
 
-    QString who = entry->identity.isEmpty() ? entry->settings.username : entry->identity;
+    QString who;
+    if ((entry->settings.protocol == ConnectionSettings::Protocol::Oscar
+         || entry->settings.protocol == ConnectionSettings::Protocol::Irc)
+        && !entry->settings.accountLabel.trimmed().isEmpty()) {
+        who = entry->settings.accountLabel.trimmed();
+    } else if (entry->settings.protocol == ConnectionSettings::Protocol::Sip
+               && !entry->settings.sipProfileName.trimmed().isEmpty()) {
+        who = entry->settings.sipProfileName.trimmed();
+    } else {
+        who = entry->identity.isEmpty() ? entry->settings.username : entry->identity;
+    }
     if (who.isEmpty()) {
         who = protocolShort(entry->settings.protocol);
     }
@@ -2830,6 +2840,7 @@ void TerminalUi::loadConnections()
                     : value.protocol == ConnectionSettings::Protocol::Sip ? 5060 : 5190)
                 .toUInt());
             value.username = settings.value(QStringLiteral("username")).toString();
+            value.accountLabel = settings.value(QStringLiteral("accountLabel")).toString();
             value.networkProfile = settings.value(QStringLiteral("networkProfile"), QStringLiteral("auto")).toString();
             value.arsHost = settings.value(QStringLiteral("arsHost")).toString();
             value.arsPort = static_cast<quint16>(settings.value(QStringLiteral("arsPort"), 5190).toUInt());
@@ -2968,6 +2979,7 @@ void TerminalUi::saveConnections() const
         settings.setValue(QStringLiteral("server"), value.server);
         settings.setValue(QStringLiteral("port"), value.port);
         settings.setValue(QStringLiteral("username"), value.username);
+        settings.setValue(QStringLiteral("accountLabel"), value.accountLabel);
         settings.setValue(QStringLiteral("networkProfile"), value.networkProfile);
         settings.setValue(QStringLiteral("arsHost"), value.arsHost);
         settings.setValue(QStringLiteral("arsPort"), value.arsPort);
@@ -6567,9 +6579,9 @@ void TerminalUi::listConnections()
             ? QStringLiteral("connecting")
             : entry->connected ? QStringLiteral("online") : QStringLiteral("offline");
         append(buffer,
-               QStringLiteral("  %1) %2 %3  %4:%5  [%6]")
+               QStringLiteral("  %1) %2  %3  %4:%5  [%6]")
                    .arg(shown)
-                   .arg(protocolName(entry->settings.protocol), -10)
+                   .arg(connectionLabel(entry))
                    .arg(entry->settings.username)
                    .arg(entry->settings.server)
                    .arg(entry->settings.port)
@@ -7245,6 +7257,8 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
          settings.port ? QString::number(settings.port) : QString(), FieldType::Text},
         {QStringLiteral("account"), QStringLiteral("Account / Nick / Label"),
          settings.username, FieldType::Text},
+        {QStringLiteral("accountlabel"), QStringLiteral("AIM/IRC account label"),
+         settings.accountLabel, FieldType::Text},
         {QStringLiteral("secret"), QStringLiteral("Password / Token"),
          QString(), FieldType::Secret},
         {QStringLiteral("savepass"), QStringLiteral("Save password"),
@@ -7306,6 +7320,8 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         if (p == ConnectionSettings::Protocol::Unknown) return false;
         if (key == QStringLiteral("server") || key == QStringLiteral("port")
             || key == QStringLiteral("account")) return true;
+        if (key == QStringLiteral("accountlabel"))
+            return p == ConnectionSettings::Protocol::Oscar || p == ConnectionSettings::Protocol::Irc;
         if (key == QStringLiteral("debug")) return p != ConnectionSettings::Protocol::Oscar;
         if (key == QStringLiteral("secret") || key == QStringLiteral("savepass"))
             return p != ConnectionSettings::Protocol::Telnet;
@@ -7639,6 +7655,7 @@ bool TerminalUi::promptConnectionSettings(ConnectionSettings &settings,
         settings.server = server;
         settings.port = port;
         settings.username = account;
+        settings.accountLabel = field(QStringLiteral("accountlabel")).value.trimmed();
         settings.networkProfile = field(QStringLiteral("oscarnetwork")).value.trimmed().toCaseFolded();
         if (settings.networkProfile.isEmpty()) settings.networkProfile = QStringLiteral("auto");
         if (currentProtocol == ConnectionSettings::Protocol::Oscar

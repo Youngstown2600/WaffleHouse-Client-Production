@@ -1,6 +1,6 @@
-# WaffleHouse-Client 5.1 — NINA Network compatibility
+# WaffleHouse-Client 5.1r3 — NINA Network compatibility
 
-WaffleHouse-Client 5.1 imports the **known-good NinaIM 0.2.0 / 0.3.0 OSCAR login compatibility path** that successfully signed into NINA. The reference behavior was derived from the user-supplied NINAPatcher 1.3.2 binary: NINAPatcher redirects a stock AIM client to NINA infrastructure instead of replacing the AIM/OSCAR engine.
+WaffleHouse-Client 5.1r3 imports the **known-good NinaIM 0.2.0 / 0.3.0 OSCAR login compatibility path** that successfully signed into NINA. The reference behavior was derived from the user-supplied NINAPatcher 1.3.2 binary: NINAPatcher redirects a stock AIM client to NINA infrastructure instead of replacing the AIM/OSCAR engine.
 
 ## NINA endpoints / behavior
 

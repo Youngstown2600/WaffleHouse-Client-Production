@@ -23,6 +23,10 @@ struct ConnectionSettings {
     QString server;
     quint16 port = 5190;
     QString username;
+    // Optional user-facing label for non-SIP accounts.  AIM/OSCAR and IRC
+    // keep their real screen name/nickname for protocol traffic while the UI
+    // can show a friendlier name such as "NINA", "Waffle BBS", or "Work IRC".
+    QString accountLabel;
     QString password;
     // When true, the password may be persisted in the local QSettings profile.
     // QSettings does not encrypt this value; the UI makes that clear before opt-in.

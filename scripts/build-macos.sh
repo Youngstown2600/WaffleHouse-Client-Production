@@ -19,12 +19,13 @@ INSTALL_MODE=ask
 INSTALL_PREFIX=/usr/local
 APP_INSTALL_DIR=${WAFFLEHOUSE_APP_INSTALL_DIR:-/Applications}
 ASSUME_YES=0
+UNINSTALL_MODE=0
 
 usage() {
   cat <<USAGE
 Usage: ./build.sh --os macos [options]
 
-Build WaffleHouse-Client 5.0r13 for macOS. The .app contains the GUI and the same
+Build WaffleHouse-Client 5.1r3 for macOS. The .app contains the GUI and the same
 binary also supports --cli for the terminal interface.
 
   --clean          remove the macOS build directory first
@@ -36,6 +37,8 @@ binary also supports --cli for the terminal interface.
   --no-auto-deps   do not install missing Homebrew dependencies
   --install        install after a successful build without the final prompt
   --no-install     build only and suppress the install prompt
+  --uninstall      remove the installed app + launcher; preserve user config
+  --remove-only    alias of --uninstall
   --prefix PATH    command launcher prefix (default /usr/local)
   --yes, -y        answer yes to explicit install confirmation paths
   --jobs N         parallel build jobs
@@ -59,12 +62,13 @@ while [ "$#" -gt 0 ]; do
     --no-auto-deps) AUTO_DEPS=0 ;;
     --install) INSTALL_MODE=yes ;;
     --no-install) INSTALL_MODE=no ;;
+    --uninstall|--remove-only) UNINSTALL_MODE=1; INSTALL_MODE=no ;;
     --yes|-y) ASSUME_YES=1 ;;
     --prefix) shift; [ "$#" -gt 0 ] || { echo "--prefix requires a path" >&2; exit 2; }; INSTALL_PREFIX=$1 ;;
     --jobs) shift; JOBS=${1:?--jobs requires a value} ;;
     --build-type) shift; BUILD_TYPE=${1:?--build-type requires a value} ;;
     --dry-run) echo "--dry-run is currently a Linux/FreeBSD builder option." >&2; exit 2 ;;
-    --upgrade|--uninstall|--remove-only|--audio-diagnose|--no-audio-fix)
+    --upgrade|--audio-diagnose|--no-audio-fix)
       echo "$1 is currently a Linux/FreeBSD builder option." >&2; exit 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown macOS build option: $1" >&2; usage >&2; exit 2 ;;
@@ -76,6 +80,28 @@ case "$JOBS" in ''|*[!0-9]*|0) echo "--jobs requires a positive integer" >&2; ex
 [ "$INSTALL_PREFIX" = / ] || INSTALL_PREFIX=${INSTALL_PREFIX%/}
 INSTALL_BIN="$INSTALL_PREFIX/bin/wafflehouse-client"
 INSTALL_APP="$APP_INSTALL_DIR/WaffleHouse-Client.app"
+
+run_admin() {
+  if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo "$@"; fi
+}
+
+if [ "$UNINSTALL_MODE" -eq 1 ]; then
+  if [ "$ASSUME_YES" -ne 1 ] && [ -t 0 ]; then
+    echo "Uninstall targets:"
+    echo "  app:      $INSTALL_APP"
+    echo "  launcher: $INSTALL_BIN"
+    printf 'Remove WaffleHouse-Client application files and preserve user configuration? [y/N]: '
+    IFS= read -r answer
+    case "$answer" in y|Y|yes|YES|Yes) : ;; *) echo "Uninstall cancelled."; exit 0 ;; esac
+  fi
+  echo "==> Removing installed WaffleHouse-Client 5.1r3 for macOS"
+  removed=0
+  if [ -e "$INSTALL_APP" ] || [ -L "$INSTALL_APP" ]; then run_admin rm -rf "$INSTALL_APP"; echo "Removed app: $INSTALL_APP"; removed=1; fi
+  if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then run_admin rm -f "$INSTALL_BIN"; echo "Removed launcher: $INSTALL_BIN"; removed=1; fi
+  if [ "$removed" -eq 0 ]; then echo "No installed WaffleHouse-Client files were found at the standard targets."; fi
+  echo "Per-user WaffleHouse configuration was preserved."
+  exit 0
+fi
 
 command -v brew >/dev/null 2>&1 || {
   echo "Homebrew is required for the macOS dependency preflight: https://brew.sh" >&2
@@ -98,7 +124,7 @@ need_formula() {
 # dependency preflight. mpv and ffmpeg are external runtime helpers and are
 # deliberately optional; an older/unsupported macOS Homebrew installation may
 # have no bottle for mpv, and that must never prevent the client itself from
-# building. yt-dlp is not used by the 5.0r13 media implementation.
+# building. yt-dlp is not used by the 5.1r3 media implementation.
 for formula in cmake pkg-config qt libsodium ncurses portaudio opus; do
   need_formula "$formula"
 done
@@ -150,7 +176,7 @@ export PKG_CONFIG_PATH="$PJSIP_PREFIX/lib/pkgconfig:$SODIUM_PREFIX/lib/pkgconfig
 export CMAKE_PREFIX_PATH="$QT_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
 printf '%s\n' "============================================================" \
-  "                    WAFFLEHOUSE-CLIENT 5.0r13" \
+  "                    WAFFLEHOUSE-CLIENT 5.1r3" \
   "============================================================" \
   "Platform:       macOS $(sw_vers -productVersion 2>/dev/null || true)" \
   "Architecture:   $(uname -m)" \
@@ -211,14 +237,10 @@ ask_install() {
   case "$answer" in y|Y|yes|YES|Yes) INSTALL_MODE=yes ;; *) INSTALL_MODE=no ;; esac
 }
 
-run_admin() {
-  if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo "$@"; fi
-}
-
 ask_install
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 5.0r13 for macOS"
+  echo "==> Installing WaffleHouse-Client 5.1r3 for macOS"
   run_admin mkdir -p "$APP_INSTALL_DIR" "$INSTALL_PREFIX/bin"
   if [ -e "$INSTALL_APP" ]; then run_admin rm -rf "$INSTALL_APP"; fi
   run_admin ditto "$APP" "$INSTALL_APP"
@@ -247,7 +269,7 @@ fi
 
 cat <<DONE
 
-WaffleHouse-Client 5.0r13 macOS build complete.
+WaffleHouse-Client 5.1r3 macOS build complete.
 GUI: open "$APP"
 CLI: "$APP/Contents/MacOS/wafflehouse-client" --cli
 $(if [ "$MAKE_DMG" -eq 1 ]; then echo "DMG: $BUILD_DIR/wafflehouse-client.dmg"; fi)

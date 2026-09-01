@@ -1,5 +1,5 @@
 #!/bin/sh
-# WaffleHouse-Client 5.1 restricted-login wrapper.
+# WaffleHouse-Client 5.1r3 restricted-login wrapper.
 # Works as a normal login command and as an sshd ForceCommand target.
 set -u
 

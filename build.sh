@@ -7,12 +7,14 @@ cd "$ROOT_DIR"
 SELECTED_OS=
 PROTOCOL_SELECTION=
 PROTOCOLS_EXPLICIT=0
+LIFECYCLE_ACTION=build
+LIFECYCLE_EXPLICIT=0
 
 usage() {
   cat <<'USAGE'
-WaffleHouse-Client 5.1 — Linux/Unix/macOS builder
+WaffleHouse-Client 5.1r3 — Linux/Unix/macOS builder
 
-Usage: ./build.sh [--os linux|freebsd|macos] [--protocols LIST] [platform build options]
+Usage: ./build.sh [--os linux|freebsd|macos] [--protocols LIST] [--uninstall] [platform build options]
 
 With no --os option the builder asks which operating system you are installing on:
   1) Linux
@@ -20,7 +22,8 @@ With no --os option the builder asks which operating system you are installing o
   3) macOS
 
 The selected platform is checked against the host before any dependency installation
-or build action begins. For Termux/Android use ./scripts/build-termux.sh; for Windows use ./build-windows.ps1.
+or build action begins. In interactive mode the builder then asks whether to build/install
+or uninstall/remove the existing WaffleHouse-Client installation. For Termux/Android use ./scripts/build-termux.sh; for Windows use ./build-windows.ps1.
 
 The builder also asks which features to bake into this binary:
   AIM/OSCAR, IRC, Telnet/BBS, SIP/VoIP, Media/Radio
@@ -34,10 +37,10 @@ macOS keeps its normal /Applications + /usr/local/bin launcher flow.
 
 Common options forwarded to the selected platform builder include:
   --clean, --pjsip, --no-auto-deps, --jobs N, --build-type TYPE
-  --install, --no-install, --prefix PATH
+  --install, --no-install, --prefix PATH, --uninstall, --remove-only
 
 Linux/FreeBSD also support:
-  --audio-diagnose, --no-audio-fix, --dry-run, --upgrade, --uninstall, --yes
+  --audio-diagnose, --no-audio-fix, --dry-run, --upgrade, --yes
 
 macOS also supports:
   --dmg, --with-media-deps, --yes
@@ -47,6 +50,8 @@ Examples:
   ./build.sh --os linux --clean
   ./build.sh --os freebsd --pjsip
   ./build.sh --os macos --clean --dmg
+  ./build.sh --os linux --uninstall
+  ./build.sh --os macos --uninstall
   ./build.sh --os linux --protocols aim,irc,telnet
   ./build.sh --os macos --protocols aim,irc,telnet,sip,media
 USAGE
@@ -77,6 +82,11 @@ while [ "$#" -gt 0 ]; do
       PROTOCOL_SELECTION=$(printf '%s' "${1#--protocols=}" | tr '[:upper:]' '[:lower:]')
       PROTOCOLS_EXPLICIT=1
       ;;
+    --uninstall|--remove-only)
+      LIFECYCLE_ACTION=uninstall
+      LIFECYCLE_EXPLICIT=1
+      printf '%s\n' "$1" | sed "s/'/'\\''/g; s/^/'/; s/$/'/" >> "$forward_file"
+      ;;
     -h|--help)
       usage
       exit 0
@@ -102,7 +112,7 @@ if [ -z "$SELECTED_OS" ]; then
   fi
   cat <<'PROMPT'
 ============================================================
-             WAFFLEHOUSE-CLIENT 5.1
+             WAFFLEHOUSE-CLIENT 5.1r3
 ============================================================
 What operating system are you installing on?
 
@@ -126,7 +136,7 @@ case "$SELECTED_OS:$HOST_OS" in
   freebsd:FreeBSD) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
   macos:Darwin) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-macos.sh" ;;
   freebsd:*)
-    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.1 is FreeBSD." >&2
+    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.1r3 is FreeBSD." >&2
     exit 2
     ;;
   *)
@@ -135,6 +145,40 @@ case "$SELECTED_OS:$HOST_OS" in
     exit 2
     ;;
 esac
+
+# Lifecycle selection happens before protocol questions so uninstall/remove
+# never wastes time asking what should be compiled.
+if [ "$LIFECYCLE_EXPLICIT" -eq 0 ] && [ -t 0 ]; then
+  cat <<'ACTION_PROMPT'
+
+What do you want to do?
+
+  1) Build / Install / Upgrade WaffleHouse-Client
+  2) Uninstall / Remove the installed WaffleHouse-Client
+ACTION_PROMPT
+  printf 'Selection [1]: '
+  IFS= read -r lifecycle_answer
+  case "$lifecycle_answer" in
+    ''|1|build|Build|install|Install) LIFECYCLE_ACTION=build ;;
+    2|uninstall|Uninstall|remove|Remove)
+      LIFECYCLE_ACTION=uninstall
+      printf '%s\n' '--uninstall' >> "$forward_file"
+      ;;
+    *) echo "Invalid lifecycle selection." >&2; exit 2 ;;
+  esac
+fi
+
+if [ "$LIFECYCLE_ACTION" = uninstall ]; then
+  printf '\nSelected platform: %s (host: %s)\n' "$SELECTED_OS" "$HOST_OS"
+  echo "Action: uninstall/remove (user configuration will be preserved)"
+  if [ -s "$forward_file" ]; then
+    # shellcheck disable=SC2046,SC2086
+    eval "set -- $(tr '\n' ' ' < "$forward_file")"
+  else
+    set -- --uninstall
+  fi
+  exec "$PLATFORM_SCRIPT" "$@"
+fi
 
 # Compile-time feature selection.  Keep this in the top-level dispatcher so
 # Linux, FreeBSD and macOS all produce the same feature matrix.

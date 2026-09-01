@@ -1,0 +1,50 @@
+WaffleHouse-Client 5.1r1 — validation
+====================================
+Date: 2026-08-30
+
+Scope
+-----
+5.1r1 is a GUI maintenance revision on top of the corrected 5.1 all-platform
+baseline that already includes the complete 5.0r20 maintenance merge. It
+repairs the desktop Softphone Phone workspace without removing newer 5.1 NINA,
+Windows, macOS, Linux/FreeBSD, or Termux work.
+
+Softphone GUI repair
+--------------------
+- Default window increased to 1260x800 with a 1120x680 minimum.
+- Dialer minimum width increased to 405 px.
+- READY/live-call status pill is capped at 58 px height.
+- Destination moved to its own full-width row.
+- Prefix remains compact and no longer competes with Destination.
+- Keypad buttons increased to 76x58 with a 12 pt bold digit font.
+- CALL/HANG UP controls increased to 132x42.
+- Resume/Mute and Blind/Attended Transfer controls receive half-row spans.
+- Initial Phone splitter balance changed to 455/585.
+
+Regression validation
+---------------------
+14/14 shell regression gates PASS, including:
+- BuildFeatures GUI declaration scope
+- IM composer initial focus
+- macOS framework linkage/deployment
+- OSCAR login/full debug + native idle
+- OSCAR native feature audit
+- selectable protocols + multi-SIP + BBS geometry + OSCAR
+- persistent OSCAR log viewer + /bin install prompt
+- OSCAR ChatNav/Chat redirect/menu gating
+- r20 OSCAR LOCATE Away/Idle presence hydration
+- r20 printable unsecured transfer envelope + legacy compatibility
+- 5.1r1 Softphone GUI layout
+- chan_sip compatibility and SIP server-type UI
+
+2/2 Python regressions PASS:
+- 5.1 NINA compatibility
+- 5.1r1 all-platform propagation
+
+22/22 shell scripts PASS sh -n.
+
+Native-build limitation
+-----------------------
+This execution environment does not include the Qt 6 development CMake package,
+so a fresh native Qt link cannot be claimed here. The full source regression
+suite and shell syntax checks pass.

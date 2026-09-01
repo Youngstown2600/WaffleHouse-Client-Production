@@ -1,4 +1,4 @@
-# Building WaffleHouse-Client 5.0r13 on macOS
+# Building WaffleHouse-Client 5.1r3 on macOS
 
 From the source root:
 
@@ -44,3 +44,14 @@ After a successful normal build, the builder asks before installing. Pressing En
 The 5.0r13 macOS path uses the same application source as Linux/FreeBSD and includes the 5.0r4–5.0r6 OSCAR fixes. It also explicitly keeps the WaffleHouse status/menu-bar icon as a full-color non-template icon and removes the status item synchronously during quit to prevent the historical white-on-white icon state.
 
 Code signing and notarization require the distributor's own Apple Developer identity and are intentionally not fabricated by the builder.
+
+
+## Uninstall / remove
+
+The macOS builder now supports the same lifecycle choice. Interactive `./build.sh` offers **Uninstall / Remove**, or run:
+
+```sh
+./build.sh --os macos --uninstall
+```
+
+It removes `/Applications/WaffleHouse-Client.app` and the `/usr/local/bin/wafflehouse-client` launcher (or custom app/prefix targets) without running Homebrew dependency checks. Per-user WaffleHouse configuration, history, accounts, and logs are preserved. `--remove-only` is an alias.

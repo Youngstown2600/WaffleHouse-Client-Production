@@ -344,6 +344,12 @@ public:
         form->addRow(QStringLiteral("Protocol:"), m_protocol);
         m_protocol->setEnabled(!m_editing);
 
+        m_accountLabelLabel = new QLabel(QStringLiteral("Account label:"), this);
+        m_accountLabel = new QLineEdit(defaults.accountLabel, this);
+        m_accountLabel->setPlaceholderText(QStringLiteral("optional friendly name"));
+        m_accountLabel->setToolTip(QStringLiteral("A local display label only. It does not change the AIM screen name or IRC nickname sent to the server."));
+        form->addRow(m_accountLabelLabel, m_accountLabel);
+
         m_oscarNetworkLabel = new QLabel(QStringLiteral("AIM network:"), this);
         m_oscarNetwork = new QComboBox(this);
         m_oscarNetwork->addItem(QStringLiteral("Auto detect"), QStringLiteral("auto"));
@@ -638,6 +644,7 @@ public:
         value.server = m_server->text().trimmed();
         value.port = static_cast<quint16>(m_port->value());
         value.username = m_user->text().trimmed();
+        value.accountLabel = m_accountLabel->text().trimmed();
         value.realName = m_realName->text().trimmed();
         value.tls = m_tls->isChecked();
         // Buddy/contact lists belong to the saved connection and are managed
@@ -695,6 +702,9 @@ private:
         m_port->setVisible(!unknown && !sip);
         m_userLabel->setVisible(!unknown);
         m_user->setVisible(!unknown);
+        const bool labeledMessagingAccount = oscar || irc;
+        m_accountLabelLabel->setVisible(labeledMessagingAccount);
+        m_accountLabel->setVisible(labeledMessagingAccount);
 
         m_passwordLabel->setVisible(!telnet && !unknown);
         m_password->setVisible(!telnet && !unknown);
@@ -736,6 +746,7 @@ private:
         for (QWidget *widget : sipWidgets) widget->setVisible(sip);
 
         if (irc) {
+            m_accountLabel->setPlaceholderText(QStringLiteral("Work IRC / EFnet / Libera"));
             m_userLabel->setText(QStringLiteral("Nickname:"));
             m_passwordLabel->setText(QStringLiteral("Server password:"));
             m_password->setPlaceholderText(QStringLiteral("optional"));
@@ -750,6 +761,7 @@ private:
                 m_port->setValue(23);
             }
         } else if (oscar) {
+            m_accountLabel->setPlaceholderText(QStringLiteral("NINA / Waffle BBS / Legacy AIM"));
             m_userLabel->setText(QStringLiteral("Screen name:"));
             m_passwordLabel->setText(QStringLiteral("Password:"));
             m_password->setPlaceholderText(QString());
@@ -768,6 +780,8 @@ private:
     bool m_editing = false;
     ConnectionSettings m_original;
     QComboBox *m_protocol = nullptr;
+    QLabel *m_accountLabelLabel = nullptr;
+    QLineEdit *m_accountLabel = nullptr;
     QLabel *m_serverLabel = nullptr;
     QLineEdit *m_server = nullptr;
     QLabel *m_portLabel = nullptr;
@@ -1442,7 +1456,11 @@ QString MainWindow::accountMenuLabel(BackendState *state) const
                                     : QStringLiteral("%1@%2").arg(cfg.username.trimmed(), domain);
         }
     } else {
-        name = state->identity.trimmed();
+        if (cfg.protocol == ConnectionSettings::Protocol::Oscar
+            || cfg.protocol == ConnectionSettings::Protocol::Irc) {
+            name = cfg.accountLabel.trimmed();
+        }
+        if (name.isEmpty()) name = state->identity.trimmed();
         if (name.isEmpty()) name = cfg.username.trimmed();
         if (name.isEmpty()) name = cfg.server.trimmed();
     }
@@ -3606,6 +3624,7 @@ void MainWindow::loadConnections()
             : value.protocol == ConnectionSettings::Protocol::Sip ? 5060 : 5190;
         value.port = static_cast<quint16>(settings.value(QStringLiteral("port"), defaultPort).toUInt());
         value.username = settings.value(QStringLiteral("username")).toString();
+        value.accountLabel = settings.value(QStringLiteral("accountLabel")).toString();
         value.networkProfile = settings.value(QStringLiteral("networkProfile"), QStringLiteral("auto")).toString();
         value.arsHost = settings.value(QStringLiteral("arsHost")).toString();
         value.arsPort = static_cast<quint16>(settings.value(QStringLiteral("arsPort"), 5190).toUInt());
@@ -3694,6 +3713,7 @@ void MainWindow::saveConnections() const
         settings.setValue(QStringLiteral("server"), value.server);
         settings.setValue(QStringLiteral("port"), value.port);
         settings.setValue(QStringLiteral("username"), value.username);
+        settings.setValue(QStringLiteral("accountLabel"), value.accountLabel);
         settings.setValue(QStringLiteral("networkProfile"), value.networkProfile);
         settings.setValue(QStringLiteral("arsHost"), value.arsHost);
         settings.setValue(QStringLiteral("arsPort"), value.arsPort);
@@ -4291,9 +4311,19 @@ void MainWindow::updateConnectionItem(BackendState *state)
         return;
     }
 
+    const ConnectionSettings &cfg = state->backend->settings();
     const QString identity = state->identity.isEmpty()
-        ? state->backend->settings().username
+        ? cfg.username
         : state->identity;
+    QString displayIdentity = identity;
+    if ((cfg.protocol == ConnectionSettings::Protocol::Oscar
+         || cfg.protocol == ConnectionSettings::Protocol::Irc)
+        && !cfg.accountLabel.trimmed().isEmpty()) {
+        displayIdentity = cfg.accountLabel.trimmed();
+    } else if (cfg.protocol == ConnectionSettings::Protocol::Sip
+               && !cfg.sipProfileName.trimmed().isEmpty()) {
+        displayIdentity = cfg.sipProfileName.trimmed();
+    }
     QString stateWord = state->connecting
         ? QStringLiteral("Connecting")
         : statusWord(state->connected);
@@ -4304,11 +4334,16 @@ void MainWindow::updateConnectionItem(BackendState *state)
     }
 
     QString text = QStringLiteral("%1 — %2").arg(stateWord, state->backend->protocolName());
-    if (!identity.isEmpty()) {
-        text += QStringLiteral(" — %1").arg(identity);
+    if (!displayIdentity.isEmpty()) {
+        text += QStringLiteral(" — %1").arg(displayIdentity);
     }
     state->connectionItem->setText(text);
-    state->connectionItem->setToolTip(state->endpoint);
+    QString toolTip = state->endpoint;
+    if (!displayIdentity.isEmpty() && !identity.isEmpty()
+        && displayIdentity.compare(identity, Qt::CaseInsensitive) != 0) {
+        toolTip = QStringLiteral("%1\nIdentity: %2").arg(toolTip, identity);
+    }
+    state->connectionItem->setToolTip(toolTip);
 }
 
 void MainWindow::updateActions()
@@ -4374,9 +4409,15 @@ void MainWindow::refreshBuddyList()
         if (protocolCompare != 0) {
             return protocolCompare < 0;
         }
-        const QString aName = a->identity.isEmpty() ? a->backend->settings().username : a->identity;
-        const QString bName = b->identity.isEmpty() ? b->backend->settings().username : b->identity;
-        return aName.compare(bName, Qt::CaseInsensitive) < 0;
+        const auto visibleAccountName = [](BackendState *state) {
+            const ConnectionSettings &cfg = state->backend->settings();
+            if ((cfg.protocol == ConnectionSettings::Protocol::Oscar
+                 || cfg.protocol == ConnectionSettings::Protocol::Irc)
+                && !cfg.accountLabel.trimmed().isEmpty()) return cfg.accountLabel.trimmed();
+            const QString identity = state->identity.isEmpty() ? cfg.username : state->identity;
+            return identity.isEmpty() ? cfg.server : identity;
+        };
+        return visibleAccountName(a).compare(visibleAccountName(b), Qt::CaseInsensitive) < 0;
     });
 
     QTreeWidgetItem *restoreItem = nullptr;
@@ -4388,12 +4429,18 @@ void MainWindow::refreshBuddyList()
             continue;
         }
 
-        QString accountName = state->identity.isEmpty()
-            ? state->backend->settings().username
-            : state->identity;
+        const ConnectionSettings &accountCfg = state->backend->settings();
+        QString accountName;
+        if ((accountCfg.protocol == ConnectionSettings::Protocol::Oscar
+             || accountCfg.protocol == ConnectionSettings::Protocol::Irc)
+            && !accountCfg.accountLabel.trimmed().isEmpty()) {
+            accountName = accountCfg.accountLabel.trimmed();
+        } else {
+            accountName = state->identity.isEmpty() ? accountCfg.username : state->identity;
+        }
         if (accountName.isEmpty()) {
-            accountName = state->backend->settings().protocol == ConnectionSettings::Protocol::Telnet
-                ? state->backend->settings().server
+            accountName = accountCfg.protocol == ConnectionSettings::Protocol::Telnet
+                ? accountCfg.server
                 : state->backend->protocolName();
         }
 
@@ -4412,6 +4459,13 @@ void MainWindow::refreshBuddyList()
         }
         root->setText(1, QStringLiteral("%1 — %2").arg(state->backend->protocolName(), accountStatus));
         if (!state->presenceMessage.isEmpty()) root->setToolTip(1, state->presenceMessage);
+        if (!accountCfg.accountLabel.trimmed().isEmpty()
+            && (accountCfg.protocol == ConnectionSettings::Protocol::Oscar
+                || accountCfg.protocol == ConnectionSettings::Protocol::Irc)) {
+            root->setToolTip(0, QStringLiteral("%1 identity: %2")
+                .arg(state->backend->protocolName(),
+                     state->identity.isEmpty() ? accountCfg.username : state->identity));
+        }
         root->setData(0, Qt::UserRole, state->backend->id());
         QFont rootFont = root->font(0);
         rootFont.setBold(true);

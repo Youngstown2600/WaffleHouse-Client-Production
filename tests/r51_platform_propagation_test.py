@@ -5,7 +5,7 @@ win=(root/'build-windows.ps1').read_text()
 term=(root/'scripts/build-termux.sh').read_text()
 main=(root/'src/main.cpp').read_text()
 checks={
- 'version':'APP_VERSION_STRING="5.1"' in cm,
+ 'version':'APP_VERSION_STRING="5.1r3"' in cm,
  'Windows target':'WAFFLEHOUSE_WINDOWS=1' in cm,
  'Termux target':'WAFFLEHOUSE_TERMUX=1' in cm,
  'Windows builder':'build-windows-msys2.sh' in win,
@@ -16,4 +16,4 @@ checks={
 }
 missing=[k for k,v in checks.items() if not v]
 if missing: raise SystemExit('FAIL: '+', '.join(missing))
-print('WaffleHouse-Client 5.1 platform propagation regression: PASS')
+print('WaffleHouse-Client 5.1r3 platform propagation regression: PASS')

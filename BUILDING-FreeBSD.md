@@ -1,6 +1,6 @@
-# WaffleHouse-Client 5.0r13 — FreeBSD build notes
+# WaffleHouse-Client 5.1r3 — FreeBSD build notes
 
-WaffleHouse-Client 5.0r13 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
+WaffleHouse-Client 5.1r3 integrates the multi-account PJSIP softphone with the modern Qt GUI and ncurses CLI while retaining AIM/OSCAR, IRC, Telnet/BBS, CPX secure messaging, themes, notification sounds, and secure/unsecured file-transfer workflows.
 
 Run:
 
@@ -63,3 +63,14 @@ WaffleHouse-Client uses `paplay` for built-in and user-selected notification aud
 The media feature set additionally uses the packaged `mpv` and `ffmpeg` runtime tools. `build.sh` checks/installs them through `pkg` when automatic dependency handling is enabled. No libmpv development package is required because WaffleHouse controls mpv through local JSON IPC.
 
 A normal interactive `./build.sh` builds first and then explicitly asks whether to install the application system-wide and add `/bin/wafflehouse-client`, defaulting to **No**. The application/data remain under the configured prefix (default `/usr/local`); `/bin/wafflehouse-client` is the global launcher. During testing, `./build.sh --os freebsd --no-install` guarantees the WaffleHouse executable is not installed. To avoid automatic package installation and the inherited guarded HDA repair as well, use `--no-install --no-auto-deps --no-audio-fix`.
+
+
+## Uninstall / remove
+
+Interactive `./build.sh` now offers **Uninstall / Remove** before dependency or protocol prompts. Scripted removal is also available:
+
+```sh
+./build.sh --os freebsd --uninstall
+```
+
+The removal path deletes the installed executable, `/bin/wafflehouse-client` launcher, `wafflehouse-shell`, desktop entry, installed icons, and WaffleHouse shared sound/resource directory while preserving per-user configuration, accounts, history, and logs. `--remove-only` is an alias.

@@ -80,7 +80,7 @@ QList<StoredProfile> readProfiles(QSettings &settings)
 {
     static const QStringList keys = {
         QStringLiteral("id"), QStringLiteral("protocol"), QStringLiteral("server"),
-        QStringLiteral("port"), QStringLiteral("username"), QStringLiteral("networkProfile"),
+        QStringLiteral("port"), QStringLiteral("username"), QStringLiteral("accountLabel"), QStringLiteral("networkProfile"),
         QStringLiteral("arsHost"), QStringLiteral("arsPort"), QStringLiteral("redirectHost"),
         QStringLiteral("redirectPort"), QStringLiteral("oscarDebugMode"), QStringLiteral("realName"), QStringLiteral("tls"),
         QStringLiteral("ircBuddies"), QStringLiteral("sipContacts"),

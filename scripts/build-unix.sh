@@ -59,7 +59,7 @@ usage() {
   cat <<EOF2
 Usage: ./build.sh [options]
 
-Build WaffleHouse-Client 5.0r17 for Linux or FreeBSD (GUI + CLI).
+Build WaffleHouse-Client 5.1r3 for Linux or FreeBSD (GUI + CLI).
 The Media Center adds local media/video, SHOUTcast/Icecast/HTTP/HLS streams, internet radio, and playlists.
 
 The builder performs a full dependency preflight. Missing dependencies are
@@ -174,6 +174,8 @@ if [ "$INSTALL_PREFIX" != "/" ]; then INSTALL_PREFIX=${INSTALL_PREFIX%/}; fi
 INSTALL_BINDIR="$INSTALL_PREFIX/bin"
 INSTALL_DESKTOPDIR="$INSTALL_PREFIX/share/applications"
 INSTALL_BIN="$INSTALL_BINDIR/wafflehouse-client"
+INSTALL_SHELL="$INSTALL_BINDIR/wafflehouse-shell"
+INSTALL_DATADIR="$INSTALL_PREFIX/share/wafflehouse-client"
 INSTALL_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-client.desktop"
 INSTALL_ICON_THEME_DIR="$INSTALL_PREFIX/share/icons/hicolor"
 LEGACY_GUI="$INSTALL_BINDIR/wafflehouse-gui"
@@ -184,7 +186,7 @@ LEGACY_CLI_DESKTOP="$INSTALL_DESKTOPDIR/wafflehouse-cli.desktop"
 show_header() {
   cat <<EOF2
 ============================================================
-                    WAFFLEHOUSE-CLIENT 5.0r13
+                    WAFFLEHOUSE-CLIENT 5.1r3
 ============================================================
 Host OS:        $HOST_OS
 Build jobs:     $JOBS
@@ -1409,6 +1411,14 @@ remove_path_if_present() {
   fi
 }
 
+remove_tree_if_present() {
+  target=$1
+  if [ -d "$target" ] || [ -L "$target" ]; then
+    run_privileged rm -rf "$target"
+    echo "Removed installed application data: $target"
+  fi
+}
+
 cleanup_legacy_installation() {
   # The unified executable/desktop entry are replaced by cmake --install after
   # the new build succeeds. Only obsolete 1.x split launchers are removed here.
@@ -1423,7 +1433,9 @@ uninstall_application_files() {
   echo "==> Removing installed WaffleHouse-Client application files"
   if [ "$INSTALL_BIN" != "$SYSTEM_BIN" ]; then remove_path_if_present "$SYSTEM_BIN"; fi
   remove_path_if_present "$INSTALL_BIN"
+  remove_path_if_present "$INSTALL_SHELL"
   remove_path_if_present "$INSTALL_DESKTOP"
+  remove_tree_if_present "$INSTALL_DATADIR"
   for size in 16 22 24 32 48 64 128 256 512; do
     remove_path_if_present "$INSTALL_ICON_THEME_DIR/${size}x${size}/apps/wafflehouse-client.png"
   done
@@ -1478,7 +1490,7 @@ else
 fi
 
 echo
-echo "==> Configuring WaffleHouse-Client 5.0r17"
+echo "==> Configuring WaffleHouse-Client 5.1r3"
 # Use the compiler and GNU Make that passed the preflight. On FreeBSD this
 # intentionally means Clang/libc++ for ABI compatibility with packaged Qt6;
 # GCC/G++ are still checked/installed as explicit project prerequisites.
@@ -1491,7 +1503,7 @@ run_cmd env CC="$BUILD_CC" CXX="$BUILD_CXX" cmake -S . -B build \
   -DCMAKE_MAKE_PROGRAM="$BUILD_MAKE" ${WAFFLEHOUSE_FEATURE_CMAKE_ARGS:-}
 
 echo
-echo "==> Building WaffleHouse-Client 5.0r17"
+echo "==> Building WaffleHouse-Client 5.1r3"
 run_cmd cmake --build build --parallel "$JOBS"
 
 # A normal test build never writes the application into PREFIX/bin unless the
@@ -1500,7 +1512,7 @@ ask_install
 
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 5.0r17"
+  echo "==> Installing WaffleHouse-Client 5.1r3"
   prepare_privileges
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then
     echo "Existing WaffleHouse-Client detected; performing in-place upgrade after successful build."
@@ -1530,4 +1542,4 @@ echo "  Interactive terminal launch      -> CLI"
 echo "  wafflehouse-client --gui         -> force GUI"
 echo "  wafflehouse-client --cli         -> force CLI"
 
-if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 5.0r17 build complete."; fi
+if [ "$DRY_RUN" -eq 1 ]; then echo "Dry run complete."; else echo "WaffleHouse-Client 5.1r3 build complete."; fi
