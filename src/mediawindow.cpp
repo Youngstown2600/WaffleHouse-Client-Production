@@ -86,6 +86,27 @@ MediaWindow::MediaWindow(QWidget *parent)
         backend += QStringLiteral(" (%1)").arg(m_media->backendVersion());
     }
     m_backend->setText(backend);
+
+    // MediaController restores its persistent library before the window connects
+    // signals, so seed the GUI explicitly from the saved state. Nothing starts
+    // playing until the user chooses Play/Resume.
+    syncPlaylist(m_media->playlistSources(), m_media->playlistTitles(), m_media->playlistIndex());
+    {
+        const QSignalBlocker shuffleBlocker(m_shuffle);
+        m_shuffle->setChecked(m_media->shuffleEnabled());
+    }
+    {
+        const QSignalBlocker repeatBlocker(m_repeat);
+        const QString repeat = m_media->repeatMode();
+        m_repeat->setCurrentIndex(repeat == QStringLiteral("one") ? 1
+                                  : repeat == QStringLiteral("all") ? 2 : 0);
+    }
+    {
+        const QSignalBlocker volumeBlocker(m_volume);
+        m_volume->setValue(m_media->volume());
+    }
+    statusBar()->showMessage(QStringLiteral("Persistent media library: %1")
+                                 .arg(m_media->mediaLibraryPath()), 6000);
 }
 
 bool MediaWindow::executeCommand(const QString &command,
@@ -300,14 +321,16 @@ void MediaWindow::buildUi()
     auto *internetList = new QPushButton(QStringLiteral("Playlist URL"), playlistBox);
     auto *loadList = new QPushButton(QStringLiteral("Load Playlist"), playlistBox);
     auto *saveList = new QPushButton(QStringLiteral("Save Playlist"), playlistBox);
+    auto *libraryFolder = new QPushButton(QStringLiteral("Library Folder"), playlistBox);
     auto *remove = new QPushButton(QStringLiteral("Remove"), playlistBox);
-    auto *clear = new QPushButton(QStringLiteral("Clear Queue"), playlistBox);
+    auto *clear = new QPushButton(QStringLiteral("Clear Library"), playlistBox);
     playlistButtons->addWidget(add);
     playlistButtons->addWidget(stream);
     playlistButtons->addWidget(shoutcast);
     playlistButtons->addWidget(internetList);
     playlistButtons->addWidget(loadList);
     playlistButtons->addWidget(saveList);
+    playlistButtons->addWidget(libraryFolder);
     playlistButtons->addStretch(1);
     playlistButtons->addWidget(remove);
     playlistButtons->addWidget(clear);
@@ -375,6 +398,13 @@ void MediaWindow::buildUi()
     connect(internetList, &QPushButton::clicked, this, &MediaWindow::openInternetPlaylistDialog);
     connect(loadList, &QPushButton::clicked, this, &MediaWindow::openPlaylistDialog);
     connect(saveList, &QPushButton::clicked, this, &MediaWindow::savePlaylistDialog);
+    connect(libraryFolder, &QPushButton::clicked, this, [this] {
+        const QString folder = QFileInfo(m_media->mediaLibraryPath()).absolutePath();
+        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder))) {
+            QMessageBox::information(this, QStringLiteral("Media Library"),
+                                     QStringLiteral("Media library folder:\n%1").arg(folder));
+        }
+    });
     connect(remove, &QPushButton::clicked, this, &MediaWindow::removeSelected);
     connect(clear, &QPushButton::clicked, this, &MediaWindow::clearPlaylist);
     connect(flat, &QPushButton::clicked, this, [this] {
@@ -442,7 +472,7 @@ void MediaWindow::openInternetPlaylistDialog()
     bool ok = false;
     const QString url = QInputDialog::getText(
         this, QStringLiteral("Open internet playlist"),
-        QStringLiteral("M3U / PLS playlist URL (use Stream URL for HLS .m3u8 manifests):"),
+        QStringLiteral("M3U / PLS / XSPF playlist URL (use Stream URL for HLS .m3u8 manifests):"),
         QLineEdit::Normal, {}, &ok).trimmed();
     if (!ok || url.isEmpty()) return;
     m_media->loadPlaylist(url, true);
@@ -451,8 +481,8 @@ void MediaWindow::openInternetPlaylistDialog()
 void MediaWindow::openPlaylistDialog()
 {
     const QString path = QFileDialog::getOpenFileName(
-        this, QStringLiteral("Load playlist"), {},
-        QStringLiteral("Playlists (*.m3u *.m3u8 *.pls);;All files (*)"));
+        this, QStringLiteral("Import playlist"), {},
+        QStringLiteral("Playlists (*.m3u *.m3u8 *.pls *.xspf);;All files (*)"));
     if (path.isEmpty()) return;
     m_media->loadPlaylist(path, true);
 }

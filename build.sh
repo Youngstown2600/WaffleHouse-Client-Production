@@ -12,7 +12,7 @@ LIFECYCLE_EXPLICIT=0
 
 usage() {
   cat <<'USAGE'
-WaffleHouse-Client 5.1r3 — Linux/Unix/macOS builder
+WaffleHouse-Client 5.1r4 — Linux/Unix/macOS builder
 
 Usage: ./build.sh [--os linux|freebsd|macos] [--protocols LIST] [--uninstall] [platform build options]
 
@@ -112,7 +112,7 @@ if [ -z "$SELECTED_OS" ]; then
   fi
   cat <<'PROMPT'
 ============================================================
-             WAFFLEHOUSE-CLIENT 5.1r3
+             WAFFLEHOUSE-CLIENT 5.1r4
 ============================================================
 What operating system are you installing on?
 
@@ -136,7 +136,7 @@ case "$SELECTED_OS:$HOST_OS" in
   freebsd:FreeBSD) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-unix.sh" ;;
   macos:Darwin) PLATFORM_SCRIPT="$ROOT_DIR/scripts/build-macos.sh" ;;
   freebsd:*)
-    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.1r3 is FreeBSD." >&2
+    echo "You selected FreeBSD / Unix, but this host reports '$HOST_OS'. The validated Unix target in 5.1r4 is FreeBSD." >&2
     exit 2
     ;;
   *)

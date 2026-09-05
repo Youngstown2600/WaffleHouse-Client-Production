@@ -42,7 +42,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 endif()
 pkg_check_modules(PJPROJECT REQUIRED libpjproject)
 if(NOT PJPROJECT_VERSION VERSION_EQUAL "2.17")
-    message(FATAL_ERROR "WaffleHouse-Client 5.1r3 softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
+    message(FATAL_ERROR "WaffleHouse-Client 5.1r4 softphone requires PJSIP 2.17; pkg-config reported ${PJPROJECT_VERSION}")
 endif()
 if(NOT PJPROJECT_STATIC_LDFLAGS)
     message(FATAL_ERROR "pkg-config did not return static PJSIP flags. Check: pkg-config --cflags --libs --static libpjproject")
@@ -188,7 +188,7 @@ target_compile_definitions(${APP_EXECUTABLE} PRIVATE
     APP_DISPLAY_NAME="${APP_DISPLAY_NAME}"
     APP_ID="${APP_ID}"
     APP_EXECUTABLE="${APP_EXECUTABLE}"
-    APP_VERSION_STRING="5.1r3"
+    APP_VERSION_STRING="5.1r4"
     WAFFLEHOUSE_SOURCE_SOUND_DIR="${CMAKE_CURRENT_SOURCE_DIR}/sounds"
     WAFFLEHOUSE_OSCAR_VOICE=1
     WAFFLEHOUSE_FEATURE_OSCAR=$<BOOL:${WAFFLEHOUSE_ENABLE_OSCAR}>
@@ -242,7 +242,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_compile_definitions(${APP_EXECUTABLE} PRIVATE WAFFLEHOUSE_TERMUX=1)
     endif()
 else()
-    message(FATAL_ERROR "WaffleHouse-Client 5.1r3 supports Linux/Unix, FreeBSD, macOS, Windows, and Termux/Android")
+    message(FATAL_ERROR "WaffleHouse-Client 5.1r4 supports Linux/Unix, FreeBSD, macOS, Windows, and Termux/Android")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")

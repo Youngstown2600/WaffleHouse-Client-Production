@@ -1,4 +1,4 @@
-# Building WaffleHouse-Client 5.1r3 on macOS
+# Building WaffleHouse-Client 5.1r4 on macOS
 
 From the source root:
 

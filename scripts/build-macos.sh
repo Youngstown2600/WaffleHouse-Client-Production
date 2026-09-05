@@ -25,7 +25,7 @@ usage() {
   cat <<USAGE
 Usage: ./build.sh --os macos [options]
 
-Build WaffleHouse-Client 5.1r3 for macOS. The .app contains the GUI and the same
+Build WaffleHouse-Client 5.1r4 for macOS. The .app contains the GUI and the same
 binary also supports --cli for the terminal interface.
 
   --clean          remove the macOS build directory first
@@ -94,7 +94,7 @@ if [ "$UNINSTALL_MODE" -eq 1 ]; then
     IFS= read -r answer
     case "$answer" in y|Y|yes|YES|Yes) : ;; *) echo "Uninstall cancelled."; exit 0 ;; esac
   fi
-  echo "==> Removing installed WaffleHouse-Client 5.1r3 for macOS"
+  echo "==> Removing installed WaffleHouse-Client 5.1r4 for macOS"
   removed=0
   if [ -e "$INSTALL_APP" ] || [ -L "$INSTALL_APP" ]; then run_admin rm -rf "$INSTALL_APP"; echo "Removed app: $INSTALL_APP"; removed=1; fi
   if [ -e "$INSTALL_BIN" ] || [ -L "$INSTALL_BIN" ]; then run_admin rm -f "$INSTALL_BIN"; echo "Removed launcher: $INSTALL_BIN"; removed=1; fi
@@ -124,7 +124,7 @@ need_formula() {
 # dependency preflight. mpv and ffmpeg are external runtime helpers and are
 # deliberately optional; an older/unsupported macOS Homebrew installation may
 # have no bottle for mpv, and that must never prevent the client itself from
-# building. yt-dlp is not used by the 5.1r3 media implementation.
+# building. yt-dlp is not used by the 5.1r4 media implementation.
 for formula in cmake pkg-config qt libsodium ncurses portaudio opus; do
   need_formula "$formula"
 done
@@ -176,7 +176,7 @@ export PKG_CONFIG_PATH="$PJSIP_PREFIX/lib/pkgconfig:$SODIUM_PREFIX/lib/pkgconfig
 export CMAKE_PREFIX_PATH="$QT_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
 printf '%s\n' "============================================================" \
-  "                    WAFFLEHOUSE-CLIENT 5.1r3" \
+  "                    WAFFLEHOUSE-CLIENT 5.1r4" \
   "============================================================" \
   "Platform:       macOS $(sw_vers -productVersion 2>/dev/null || true)" \
   "Architecture:   $(uname -m)" \
@@ -240,7 +240,7 @@ ask_install() {
 ask_install
 if [ "$INSTALL_MODE" = yes ]; then
   echo
-  echo "==> Installing WaffleHouse-Client 5.1r3 for macOS"
+  echo "==> Installing WaffleHouse-Client 5.1r4 for macOS"
   run_admin mkdir -p "$APP_INSTALL_DIR" "$INSTALL_PREFIX/bin"
   if [ -e "$INSTALL_APP" ]; then run_admin rm -rf "$INSTALL_APP"; fi
   run_admin ditto "$APP" "$INSTALL_APP"
@@ -269,7 +269,7 @@ fi
 
 cat <<DONE
 
-WaffleHouse-Client 5.1r3 macOS build complete.
+WaffleHouse-Client 5.1r4 macOS build complete.
 GUI: open "$APP"
 CLI: "$APP/Contents/MacOS/wafflehouse-client" --cli
 $(if [ "$MAKE_DMG" -eq 1 ]; then echo "DMG: $BUILD_DIR/wafflehouse-client.dmg"; fi)

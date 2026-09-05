@@ -1,4 +1,13 @@
-# WaffleHouse-Client 5.1r3
+# WaffleHouse-Client 5.1r4
+
+## 5.1r4 persistent Media Library + release cleanup
+
+- Media Center queue is now persisted per user in `media/library.json` and mirrored to `media/queue.m3u8`; launching WaffleHouse restores the playlist without automatically starting playback.
+- Local `.pls`, `.m3u`, `.m3u8`, and `.xspf` playlist definitions are copied into the internal `media/playlists/` cache while the expanded stream queue is stored independently of the original file.
+- Playlist add/remove/clear/import operations, current item, volume/mute, shuffle, and repeat state are saved atomically and shared by the GUI/CLI MediaController.
+- Added a Media Center **Library Folder** shortcut and XSPF import filter; renamed the destructive queue action to **Clear Library** to make persistence explicit.
+- Release bundle cleanup removes old versioned validation receipts, the one-off r20 merge audit, and obsolete historical platform-comparison artifact. The bundle now carries a single current `VALIDATION.md` plus the actual regression tests.
+- Retains all 5.1r3 account-label/softphone changes, 5.1r2 uninstall lifecycle, and the complete 5.0r20 OSCAR/file-transfer fix set.
 
 ## 5.1r3 AIM/IRC labels + softphone control cleanup
 

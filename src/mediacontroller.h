@@ -36,6 +36,10 @@ public:
     QString repeatMode() const { return m_repeatMode; }
     bool shuffleEnabled() const { return m_shuffle; }
     QVector<double> equalizerGains() const { return m_eq; }
+    QStringList playlistSources() const { return m_playlistSources; }
+    QStringList playlistTitles() const { return m_playlistTitles; }
+    int playlistIndex() const { return m_playlistIndex; }
+    QString mediaLibraryPath() const;
 
     QString statusText() const;
     QStringList statusLines() const;
@@ -107,6 +111,14 @@ private:
     void parseIpcLine(const QByteArray &line);
     bool sendLoadFile(const QString &source, const QString &flags);
     void refreshPlaylistSnapshot(const QJsonValue &data);
+    void loadPersistentLibrary();
+    void savePersistentLibrary();
+    QString mediaDataDirectory() const;
+    QString persistentLibraryFile() const;
+    QString persistentQueueFile() const;
+    QString cachePlaylistDefinition(const QString &pathOrUrl);
+    bool hydrateBackendPlaylist(int startIndex = -1);
+    QString originForSource(const QString &source) const;
     QString buildIpcPath();
     void cleanupIpcPath();
     static bool looksLikeVideoFile(const QString &source);
@@ -136,6 +148,11 @@ private:
     QString m_title;
     QString m_source;
     QStringList m_playlistSources;
+    QStringList m_playlistTitles;
+    QStringList m_playlistOrigins;
+    QStringList m_importedPlaylistSources;
+    QStringList m_importedPlaylistCaches;
+    QString m_pendingPlaylistOrigin;
 
     double m_position = 0.0;
     double m_duration = 0.0;
@@ -147,6 +164,8 @@ private:
     bool m_shuffle = false;
     bool m_observing = false;
     bool m_shuttingDown = false;
+    bool m_backendPlaylistHydrated = false;
+    bool m_loadingPersistentLibrary = false;
     QString m_repeatMode = QStringLiteral("off");
     QVector<double> m_eq = QVector<double>(10, 0.0);
     double m_remoteBasePosition = 0.0;

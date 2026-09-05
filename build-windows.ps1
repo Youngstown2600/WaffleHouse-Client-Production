@@ -34,7 +34,7 @@ $MsysShell = $Candidates | Where-Object { Test-Path $_ } | Select-Object -First 
 if (-not $MsysShell) {
     throw "MSYS2 was not found. Install MSYS2 (UCRT64 recommended), then rerun this builder."
 }
-Write-Host "WaffleHouse-Client 5.1r3 - Windows 10/11 GUI + CLI"
+Write-Host "WaffleHouse-Client 5.1r4 - Windows 10/11 GUI + CLI"
 Write-Host "Using MSYS2 UCRT64: $MsysShell"
 $Escaped = $Root.Replace("'", "'\"'\"'")
 $Command = "ROOT=`$(cygpath -u '$Escaped'); cd `"`$ROOT`"; exec ./scripts/build-windows-msys2.sh"

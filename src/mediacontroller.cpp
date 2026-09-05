@@ -1,6 +1,8 @@
 #include "mediacontroller.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -15,9 +17,11 @@
 #include <QThread>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUuid>
+#include <QUrl>
 #include <QtGlobal>
 
 #include <cerrno>
@@ -100,6 +104,11 @@ MediaController::MediaController(QObject *parent)
     m_remoteTimer->setInterval(250);
     connect(m_remoteTimer, &QTimer::timeout, this, &MediaController::refreshRemotePosition);
     m_remoteClock = new QElapsedTimer();
+
+    // The Media Center owns a persistent queue/library independent of mpv.
+    // Load it without starting the backend so merely launching WaffleHouse never
+    // begins playback. GUI and CLI MediaController instances use the same file.
+    loadPersistentLibrary();
 }
 
 MediaController::~MediaController()
@@ -107,6 +116,241 @@ MediaController::~MediaController()
     shutdown();
     delete m_remoteClock;
     m_remoteClock = nullptr;
+}
+
+QString MediaController::mediaDataDirectory() const
+{
+    QString root = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (root.isEmpty()) {
+        root = QDir::home().filePath(QStringLiteral(".local/share/WaffleHouse-Client"));
+    }
+    const QString media = QDir(root).filePath(QStringLiteral("media"));
+    QDir().mkpath(QDir(media).filePath(QStringLiteral("playlists")));
+    return media;
+}
+
+QString MediaController::persistentLibraryFile() const
+{
+    return QDir(mediaDataDirectory()).filePath(QStringLiteral("library.json"));
+}
+
+QString MediaController::persistentQueueFile() const
+{
+    return QDir(mediaDataDirectory()).filePath(QStringLiteral("queue.m3u8"));
+}
+
+QString MediaController::mediaLibraryPath() const
+{
+    return persistentLibraryFile();
+}
+
+QString MediaController::originForSource(const QString &source) const
+{
+    for (int i = 0; i < m_playlistSources.size(); ++i) {
+        if (m_playlistSources.at(i) == source && i < m_playlistOrigins.size())
+            return m_playlistOrigins.at(i);
+    }
+    return {};
+}
+
+void MediaController::loadPersistentLibrary()
+{
+    m_loadingPersistentLibrary = true;
+    QFile file(persistentLibraryFile());
+    if (!file.open(QIODevice::ReadOnly)) {
+        m_loadingPersistentLibrary = false;
+        return;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        m_loadingPersistentLibrary = false;
+        return;
+    }
+
+    const QJsonObject root = document.object();
+    const QJsonArray entries = root.value(QStringLiteral("playlist")).toArray();
+    for (const QJsonValue &value : entries) {
+        if (!value.isObject()) continue;
+        const QJsonObject item = value.toObject();
+        const QString source = item.value(QStringLiteral("source")).toString().trimmed();
+        if (source.isEmpty()) continue;
+        QString title = item.value(QStringLiteral("title")).toString().trimmed();
+        if (title.isEmpty()) {
+            title = QFileInfo(source).fileName();
+            if (title.isEmpty()) title = source;
+        }
+        m_playlistSources << source;
+        m_playlistTitles << title;
+        m_playlistOrigins << item.value(QStringLiteral("origin")).toString();
+    }
+
+    const QJsonArray imports = root.value(QStringLiteral("imported_playlists")).toArray();
+    for (const QJsonValue &value : imports) {
+        if (!value.isObject()) continue;
+        const QJsonObject item = value.toObject();
+        const QString source = item.value(QStringLiteral("source")).toString().trimmed();
+        if (source.isEmpty()) continue;
+        m_importedPlaylistSources << source;
+        m_importedPlaylistCaches << item.value(QStringLiteral("cached_copy")).toString();
+    }
+
+    m_playlistIndex = root.value(QStringLiteral("current_index")).toInt(-1);
+    if (m_playlistSources.isEmpty()) m_playlistIndex = -1;
+    else m_playlistIndex = qBound(0, m_playlistIndex < 0 ? 0 : m_playlistIndex,
+                                  m_playlistSources.size() - 1);
+    m_volume = qBound(0, root.value(QStringLiteral("volume")).toInt(m_volume), 150);
+    m_muted = root.value(QStringLiteral("muted")).toBool(m_muted);
+    m_shuffle = root.value(QStringLiteral("shuffle")).toBool(m_shuffle);
+    const QString repeat = root.value(QStringLiteral("repeat")).toString(m_repeatMode);
+    if (repeat == QStringLiteral("off") || repeat == QStringLiteral("one") || repeat == QStringLiteral("all"))
+        m_repeatMode = repeat;
+
+    // A freshly launched mpv process has no queue yet. It is hydrated lazily
+    // only when the user actually asks to play/resume/enqueue something.
+    m_backendPlaylistHydrated = false;
+    m_loadingPersistentLibrary = false;
+}
+
+void MediaController::savePersistentLibrary()
+{
+    if (m_loadingPersistentLibrary) return;
+    const QString directory = mediaDataDirectory();
+    if (directory.isEmpty()) return;
+
+    QJsonArray entries;
+    for (int i = 0; i < m_playlistSources.size(); ++i) {
+        const QString source = m_playlistSources.at(i).trimmed();
+        if (source.isEmpty()) continue;
+        QJsonObject item;
+        item.insert(QStringLiteral("source"), source);
+        const QString title = i < m_playlistTitles.size() ? m_playlistTitles.at(i) : QString();
+        item.insert(QStringLiteral("title"), title);
+        const QString origin = i < m_playlistOrigins.size() ? m_playlistOrigins.at(i) : QString();
+        if (!origin.isEmpty()) item.insert(QStringLiteral("origin"), origin);
+        entries.append(item);
+    }
+
+    QJsonArray imports;
+    for (int i = 0; i < m_importedPlaylistSources.size(); ++i) {
+        QJsonObject item;
+        item.insert(QStringLiteral("source"), m_importedPlaylistSources.at(i));
+        if (i < m_importedPlaylistCaches.size() && !m_importedPlaylistCaches.at(i).isEmpty())
+            item.insert(QStringLiteral("cached_copy"), m_importedPlaylistCaches.at(i));
+        imports.append(item);
+    }
+
+    QJsonObject root;
+    root.insert(QStringLiteral("schema"), 1);
+    root.insert(QStringLiteral("saved_at"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+    root.insert(QStringLiteral("playlist"), entries);
+    root.insert(QStringLiteral("current_index"), m_playlistIndex);
+    root.insert(QStringLiteral("volume"), m_volume);
+    root.insert(QStringLiteral("muted"), m_muted);
+    root.insert(QStringLiteral("shuffle"), m_shuffle);
+    root.insert(QStringLiteral("repeat"), m_repeatMode);
+    root.insert(QStringLiteral("imported_playlists"), imports);
+
+    QSaveFile library(persistentLibraryFile());
+    if (library.open(QIODevice::WriteOnly)) {
+        library.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        (void)library.commit();
+    }
+
+    // Keep an ordinary M3U8 mirror as well. Besides being easy for a user to
+    // inspect/export, this lets a new mpv process rehydrate the exact saved queue
+    // in one loadlist command without depending on the original .pls/.m3u file.
+    QSaveFile queue(persistentQueueFile());
+    if (queue.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QByteArray out("#EXTM3U\n");
+        for (int i = 0; i < m_playlistSources.size(); ++i) {
+            QString source = m_playlistSources.at(i);
+            source.replace(QLatin1Char('\r'), QLatin1Char(' '));
+            source.replace(QLatin1Char('\n'), QLatin1Char(' '));
+            QString title = i < m_playlistTitles.size() ? m_playlistTitles.at(i) : QString();
+            title.replace(QLatin1Char('\r'), QLatin1Char(' '));
+            title.replace(QLatin1Char('\n'), QLatin1Char(' '));
+            if (!title.isEmpty()) out += QByteArray("#EXTINF:-1,") + title.toUtf8() + '\n';
+            out += source.toUtf8() + '\n';
+        }
+        queue.write(out);
+        (void)queue.commit();
+    }
+}
+
+QString MediaController::cachePlaylistDefinition(const QString &pathOrUrl)
+{
+    const QString clean = pathOrUrl.trimmed();
+    if (clean.isEmpty()) return {};
+
+    QString cached;
+    const QUrl maybeUrl(clean);
+    const bool isRemote = maybeUrl.isValid() && !maybeUrl.scheme().isEmpty()
+                          && maybeUrl.scheme().compare(QStringLiteral("file"), Qt::CaseInsensitive) != 0;
+    if (!isRemote) {
+        const QString local = maybeUrl.isLocalFile() ? maybeUrl.toLocalFile() : clean;
+        QFile input(local);
+        const QString suffix = QFileInfo(local).suffix().toCaseFolded();
+        static const QStringList playlistTypes = {
+            QStringLiteral("pls"), QStringLiteral("m3u"), QStringLiteral("m3u8"), QStringLiteral("xspf")
+        };
+        if (playlistTypes.contains(suffix) && input.open(QIODevice::ReadOnly)) {
+            const QByteArray bytes = input.readAll();
+            const QString digest = QString::fromLatin1(
+                QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex().left(16));
+            QString basename = QFileInfo(local).fileName();
+            basename.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9._-]+")), QStringLiteral("_"));
+            if (basename.isEmpty()) basename = QStringLiteral("playlist.%1").arg(suffix);
+            cached = QDir(mediaDataDirectory()).filePath(
+                QStringLiteral("playlists/%1-%2").arg(digest, basename));
+            QSaveFile output(cached);
+            if (output.open(QIODevice::WriteOnly)) {
+                output.write(bytes);
+                if (!output.commit()) cached.clear();
+            } else {
+                cached.clear();
+            }
+        }
+    }
+
+    const int existing = m_importedPlaylistSources.indexOf(clean);
+    if (existing >= 0) {
+        while (m_importedPlaylistCaches.size() <= existing) m_importedPlaylistCaches << QString();
+        if (!cached.isEmpty()) m_importedPlaylistCaches[existing] = cached;
+    } else {
+        m_importedPlaylistSources << clean;
+        m_importedPlaylistCaches << cached;
+    }
+    savePersistentLibrary();
+    return cached;
+}
+
+bool MediaController::hydrateBackendPlaylist(int startIndex)
+{
+    if (remoteAudioMode()) return true;
+    if (!ensureBackend()) return false;
+    if (m_playlistSources.isEmpty()) {
+        m_backendPlaylistHydrated = true;
+        return true;
+    }
+
+    if (!m_backendPlaylistHydrated) {
+        savePersistentLibrary();
+        if (!sendCommand({QStringLiteral("loadlist"), persistentQueueFile(), QStringLiteral("replace")},
+                         QStringLiteral("restore persistent media library"))) {
+            return false;
+        }
+        m_backendPlaylistHydrated = true;
+    }
+
+    if (startIndex >= 0 && startIndex < m_playlistSources.size()) {
+        m_playlistIndex = startIndex;
+        savePersistentLibrary();
+        return sendCommand({QStringLiteral("playlist-play-index"), QString::number(startIndex)},
+                           QStringLiteral("play restored playlist index"));
+    }
+    return true;
 }
 
 bool MediaController::backendAvailable() const
@@ -708,19 +952,34 @@ bool MediaController::play(const QString &source)
         emit errorMessage(QStringLiteral("No media source was supplied."));
         return false;
     }
+    const QString title = [&] {
+        QString value = QFileInfo(clean).fileName();
+        return value.isEmpty() ? clean : value;
+    }();
     if (remoteAudioMode()) {
         m_playlistSources = {clean};
+        m_playlistTitles = {title};
+        m_playlistOrigins = {QString()};
         m_playlistIndex = 0;
+        savePersistentLibrary();
         emit playlistChanged();
-        emit playlistEntriesChanged(m_playlistSources, m_playlistSources, m_playlistIndex);
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
         return startRemotePlayback(clean, 0.0);
     }
     if (!ensureBackend()) return false;
     if (!sendLoadFile(clean, QStringLiteral("replace"))) return false;
 
+    m_backendPlaylistHydrated = true;
+    m_playlistSources = {clean};
+    m_playlistTitles = {title};
+    m_playlistOrigins = {QString()};
+    m_playlistIndex = 0;
+    savePersistentLibrary();
+    emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
+    emit playlistChanged();
+
     m_source = clean;
-    m_title = QFileInfo(clean).fileName();
-    if (m_title.isEmpty()) m_title = clean;
+    m_title = title;
     m_position = 0.0;
     m_duration = 0.0;
     m_idle = false;
@@ -737,16 +996,47 @@ bool MediaController::enqueue(const QString &source)
 {
     const QString clean = source.trimmed();
     if (clean.isEmpty() || !ensureBackend()) return false;
+    QString title = QFileInfo(clean).fileName();
+    if (title.isEmpty()) title = clean;
     if (remoteAudioMode()) {
         m_playlistSources.append(clean);
+        m_playlistTitles.append(title);
+        m_playlistOrigins.append(QString());
         if (m_playlistIndex < 0) m_playlistIndex = 0;
+        savePersistentLibrary();
         emit playlistChanged();
-        emit playlistEntriesChanged(m_playlistSources, m_playlistSources, m_playlistIndex);
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
         if (m_idle) return startRemotePlayback(m_playlistSources.at(m_playlistIndex), 0.0);
         return true;
     }
+
+    // If this process has just restored a library from disk, rehydrate the saved
+    // queue before adding to it so the first enqueue cannot discard older entries.
+    if (!m_backendPlaylistHydrated && !m_playlistSources.isEmpty()) {
+        m_playlistSources.append(clean);
+        m_playlistTitles.append(title);
+        m_playlistOrigins.append(QString());
+        if (m_playlistIndex < 0) m_playlistIndex = 0;
+        savePersistentLibrary();
+        const bool ok = hydrateBackendPlaylist(m_playlistIndex);
+        if (ok) {
+            emit playlistChanged();
+            emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
+        }
+        return ok;
+    }
+
     const bool ok = sendLoadFile(clean, QStringLiteral("append-play"));
-    if (ok) emit playlistChanged();
+    if (ok) {
+        m_backendPlaylistHydrated = true;
+        m_playlistSources.append(clean);
+        m_playlistTitles.append(title);
+        m_playlistOrigins.append(QString());
+        if (m_playlistIndex < 0) m_playlistIndex = 0;
+        savePersistentLibrary();
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
+        emit playlistChanged();
+    }
     return ok;
 }
 
@@ -754,20 +1044,42 @@ bool MediaController::loadPlaylist(const QString &pathOrUrl, bool replace)
 {
     const QString clean = pathOrUrl.trimmed();
     if (clean.isEmpty() || !ensureBackend()) return false;
+
+    // Preserve local playlist definitions inside WaffleHouse AppData. We still
+    // load the original path so relative local-media references keep working;
+    // the expanded queue is persisted separately and no longer depends on the
+    // original .pls/.m3u/.xspf being present on the next launch.
+    const QString cached = cachePlaylistDefinition(clean);
+    m_pendingPlaylistOrigin = cached.isEmpty() ? clean : cached;
+
     if (remoteAudioMode()) {
         QStringList entries;
+        QStringList titles;
         QFile file(clean);
         if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             const QString baseDir = QFileInfo(clean).absolutePath();
-            while (!file.atEnd()) {
-                QString line = QString::fromUtf8(file.readLine()).trimmed();
-                if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) continue;
-                if (line.contains(QLatin1Char('=')) && line.startsWith(QStringLiteral("File"), Qt::CaseInsensitive))
-                    line = line.mid(line.indexOf(QLatin1Char('=')) + 1).trimmed();
-                if (line.isEmpty()) continue;
-                if (!line.contains(QStringLiteral("://")) && QFileInfo(line).isRelative())
-                    line = QDir(baseDir).filePath(line);
-                entries << line;
+            const QString suffix = QFileInfo(clean).suffix().toCaseFolded();
+            if (suffix == QStringLiteral("xspf")) {
+                const QString xml = QString::fromUtf8(file.readAll());
+                const QRegularExpression rx(QStringLiteral("<location[^>]*>([^<]+)</location>"),
+                                            QRegularExpression::CaseInsensitiveOption);
+                auto it = rx.globalMatch(xml);
+                while (it.hasNext()) {
+                    QString entry = it.next().captured(1).trimmed();
+                    entry.replace(QStringLiteral("&amp;"), QStringLiteral("&"));
+                    if (!entry.isEmpty()) entries << entry;
+                }
+            } else {
+                while (!file.atEnd()) {
+                    QString line = QString::fromUtf8(file.readLine()).trimmed();
+                    if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) continue;
+                    if (line.contains(QLatin1Char('=')) && line.startsWith(QStringLiteral("File"), Qt::CaseInsensitive))
+                        line = line.mid(line.indexOf(QLatin1Char('=')) + 1).trimmed();
+                    if (line.isEmpty()) continue;
+                    if (!line.contains(QStringLiteral("://")) && QFileInfo(line).isRelative())
+                        line = QDir(baseDir).filePath(line);
+                    entries << line;
+                }
             }
         } else {
             // A URL or non-playlist source is still a valid one-entry queue.
@@ -777,16 +1089,27 @@ bool MediaController::loadPlaylist(const QString &pathOrUrl, bool replace)
             emit errorMessage(QStringLiteral("Playlist contains no playable entries: %1").arg(clean));
             return false;
         }
+        for (const QString &entry : entries) {
+            QString title = QFileInfo(entry).fileName();
+            titles << (title.isEmpty() ? entry : title);
+        }
         if (replace) {
             stopRemotePlayback(true);
             m_playlistSources = entries;
+            m_playlistTitles = titles;
+            m_playlistOrigins.clear();
+            for (int i = 0; i < entries.size(); ++i) m_playlistOrigins << m_pendingPlaylistOrigin;
             m_playlistIndex = 0;
         } else {
             m_playlistSources.append(entries);
+            m_playlistTitles.append(titles);
+            for (int i = 0; i < entries.size(); ++i) m_playlistOrigins << m_pendingPlaylistOrigin;
             if (m_playlistIndex < 0) m_playlistIndex = 0;
         }
+        m_pendingPlaylistOrigin.clear();
+        savePersistentLibrary();
         emit playlistChanged();
-        emit playlistEntriesChanged(m_playlistSources, m_playlistSources, m_playlistIndex);
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
         emit statusMessage(QStringLiteral("Loaded %1 remote playlist entries from %2")
                                .arg(entries.size()).arg(clean));
         if (replace) return startRemotePlayback(m_playlistSources.at(0), 0.0);
@@ -798,35 +1121,47 @@ bool MediaController::loadPlaylist(const QString &pathOrUrl, bool replace)
         replace ? QStringLiteral("replace") : QStringLiteral("append")
     }, QStringLiteral("load playlist"));
     if (ok) {
+        m_backendPlaylistHydrated = true;
         m_source = clean;
         emit sourceChanged(clean);
         emit playlistChanged();
-        emit statusMessage(QStringLiteral("Loaded playlist: %1").arg(clean));
+        savePersistentLibrary(); // also persists the import/cache record now
+        emit statusMessage(QStringLiteral("Imported playlist into persistent library: %1").arg(clean));
+    } else {
+        m_pendingPlaylistOrigin.clear();
     }
     return ok;
 }
 
 void MediaController::playPlaylistIndex(int index)
 {
-    if (index < 0) return;
+    if (index < 0 || index >= m_playlistSources.size()) return;
     if (remoteAudioMode()) {
-        if (index >= m_playlistSources.size()) return;
         m_playlistIndex = index;
+        savePersistentLibrary();
         startRemotePlayback(m_playlistSources.at(index), 0.0);
-        emit playlistEntriesChanged(m_playlistSources, m_playlistSources, m_playlistIndex);
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
         return;
     }
-    sendCommand({QStringLiteral("playlist-play-index"), QString::number(index)},
-                QStringLiteral("play playlist index"));
+    if (!m_backendPlaylistHydrated) {
+        if (!hydrateBackendPlaylist(index)) return;
+    } else {
+        m_playlistIndex = index;
+        savePersistentLibrary();
+        sendCommand({QStringLiteral("playlist-play-index"), QString::number(index)},
+                    QStringLiteral("play playlist index"));
+    }
+    emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
 }
 
 void MediaController::removePlaylistIndex(int index)
 {
-    if (index < 0) return;
+    if (index < 0 || index >= m_playlistSources.size()) return;
     if (remoteAudioMode()) {
-        if (index >= m_playlistSources.size()) return;
         const bool removingCurrent = index == m_playlistIndex;
         m_playlistSources.removeAt(index);
+        if (index < m_playlistTitles.size()) m_playlistTitles.removeAt(index);
+        if (index < m_playlistOrigins.size()) m_playlistOrigins.removeAt(index);
         if (m_playlistSources.isEmpty()) {
             stopRemotePlayback(true);
             m_playlistIndex = -1;
@@ -836,25 +1171,41 @@ void MediaController::removePlaylistIndex(int index)
         } else if (index < m_playlistIndex) {
             --m_playlistIndex;
         }
+        savePersistentLibrary();
         emit playlistChanged();
-        emit playlistEntriesChanged(m_playlistSources, m_playlistSources, m_playlistIndex);
+        emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
         return;
     }
-    sendCommand({QStringLiteral("playlist-remove"), QString::number(index)},
-                QStringLiteral("remove playlist entry"));
+
+    if (m_backendPlaylistHydrated) {
+        sendCommand({QStringLiteral("playlist-remove"), QString::number(index)},
+                    QStringLiteral("remove playlist entry"));
+    }
+    m_playlistSources.removeAt(index);
+    if (index < m_playlistTitles.size()) m_playlistTitles.removeAt(index);
+    if (index < m_playlistOrigins.size()) m_playlistOrigins.removeAt(index);
+    if (m_playlistSources.isEmpty()) m_playlistIndex = -1;
+    else if (index < m_playlistIndex) --m_playlistIndex;
+    else if (m_playlistIndex >= m_playlistSources.size()) m_playlistIndex = m_playlistSources.size() - 1;
+    savePersistentLibrary();
+    emit playlistChanged();
+    emit playlistEntriesChanged(m_playlistSources, m_playlistTitles, m_playlistIndex);
 }
 
 void MediaController::clearPlaylist()
 {
     if (remoteAudioMode()) {
         stopRemotePlayback(true);
-        m_playlistSources.clear();
-        m_playlistIndex = -1;
-        emit playlistChanged();
-        emit playlistEntriesChanged({}, {}, -1);
-        return;
+    } else if (m_backendPlaylistHydrated) {
+        sendCommand({QStringLiteral("playlist-clear")}, QStringLiteral("clear playlist"));
     }
-    sendCommand({QStringLiteral("playlist-clear")}, QStringLiteral("clear playlist"));
+    m_playlistSources.clear();
+    m_playlistTitles.clear();
+    m_playlistOrigins.clear();
+    m_playlistIndex = -1;
+    savePersistentLibrary();
+    emit playlistChanged();
+    emit playlistEntriesChanged({}, {}, -1);
 }
 
 void MediaController::pause()
@@ -893,8 +1244,11 @@ void MediaController::resume()
         return;
     }
     if (m_idle && !m_playlistSources.isEmpty()) {
-        sendCommand({QStringLiteral("playlist-play-index"), QStringLiteral("0")},
-                    QStringLiteral("play first queued item after stop"));
+        const int index = qBound(0, m_playlistIndex < 0 ? 0 : m_playlistIndex,
+                                 m_playlistSources.size() - 1);
+        if (!m_backendPlaylistHydrated) hydrateBackendPlaylist(index);
+        else sendCommand({QStringLiteral("playlist-play-index"), QString::number(index)},
+                         QStringLiteral("resume saved playlist"));
         return;
     }
     setProperty(QStringLiteral("pause"), false);
@@ -927,6 +1281,12 @@ void MediaController::next()
         playPlaylistIndex(index);
         return;
     }
+    if (!m_backendPlaylistHydrated && !m_playlistSources.isEmpty()) {
+        int index = m_playlistIndex + 1;
+        if (index >= m_playlistSources.size()) index = (m_repeatMode == QStringLiteral("all")) ? 0 : m_playlistSources.size() - 1;
+        hydrateBackendPlaylist(index);
+        return;
+    }
     sendCommand({QStringLiteral("playlist-next"), QStringLiteral("force")});
 }
 
@@ -937,6 +1297,12 @@ void MediaController::previous()
         int index = m_playlistIndex - 1;
         if (index < 0) index = (m_repeatMode == QStringLiteral("all")) ? m_playlistSources.size()-1 : 0;
         playPlaylistIndex(index);
+        return;
+    }
+    if (!m_backendPlaylistHydrated && !m_playlistSources.isEmpty()) {
+        int index = m_playlistIndex - 1;
+        if (index < 0) index = (m_repeatMode == QStringLiteral("all")) ? m_playlistSources.size() - 1 : 0;
+        hydrateBackendPlaylist(index);
         return;
     }
     sendCommand({QStringLiteral("playlist-prev"), QStringLiteral("force")});
@@ -962,6 +1328,7 @@ void MediaController::setVolume(int percent)
     } else {
         setProperty(QStringLiteral("volume"), m_volume);
     }
+    savePersistentLibrary();
     emit volumeChanged(m_volume);
 }
 
@@ -973,6 +1340,7 @@ void MediaController::setMuted(bool muted)
     } else {
         setProperty(QStringLiteral("mute"), muted);
     }
+    savePersistentLibrary();
     emit muteChanged(muted);
 }
 
@@ -990,6 +1358,7 @@ void MediaController::setShuffle(bool enabled)
                              : QStringLiteral("playlist-unshuffle")});
     }
     m_shuffle = enabled;
+    savePersistentLibrary();
     emit statusMessage(QStringLiteral("Shuffle %1.").arg(enabled ? QStringLiteral("enabled")
                                                                  : QStringLiteral("disabled")));
 }
@@ -1013,6 +1382,7 @@ void MediaController::setRepeatMode(const QString &mode)
                     normalized == QStringLiteral("all") ? QJsonValue(QStringLiteral("inf"))
                                                         : QJsonValue(QStringLiteral("no")));
     }
+    savePersistentLibrary();
     emit statusMessage(QStringLiteral("Repeat mode: %1").arg(normalized));
 }
 
@@ -1131,8 +1501,11 @@ void MediaController::refreshPlaylistSnapshot(const QJsonValue &data)
 {
     if (!data.isArray()) return;
     const QJsonArray array = data.toArray();
+    const QStringList oldSources = m_playlistSources;
+    const QStringList oldOrigins = m_playlistOrigins;
     QStringList sources;
     QStringList titles;
+    QStringList origins;
     int current = -1;
     for (int i = 0; i < array.size(); ++i) {
         if (!array.at(i).isObject()) continue;
@@ -1145,11 +1518,23 @@ void MediaController::refreshPlaylistSnapshot(const QJsonValue &data)
         }
         sources << source;
         titles << title;
+        QString origin = m_pendingPlaylistOrigin;
+        if (origin.isEmpty()) {
+            const int oldIndex = oldSources.indexOf(source);
+            if (oldIndex >= 0 && oldIndex < oldOrigins.size()) origin = oldOrigins.at(oldIndex);
+        }
+        origins << origin;
         if (entry.value(QStringLiteral("current")).toBool(false)) current = i;
     }
     m_playlistSources = sources;
+    m_playlistTitles = titles;
+    m_playlistOrigins = origins;
     m_playlistIndex = current;
-    emit playlistEntriesChanged(sources, titles, current);
+    if (!m_playlistSources.isEmpty() && m_playlistIndex < 0) m_playlistIndex = 0;
+    m_pendingPlaylistOrigin.clear();
+    m_backendPlaylistHydrated = true;
+    savePersistentLibrary();
+    emit playlistEntriesChanged(sources, titles, m_playlistIndex);
     emit playlistChanged();
 }
 
@@ -1214,7 +1599,11 @@ void MediaController::parseIpcLine(const QByteArray &line)
         m_source = data.toString();
         emit sourceChanged(m_source);
     } else if (name == QStringLiteral("playlist-pos") && data.isDouble()) {
-        m_playlistIndex = qRound(data.toDouble());
+        const int nextIndex = qRound(data.toDouble());
+        if (nextIndex != m_playlistIndex) {
+            m_playlistIndex = nextIndex;
+            savePersistentLibrary();
+        }
     } else if (name == QStringLiteral("playlist")) {
         refreshPlaylistSnapshot(data);
     }
@@ -1235,6 +1624,7 @@ void MediaController::processFinished(int exitCode)
     m_connectTimer->stop();
     m_refreshTimer->stop();
     m_observing = false;
+    m_backendPlaylistHydrated = false;
     closeIpcSocket();
     cleanupIpcPath();
     emit readyChanged(false);
@@ -1249,6 +1639,7 @@ void MediaController::processFinished(int exitCode)
 void MediaController::shutdown()
 {
     if (m_shuttingDown) return;
+    savePersistentLibrary();
     m_shuttingDown = true;
     m_connectTimer->stop();
     m_refreshTimer->stop();

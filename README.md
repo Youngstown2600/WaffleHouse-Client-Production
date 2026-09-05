@@ -1,5 +1,11 @@
-# WaffleHouse-Client 5.1 — All-Platform Source Bundle
+# WaffleHouse-Client 5.1r4 — All-Platform Source Bundle
 
+
+## 5.1r4 persistent Media Library
+
+The Media Center now restores its playlist across application restarts. Imported local `.pls`, `.m3u`, `.m3u8`, and `.xspf` definitions are cached inside WaffleHouse's per-user application-data directory, while the expanded queue is stored in `media/library.json` and a portable `media/queue.m3u8` mirror. The original playlist file is no longer required to preserve already imported stream entries. Local audio/video files are referenced by path rather than silently duplicated.
+
+The r4 release bundle is also cleaned up: historical validation receipts and one-off merge-audit artifacts are no longer shipped. `VALIDATION.md` is the single current validation report; regression scripts remain under `tests/`.
 
 ## 5.1r3 AIM/IRC account labels + compact phone controls
 
